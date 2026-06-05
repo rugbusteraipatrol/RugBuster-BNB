@@ -101,6 +101,7 @@ DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "").strip()
 DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat").strip()
 DEEPSEEK_API_URL = os.getenv("DEEPSEEK_API_URL", "https://api.deepseek.com/chat/completions").strip()
 DEEPSEEK_TIMEOUT_SECONDS = int(os.getenv("DEEPSEEK_TIMEOUT_SECONDS", "20"))
+RUGBUSTER_API_KEY = (os.getenv("RUGBUSTER_API_KEY") or os.getenv("API_KEY") or "").strip()
 
 
 def cache_key(address: str) -> str:
@@ -182,10 +183,108 @@ def add_cors_headers(response):
     return cors(response)
 
 
+@app.route("/", methods=["GET"])
+def root():
+    network = resolve_network()
+    return jsonify(
+        {
+            "ok": True,
+            "name": "RugBuster BNB",
+            "version": "rugbuster-bnb-api-v1",
+            "network": network,
+            "label": NETWORKS[network]["label"],
+            "database_configured": bool(DATABASE_URL),
+            "classifier_version": "weighted_v2",
+            "ai_provider": "deepseek" if deepseek_enabled() else "none",
+        }
+    )
+
+
 @app.route("/health", methods=["GET"])
 def health():
     network = resolve_network()
     return jsonify({"ok": True, "network": network, "label": NETWORKS[network]["label"]})
+
+
+def compact_score_response(record: dict[str, Any], source: str) -> dict[str, Any]:
+    address = record.get("contract_address") or record.get("address") or ""
+    label = record.get("label") or record.get("verdict") or "UNKNOWN"
+    return {
+        "ok": True,
+        "address": Web3.to_checksum_address(address) if Web3.is_address(address) else address,
+        "chain": "bnb",
+        "label": label,
+        "rug_score": record.get("rug_score"),
+        "rug_status": record.get("rug_status"),
+        "speculation_score": record.get("speculation_score"),
+        "speculation_status": record.get("speculation_status"),
+        "token_name": record.get("token_name"),
+        "token_symbol": record.get("token_symbol") or record.get("symbol"),
+        "classifier": "weighted_v2",
+        "source": source,
+    }
+
+
+def lookup_cached_score(address: str) -> dict[str, Any] | None:
+    cached = get_cached_report(address)
+    if cached:
+        return compact_score_response(cached, "memory_cache")
+    if not DATABASE_URL or psycopg2 is None:
+        return None
+    try:
+        with psycopg2.connect(DATABASE_URL) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT full_record
+                    FROM bnb_scans
+                    WHERE lower(contract_address) = lower(%s)
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                    """,
+                    (address,),
+                )
+                row = cur.fetchone()
+        if not row:
+            return None
+        record = row[0]
+        if isinstance(record, str):
+            record = json.loads(record)
+        return compact_score_response(record, "postgres_cache")
+    except Exception as exc:
+        return {"ok": False, "error": str(exc), "source": "postgres_cache"}
+
+
+@app.route("/score", methods=["GET"])
+def public_score():
+    address = str(request.args.get("address") or "").strip()
+    if not Web3.is_address(address):
+        return jsonify({"ok": False, "error": "Invalid BNB Chain token address"}), 400
+
+    score = lookup_cached_score(address)
+    if score:
+        status = 200 if score.get("ok") else 500
+        return jsonify(score), status
+    return jsonify({"ok": False, "error": "No cached BNB score for this token yet", "address": address}), 404
+
+
+@app.route("/scan", methods=["GET"])
+def protected_scan():
+    if RUGBUSTER_API_KEY:
+        supplied_key = request.headers.get("X-API-Key", "")
+        if supplied_key != RUGBUSTER_API_KEY:
+            return jsonify({"ok": False, "error": "Unauthorized"}), 401
+
+    address = str(request.args.get("address") or "").strip()
+    if not Web3.is_address(address):
+        return jsonify({"ok": False, "error": "Invalid BNB Chain token address"}), 400
+
+    try:
+        report = scan_token(address)
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    put_cached_report(address, report)
+    return jsonify({"ok": True, "report": report, "source": "live_scan"})
 
 
 @app.route("/api/recent-scans", methods=["GET", "POST", "OPTIONS"])

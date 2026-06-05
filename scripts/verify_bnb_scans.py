@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from dataclasses import dataclass
 
 import requests
 
 
-API_URL = "https://web-production-376bf.up.railway.app/api/scan"
+API_URL = os.getenv("BNB_API_URL", "http://localhost:8000/api/scan")
 
 
 @dataclass(frozen=True)
@@ -27,12 +28,11 @@ class UnknownLiquidityExpectation:
 
 KNOWN_TOKENS = [
     ScanExpectation("WBNB", "0xBB4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", 35, 40),
-    ScanExpectation("USDC", "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E", 35, 40),
-    ScanExpectation("USDT.e", "0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7", 35, 40),
-    ScanExpectation("WETH.e", "0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB", 35, 45),
-    ScanExpectation("JOE", "0x6e84a6216ea6dacc71ee8e6b0a5b7322eebc0fdd", 35, 45),
-    ScanExpectation("QI", "0x8729438eb15e2c8b576fcc6aecda6a148776c0f5", 35, 50),
-    ScanExpectation("COQ", "0x420fca0121dc28039145009570975747295f2329", 35, 55),
+    ScanExpectation("USDT", "0x55d398326f99059ff775485246999027b3197955", 35, 40),
+    ScanExpectation("USDC", "0x8AC76a51cc950d9822d68b83fE1Ad97B32Cd580d", 35, 40),
+    ScanExpectation("BTCB", "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c", 35, 45),
+    ScanExpectation("ETH", "0x2170Ed0880ac9A755fd29B2688956BD959F933F8", 35, 45),
+    ScanExpectation("CAKE", "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82", 45, 55),
 ]
 
 UNKNOWN_LIQUIDITY = [

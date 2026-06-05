@@ -39,8 +39,9 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 # Uniswap V2-style BNB Chain factories for mainnet.
 MAINNET_FACTORIES = {
-    "trader_joe_v1": "0x9Ad6C38BE94206cA50bb0d90783181662f0Cfa10",
-    "pangolin_v1": "0xE54Ca86531e17Ef3616d22Ca28b0D458b6C89106",
+    "pancakeswap_v2": "0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73",
+    "biswap_v2": "0x858E3312ed3A876947EA49d572A7C42DE08af7EE",
+    "apeswap_v2": "0x0841BD0B734E4F5853f0dD8d7EA041c241fb0Da6",
 }
 
 # BSC testnet factories for live grant/demo monitoring.

@@ -5,8 +5,7 @@ security tooling stack for BNB Chain builders.
 
 ## What Changed
 
-- Live BNB Chain builder API is online:
-  `https://rugbuster-api-production.up.railway.app`
+- Dedicated BNB Chain builder API is prepared for Railway deployment.
 - Public cache score endpoint:
   `GET /score?address=0x...`
 - Protected deep scan endpoint:
@@ -37,9 +36,9 @@ users interact with dangerous contracts.
 - Reviewer authorization and wallet-published reports work on mainnet.
 - Telegram alerts work.
 - Wallet portfolio scan works.
-- BNB collector is running on Railway.
-- Public API health endpoint confirms database connectivity and classifier
-  version.
+- BNB collector is ready for a dedicated Railway worker deployment.
+- Public API health endpoint will confirm database connectivity and classifier
+  version after the dedicated BNB Railway service is deployed.
 
 Health response currently reports:
 

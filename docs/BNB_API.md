@@ -3,7 +3,7 @@
 Live API:
 
 ```txt
-https://rugbuster-api-production.up.railway.app
+Pending dedicated BNB Railway deploy
 ```
 
 RugBuster BNB exposes a cache-first BNB Chain risk API for wallets,
@@ -14,13 +14,13 @@ access stays protected to control cost and prevent dataset scraping.
 ## Public Endpoints
 
 ```bash
-curl https://rugbuster-api-production.up.railway.app/
-curl https://rugbuster-api-production.up.railway.app/health
-curl "https://rugbuster-api-production.up.railway.app/score?address=0x2ce7788de3a177f8be43df6376a8513ef9182032"
+curl https://<bnb-railway-url>/
+curl https://<bnb-railway-url>/health
+curl "https://<bnb-railway-url>/score?address=0x55d398326f99059ff775485246999027b3197955"
 ```
 
-`GET /score?address=0x...` returns the latest cached score for an BNB Chain
-BNB Smart Chain token if the collector has evidence for it.
+`GET /score?address=0x...` returns the latest cached score for a BNB Smart
+Chain token if the collector has evidence for it.
 
 Example response shape:
 
@@ -39,7 +39,7 @@ Example response shape:
 ```bash
 curl \
   -H "X-API-Key: <partner_or_internal_key>" \
-  "https://rugbuster-api-production.up.railway.app/scan?address=0x..."
+  "https://<bnb-railway-url>/scan?address=0x..."
 ```
 
 `GET /scan?address=0x...` is protected because it can perform deeper scoring
