@@ -1387,7 +1387,7 @@
     <div>
       <div class="section-label">// live threat scanner</div>
       <h2 class="section-title">Scan Any<br><span>Token Now</span></h2>
-      <p class="section-desc" style="margin-bottom:32px;">Paste any BNB or BNB Chain token address. Our engine analyzes live chain and market signals in real-time.</p>
+      <p class="section-desc" style="margin-bottom:32px;">Paste any BNB Chain token address. Our engine analyzes live chain and market signals in real-time.</p>
 
       <!-- INPUT -->
       <div style="margin-bottom:16px;">
@@ -1408,7 +1408,7 @@
           <input
             id="scanInput"
             type="text"
-            placeholder="Paste token address (BNB / BNB Chain)..."
+            placeholder="Paste token address (BNB Chain)..."
             style="
               flex:1;
               background:transparent;
@@ -1538,7 +1538,7 @@
       </div>
       <div class="terminal-body" id="terminalBody" style="min-height:320px;max-height:420px;overflow-y:auto;">
         <div><span class="t-prompt">RB&gt;</span> <span class="t-out">System ready. Awaiting target address...</span></div>
-        <div><span class="t-out">// Paste an BNB or BNB Chain 0x address and hit SCAN</span></div>
+        <div><span class="t-out">// Paste a BNB Chain 0x address and hit SCAN</span></div>
         <div><span class="t-out">// Powered by RugBuster API + BNB Chain live market data</span></div>
         <div><span class="t-pink">// ENGINE: RUGBUSTER BNB v1.0 — ONLINE</span></div>
         <div>&nbsp;</div>
@@ -1560,7 +1560,7 @@
       <div class="cia-node">
         <div class="cia-node-label">Target Token</div>
         <div class="cia-node-main" id="ciaTargetName">Awaiting target</div>
-        <div class="cia-node-sub" id="ciaTargetAddress">Paste an BNB Chain address and start scan.</div>
+        <div class="cia-node-sub" id="ciaTargetAddress">Paste a BNB Chain address and start scan.</div>
       </div>
 
       <div class="cia-module-stack" id="ciaModuleStack">
@@ -1655,7 +1655,7 @@
 
     <div id="portfolioList" style="display:none;"></div>
     <div id="portfolioEmpty" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.9;border:1px solid rgba(0,245,255,0.08);background:rgba(0,245,255,0.03);padding:18px 20px;">
-      Connect an BNB Chain wallet and we will pull your token balances, score each asset with the Rug Engine, and flag suspicious positions without guessing market data.
+      Connect a BNB Chain wallet and we will pull your token balances, score each asset with the Rug Engine, and flag suspicious positions without guessing market data.
     </div>
   </div>
 
@@ -1716,7 +1716,7 @@
     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:18px;">
       <a href="https://rugbuster-api-production.up.railway.app" target="_blank" rel="noopener" class="btn-secondary" style="font-size:11px;padding:12px 24px;">Open API</a>
       <a href="https://github.com/rugbusteraipatrol/RugBuster-BNB/blob/main/docs/BNB_API.md" target="_blank" rel="noopener" class="btn-secondary" style="font-size:11px;padding:12px 24px;">API Docs</a>
-      <a href="https://github.com/rugbusteraipatrol/RugBuster-BNB/blob/main/docs/BNB_SECURITY_ROADMAP.md" target="_blank" rel="noopener" class="btn-secondary" style="font-size:11px;padding:12px 24px;">L1 Roadmap</a>
+      <a href="https://github.com/rugbusteraipatrol/RugBuster-BNB/blob/main/docs/BNB_SECURITY_ROADMAP.md" target="_blank" rel="noopener" class="btn-secondary" style="font-size:11px;padding:12px 24px;">Roadmap</a>
       <a href="https://github.com/rugbusteraipatrol/RugBuster-BNB/blob/main/docs/BNB_GRANT_UPDATE_2026-06-05.md" target="_blank" rel="noopener" class="btn-secondary" style="font-size:11px;padding:12px 24px;">BNB Grant Update</a>
     </div>
   </div>
@@ -1922,7 +1922,7 @@
   <p class="cta-sub">Use RugBuster BNB for token risk lookups, reviewer attestations, and Sentinel-ready monitoring.</p>
   <div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap;">
     <a href="#api" class="btn-primary">Test Builder API</a>
-    <a href="https://github.com/rugbusteraipatrol/RugBuster-BNB/blob/main/docs/BNB_SECURITY_ROADMAP.md" target="_blank" rel="noopener" class="btn-secondary">View L1 Roadmap</a>
+    <a href="https://github.com/rugbusteraipatrol/RugBuster-BNB/blob/main/docs/BNB_SECURITY_ROADMAP.md" target="_blank" rel="noopener" class="btn-secondary">View Roadmap</a>
   </div>
 </div>
 
@@ -1987,7 +1987,7 @@
       btn.onclick = connectWallet;
 
       if (scanInput && !scanInput.value) {
-        scanInput.placeholder = 'Paste token address (BNB / BNB Chain)...';
+        scanInput.placeholder = 'Paste token address (BNB Chain)...';
       }
     }
   }
@@ -2899,7 +2899,7 @@
       tokenName: `${score.token_name || 'Cached BNB Chain Token'}${score.token_symbol ? ` (${score.token_symbol})` : ''}`,
       tokenImage: null,
       dexId: 'RUGBUSTER CACHE',
-      pairLabel: 'BNB CHAIN / CACHED SCORE',
+      pairLabel: 'BNB / CACHED SCORE',
       liquidityUsd: null,
       fdv: null,
       marketCap: null,
@@ -3282,7 +3282,7 @@
   function resetCiaFlow() {
     setCiaStatus('IDLE');
     document.getElementById('ciaTargetName').textContent = 'Awaiting target';
-    document.getElementById('ciaTargetAddress').textContent = 'Paste an BNB Chain address and start scan.';
+    document.getElementById('ciaTargetAddress').textContent = 'Paste a BNB Chain address and start scan.';
     document.getElementById('ciaFinalVerdict').textContent = 'Not analyzed';
     document.getElementById('ciaFinalScore').textContent = 'Rug and speculation scores will appear here.';
     const finalNode = document.getElementById('ciaFinalNode');
@@ -3398,7 +3398,7 @@
 
     if (!isBNB) {
       termLine(`<span class="t-prompt">RB&gt;</span> <span class="t-danger">Unsupported address format</span>`);
-      termLine(`<span class="t-out">// Use an BNB / BNB Chain 0x token address.</span>`);
+      termLine(`<span class="t-out">// Use a BNB Chain 0x token address.</span>`);
       termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
       setCiaStatus('UNSUPPORTED', 'danger');
       return;
@@ -3418,7 +3418,7 @@
       apexData = await fetchBNBScan(address);
     } catch (err) {
       await termLineDelay(`<span class="t-danger">✗ SCAN FAILED: ${err.message}</span>`, 400);
-      await termLineDelay(`<span class="t-out">// Ensure this is an BNB Chain token address with live liquidity.</span>`, 200);
+      await termLineDelay(`<span class="t-out">// Ensure this is a BNB Chain token address with live liquidity.</span>`, 200);
       termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
       setCiaStatus('SCAN FAILED', 'danger');
       return;
@@ -3580,7 +3580,7 @@
 
     try {
       if (!walletConnected || connectedProvider !== 'evm' || !window.ethereum) {
-        throw new Error('Connect an BNB Chain wallet before publishing');
+        throw new Error('Connect a BNB Chain wallet before publishing');
       }
 
       const { signer, contract } = await getRegistryContractWithSigner();
