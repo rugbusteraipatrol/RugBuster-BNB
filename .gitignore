@@ -1,0 +1,8 @@
+.env
+*.pyc
+__pycache__/
+*.jsonl
+*.log
+bnb_scan_log.md
+bnb_collector_state.json
+.railway/
