@@ -1,8 +1,34 @@
+# Secrets
 .env
-*.pyc
-__pycache__/
-*.jsonl
-*.log
-bnb_scan_log.md
+*.key
+*.pem
+
+# Local data outputs
+data/*.csv
+data/*.jsonl
+!data/.gitkeep
 bnb_collector_state.json
-.railway/
+bnb_scan_log.md
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Solidity / tooling
+cache/
+out/
+artifacts/
+typechain-types/
+node_modules/
+.npm-cache/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

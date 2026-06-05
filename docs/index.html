@@ -1,0 +1,3648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RugBuster BNB — BNB Chain Security Scanner</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --neon-cyan: #00f5ff;
+    --neon-pink: #ff00c8;
+    --neon-green: #00ff88;
+    --neon-orange: #ff6b00;
+    --dark-bg: #050811;
+    --dark-panel: #0a0f1e;
+    --dark-card: #0d1527;
+    --grid-line: rgba(0, 245, 255, 0.06);
+    --text-primary: #e8f4ff;
+    --text-muted: #5a7a9a;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--dark-bg);
+    color: var(--text-primary);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 17px;
+    line-height: 1.6;
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+
+  /* GRID BACKGROUND */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* SCANLINE OVERLAY */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .z1 { position: relative; z-index: 2; }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 48px;
+    background: rgba(5, 8, 17, 0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0, 245, 255, 0.15);
+  }
+
+  .logo {
+    font-family: 'Orbitron', monospace;
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 20px rgba(0, 245, 255, 0.7), 0 0 60px rgba(0, 245, 255, 0.3);
+    letter-spacing: 3px;
+    text-decoration: none;
+  }
+
+  .logo span { color: var(--neon-pink); text-shadow: 0 0 20px rgba(255,0,200,0.7); }
+
+  nav ul {
+    display: flex;
+    gap: 36px;
+    list-style: none;
+  }
+
+  nav a {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    color: var(--text-muted);
+    text-decoration: none;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: color 0.2s, text-shadow 0.2s;
+  }
+
+  nav a:hover {
+    color: var(--neon-cyan);
+    text-shadow: 0 0 10px rgba(0, 245, 255, 0.6);
+  }
+
+  .nav-cta {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--neon-pink) !important;
+    border: 1px solid var(--neon-pink);
+    padding: 8px 20px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: all 0.2s !important;
+    text-shadow: 0 0 8px rgba(255,0,200,0.4) !important;
+  }
+
+  .nav-cta:hover {
+    background: var(--neon-pink);
+    color: var(--dark-bg) !important;
+    text-shadow: none !important;
+    box-shadow: 0 0 30px rgba(255,0,200,0.5);
+  }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 120px 48px 80px;
+    position: relative;
+  }
+
+  .hero-eyebrow {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 6px;
+    color: var(--neon-green);
+    text-shadow: 0 0 10px rgba(0,255,136,0.6);
+    margin-bottom: 24px;
+    animation: pulse-glow 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  .hero-title {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(52px, 8vw, 96px);
+    font-weight: 900;
+    line-height: 0.95;
+    margin-bottom: 8px;
+    letter-spacing: -2px;
+  }
+
+  .hero-title .line1 {
+    display: block;
+    color: var(--text-primary);
+    text-shadow: 0 0 40px rgba(232,244,255,0.2);
+    animation: glitch 8s infinite;
+  }
+
+  .hero-title .line2 {
+    display: block;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 30px rgba(0, 245, 255, 0.8), 0 0 80px rgba(0, 245, 255, 0.4);
+  }
+
+  @keyframes glitch {
+    0%, 90%, 100% { transform: translate(0); clip-path: none; }
+    91% { transform: translate(-3px, 1px); }
+    92% { transform: translate(3px, -1px); clip-path: inset(20% 0 30% 0); }
+    93% { transform: translate(0); clip-path: none; }
+    94% { transform: translate(2px, 2px); }
+    95% { transform: translate(0); }
+  }
+
+  .hero-sub {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(16px, 2.5vw, 22px);
+    font-weight: 300;
+    color: var(--text-muted);
+    max-width: 600px;
+    margin: 24px auto 48px;
+    letter-spacing: 1px;
+    line-height: 1.7;
+  }
+
+  .hero-sub strong {
+    color: var(--neon-pink);
+    font-weight: 600;
+  }
+
+  .hero-buttons {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 16px 40px;
+    background: var(--neon-cyan);
+    color: var(--dark-bg);
+    border: none;
+    cursor: pointer;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+    box-shadow: 0 0 30px rgba(0, 245, 255, 0.4), 0 0 80px rgba(0, 245, 255, 0.1);
+  }
+
+  .btn-primary:hover {
+    background: #fff;
+    box-shadow: 0 0 50px rgba(0, 245, 255, 0.8), 0 0 120px rgba(0, 245, 255, 0.3);
+    transform: translateY(-2px);
+  }
+
+  .btn-secondary {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 15px 40px;
+    background: transparent;
+    color: var(--neon-pink);
+    border: 1px solid var(--neon-pink);
+    cursor: pointer;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+    text-shadow: 0 0 10px rgba(255,0,200,0.5);
+  }
+
+  .btn-secondary:hover {
+    background: rgba(255,0,200,0.1);
+    box-shadow: 0 0 30px rgba(255,0,200,0.4);
+    transform: translateY(-2px);
+  }
+
+  /* STATS BAR */
+  .stats-bar {
+    background: var(--dark-panel);
+    border-top: 1px solid rgba(0, 245, 255, 0.1);
+    border-bottom: 1px solid rgba(0, 245, 255, 0.1);
+    padding: 28px 48px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+  }
+
+  .stat-item {
+    text-align: center;
+    padding: 12px 24px;
+    border-right: 1px solid rgba(0, 245, 255, 0.08);
+  }
+
+  .stat-item:last-child { border-right: none; }
+
+  .stat-number {
+    font-family: 'Orbitron', monospace;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 20px rgba(0, 245, 255, 0.6);
+    display: block;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .stat-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  /* SECTION */
+  section {
+    padding: 100px 48px;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 5px;
+    color: var(--neon-pink);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    text-shadow: 0 0 8px rgba(255,0,200,0.4);
+  }
+
+  .section-title {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 20px;
+    color: var(--text-primary);
+  }
+
+  .section-title span { color: var(--neon-cyan); text-shadow: 0 0 20px rgba(0,245,255,0.5); }
+
+  .section-desc {
+    font-size: 17px;
+    color: var(--text-muted);
+    max-width: 560px;
+    line-height: 1.8;
+    font-weight: 300;
+  }
+
+  /* FEATURES */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    margin-top: 64px;
+    border: 1px solid rgba(0, 245, 255, 0.08);
+  }
+
+  .feature-card {
+    background: var(--dark-card);
+    padding: 40px 36px;
+    border: 1px solid rgba(0, 245, 255, 0.06);
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .feature-card:hover::before { opacity: 1; }
+
+  .feature-card:hover {
+    background: rgba(0, 245, 255, 0.03);
+    border-color: rgba(0, 245, 255, 0.2);
+    transform: translateY(-4px);
+  }
+
+  .feature-icon {
+    width: 52px;
+    height: 52px;
+    border: 1px solid rgba(0, 245, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+    font-size: 22px;
+    clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+    background: rgba(0, 245, 255, 0.05);
+  }
+
+  .feature-card.pink .feature-icon {
+    border-color: rgba(255, 0, 200, 0.3);
+    background: rgba(255, 0, 200, 0.05);
+  }
+
+  .feature-card.green .feature-icon {
+    border-color: rgba(0, 255, 136, 0.3);
+    background: rgba(0, 255, 136, 0.05);
+  }
+
+  .feature-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+
+  .feature-desc {
+    font-size: 15px;
+    color: var(--text-muted);
+    line-height: 1.8;
+    font-weight: 300;
+  }
+
+  /* TERMINAL */
+  .terminal-section {
+    background: var(--dark-panel);
+    border-top: 1px solid rgba(0, 245, 255, 0.08);
+    border-bottom: 1px solid rgba(0, 245, 255, 0.08);
+    padding: 100px 48px;
+  }
+
+  .terminal-wrap {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: center;
+  }
+
+  .monitor-panel {
+    max-width: 1280px;
+    margin: 28px auto 0;
+    border: 1px solid rgba(0,245,255,0.14);
+    background: rgba(10,15,30,0.82);
+    padding: 22px 22px 18px;
+    box-shadow: inset 0 0 24px rgba(0,245,255,0.03);
+  }
+
+  .monitor-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .monitor-card {
+    border: 1px solid rgba(0,245,255,0.1);
+    padding: 14px 16px;
+    background: rgba(0,245,255,0.03);
+  }
+
+  .cia-flow-panel {
+    max-width: 1280px;
+    margin: 28px auto 0;
+    border: 1px solid rgba(0,245,255,0.16);
+    background:
+      linear-gradient(90deg, rgba(0,245,255,0.035) 1px, transparent 1px),
+      linear-gradient(0deg, rgba(0,245,255,0.028) 1px, transparent 1px),
+      rgba(7,12,24,0.9);
+    background-size: 44px 44px;
+    padding: 22px;
+    box-shadow: inset 0 0 34px rgba(0,245,255,0.035);
+    overflow: hidden;
+  }
+
+  .cia-flow-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 18px;
+  }
+
+  .cia-flow-kicker {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--neon-pink);
+    letter-spacing: 3px;
+  }
+
+  .cia-flow-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 16px;
+    color: var(--text-primary);
+    margin-top: 6px;
+  }
+
+  .cia-flow-state {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 3px;
+    text-align: right;
+  }
+
+  .cia-flow-state.scanning { color: var(--neon-pink); }
+  .cia-flow-state.complete { color: var(--neon-green); }
+  .cia-flow-state.warn { color: var(--neon-orange); }
+  .cia-flow-state.danger { color: #ff3d3d; }
+
+  .cia-flow-grid {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.7fr) minmax(300px, 1.35fr) minmax(90px, 0.25fr) minmax(190px, 0.75fr);
+    gap: 18px;
+    align-items: center;
+  }
+
+  .cia-node {
+    border: 1px solid rgba(0,245,255,0.18);
+    background: rgba(0,245,255,0.04);
+    padding: 16px;
+    min-height: 92px;
+    position: relative;
+    box-shadow: inset 0 0 24px rgba(0,245,255,0.025);
+  }
+
+  .cia-node-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--text-muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .cia-node-main {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    color: var(--text-primary);
+    line-height: 1.45;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .cia-node-sub {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    line-height: 1.55;
+    margin-top: 8px;
+    word-break: break-all;
+  }
+
+  .cia-module-stack {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    position: relative;
+  }
+
+  .cia-module-node {
+    border: 1px solid rgba(0,245,255,0.12);
+    background: rgba(0,245,255,0.03);
+    min-height: 78px;
+    padding: 12px 12px 10px;
+    position: relative;
+    transition: border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
+  }
+
+  .cia-module-node::before {
+    content: "";
+    position: absolute;
+    left: -5px;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    transform: translateY(-50%);
+    background: rgba(0,245,255,0.25);
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(0,245,255,0.2);
+  }
+
+  .cia-module-node.active {
+    border-color: rgba(255,0,200,0.72);
+    background: rgba(255,0,200,0.055);
+    box-shadow: 0 0 22px rgba(255,0,200,0.14);
+  }
+
+  .cia-module-node.active::before {
+    background: var(--neon-pink);
+    box-shadow: 0 0 18px rgba(255,0,200,0.85);
+    animation: pulse-glow 0.9s ease-in-out infinite;
+  }
+
+  .cia-module-node.complete {
+    border-color: rgba(0,255,136,0.52);
+    background: rgba(0,255,136,0.045);
+    box-shadow: 0 0 20px rgba(0,255,136,0.08);
+  }
+
+  .cia-module-node.complete::before {
+    background: var(--neon-green);
+    box-shadow: 0 0 16px rgba(0,255,136,0.8);
+  }
+
+  .cia-module-node.warn {
+    border-color: rgba(255,107,0,0.62);
+    background: rgba(255,107,0,0.045);
+  }
+
+  .cia-module-name {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .cia-module-detail {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    line-height: 1.45;
+    min-height: 28px;
+  }
+
+  .cia-link-stage {
+    position: relative;
+    height: 100%;
+    min-height: 252px;
+    overflow: hidden;
+  }
+
+  .cia-link {
+    position: absolute;
+    height: 1px;
+    left: 0;
+    right: 0;
+    top: 50%;
+    background: linear-gradient(90deg, rgba(0,245,255,0.05), rgba(255,0,200,0.55), rgba(0,255,136,0.18));
+  }
+
+  .cia-link::after {
+    content: "";
+    position: absolute;
+    top: -3px;
+    left: 0;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--neon-cyan);
+    box-shadow: 0 0 18px rgba(0,245,255,0.9);
+    animation: ciaTrace 2.3s linear infinite;
+  }
+
+  .cia-link:nth-child(1) { top: 18%; transform: rotate(7deg); }
+  .cia-link:nth-child(2) { top: 34%; transform: rotate(2deg); }
+  .cia-link:nth-child(3) { top: 50%; transform: rotate(-1deg); }
+  .cia-link:nth-child(4) { top: 66%; transform: rotate(-4deg); }
+  .cia-link:nth-child(5) { top: 82%; transform: rotate(-8deg); }
+
+  .cia-final-node.complete {
+    border-color: rgba(0,255,136,0.62);
+    box-shadow: 0 0 28px rgba(0,255,136,0.14), inset 0 0 30px rgba(0,255,136,0.035);
+  }
+
+  .cia-final-node.warn {
+    border-color: rgba(255,107,0,0.7);
+    box-shadow: 0 0 28px rgba(255,107,0,0.12), inset 0 0 30px rgba(255,107,0,0.035);
+  }
+
+  .cia-final-node.danger {
+    border-color: rgba(255,61,61,0.8);
+    box-shadow: 0 0 34px rgba(255,61,61,0.18), inset 0 0 30px rgba(255,61,61,0.04);
+  }
+
+  @keyframes ciaTrace {
+    from { transform: translateX(0); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    to { transform: translateX(96px); opacity: 0; }
+  }
+
+  .portfolio-panel {
+    max-width: 1280px;
+    margin: 28px auto 0;
+    border: 1px solid rgba(0,245,255,0.14);
+    background: rgba(10,15,30,0.82);
+    padding: 22px;
+    box-shadow: inset 0 0 24px rgba(0,245,255,0.03);
+  }
+
+  .portfolio-panel.alert {
+    border-color: rgba(255,61,61,0.5);
+    box-shadow: inset 0 0 24px rgba(255,61,61,0.05), 0 0 28px rgba(255,61,61,0.08);
+  }
+
+  .portfolio-row {
+    display: grid;
+    grid-template-columns: minmax(220px, 1.2fr) minmax(120px, 0.7fr) minmax(120px, 0.7fr) minmax(150px, 0.8fr) minmax(150px, 0.8fr);
+    gap: 12px;
+    align-items: center;
+    padding: 14px 16px;
+    border: 1px solid rgba(0,245,255,0.08);
+    background: rgba(0,245,255,0.03);
+  }
+
+  .portfolio-row + .portfolio-row {
+    margin-top: 10px;
+  }
+
+  .portfolio-row.risk {
+    border-color: rgba(255,61,61,0.35);
+    background: rgba(255,61,61,0.06);
+  }
+
+  .portfolio-row.warn {
+    border-color: rgba(255,153,0,0.28);
+    background: rgba(255,153,0,0.05);
+  }
+
+  .terminal {
+    background: #020408;
+    border: 1px solid rgba(0, 245, 255, 0.2);
+    padding: 0;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    box-shadow: 0 0 60px rgba(0, 245, 255, 0.08), inset 0 0 30px rgba(0, 245, 255, 0.02);
+  }
+
+  .terminal-bar {
+    background: rgba(0, 245, 255, 0.05);
+    border-bottom: 1px solid rgba(0, 245, 255, 0.15);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .t-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+
+  .t-dot.r { background: #ff5f57; }
+  .t-dot.y { background: #febc2e; }
+  .t-dot.g { background: #28c840; }
+
+  .terminal-title {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 2px;
+    margin-left: 8px;
+  }
+
+  .terminal-body {
+    padding: 24px;
+    line-height: 2;
+  }
+
+  .t-prompt { color: var(--neon-green); }
+  .t-cmd { color: var(--text-primary); }
+  .t-out { color: var(--text-muted); }
+  .t-warn { color: var(--neon-orange); }
+  .t-danger { color: #ff3d3d; }
+  .t-success { color: var(--neon-green); }
+  .t-cyan { color: var(--neon-cyan); }
+  .t-pink { color: var(--neon-pink); }
+
+  .cursor {
+    display: inline-block;
+    width: 9px;
+    height: 15px;
+    background: var(--neon-cyan);
+    animation: blink 1s step-end infinite;
+    vertical-align: middle;
+    margin-left: 2px;
+  }
+
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+  /* PRICING */
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-top: 64px;
+  }
+
+  .pricing-card {
+    background: var(--dark-card);
+    border: 1px solid rgba(0, 245, 255, 0.08);
+    padding: 40px 32px;
+    position: relative;
+    transition: all 0.3s;
+    clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+  }
+
+  .pricing-card.featured {
+    border-color: rgba(0, 245, 255, 0.4);
+    background: rgba(0, 245, 255, 0.03);
+    box-shadow: 0 0 60px rgba(0, 245, 255, 0.08);
+  }
+
+  .pricing-card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(0, 245, 255, 0.3);
+  }
+
+  .featured-badge {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--dark-bg);
+    background: var(--neon-cyan);
+    padding: 4px 14px;
+    text-transform: uppercase;
+    display: inline-block;
+    margin-bottom: 24px;
+  }
+
+  .price-tier {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 4px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .price-amount {
+    font-family: 'Orbitron', monospace;
+    font-size: 52px;
+    font-weight: 900;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 30px rgba(0,245,255,0.5);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .price-amount sup {
+    font-size: 24px;
+    vertical-align: top;
+    margin-top: 10px;
+    display: inline-block;
+  }
+
+  .price-period {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+    letter-spacing: 2px;
+    margin-bottom: 32px;
+  }
+
+  .price-divider {
+    border: none;
+    border-top: 1px solid rgba(0,245,255,0.08);
+    margin-bottom: 28px;
+  }
+
+  .price-features {
+    list-style: none;
+    margin-bottom: 36px;
+  }
+
+  .price-features li {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    color: var(--text-muted);
+    padding: 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(0,245,255,0.04);
+  }
+
+  .price-features li::before {
+    content: '▸';
+    color: var(--neon-cyan);
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  .price-features li.off { color: rgba(90, 122, 154, 0.4); }
+  .price-features li.off::before { color: rgba(90,122,154,0.3); }
+
+  /* HOW IT WORKS */
+  .how-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    margin-top: 64px;
+    position: relative;
+  }
+
+  .how-grid::before {
+    content: '';
+    position: absolute;
+    top: 42px;
+    left: calc(12.5% + 20px);
+    right: calc(12.5% + 20px);
+    height: 1px;
+    background: linear-gradient(90deg, var(--neon-cyan), var(--neon-pink), var(--neon-cyan));
+    opacity: 0.3;
+  }
+
+  .how-step {
+    padding: 24px;
+    text-align: center;
+  }
+
+  .how-num {
+    width: 56px;
+    height: 56px;
+    border: 1px solid rgba(0, 245, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+    font-family: 'Orbitron', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 15px rgba(0,245,255,0.6);
+    background: var(--dark-bg);
+    clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+    position: relative;
+    z-index: 1;
+  }
+
+  .how-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+  }
+
+  .how-desc {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.7;
+    font-weight: 300;
+  }
+
+  /* CTA FOOTER */
+  .cta-section {
+    background: var(--dark-panel);
+    border-top: 1px solid rgba(0, 245, 255, 0.1);
+    text-align: center;
+    padding: 120px 48px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cta-section::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(0,245,255,0.05) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .cta-title {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(32px, 5vw, 64px);
+    font-weight: 900;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+    line-height: 1;
+  }
+
+  .cta-title span { color: var(--neon-pink); text-shadow: 0 0 30px rgba(255,0,200,0.6); }
+
+  .cta-sub {
+    font-size: 17px;
+    color: var(--text-muted);
+    margin-bottom: 48px;
+    font-weight: 300;
+  }
+
+  /* FOOTER */
+  footer {
+    padding: 40px 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(0, 245, 255, 0.06);
+    background: rgba(5, 8, 17, 0.9);
+  }
+
+  .footer-copy {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 2px;
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+  }
+
+  .footer-links a {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-decoration: none;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+
+  .footer-links a:hover { color: var(--neon-cyan); }
+
+  /* FLOATING DECO */
+  .hex-bg {
+    position: absolute;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: rgba(0, 245, 255, 0.04);
+    pointer-events: none;
+    letter-spacing: 2px;
+    line-height: 2.2;
+    white-space: pre;
+    user-select: none;
+  }
+
+  /* ANIMATE IN */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero-eyebrow { animation: fadeUp 0.6s 0.1s both; }
+  .hero-title { animation: fadeUp 0.7s 0.3s both; }
+  .hero-sub { animation: fadeUp 0.7s 0.5s both; }
+  .hero-buttons { animation: fadeUp 0.7s 0.7s both; }
+
+  /* NOISE overlay */
+  .noise {
+    position: fixed;
+    inset: 0;
+    opacity: 0.025;
+    pointer-events: none;
+    z-index: 3;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-size: 128px;
+  }
+
+  @media (max-width: 900px) {
+    nav { padding: 16px 24px; }
+    nav ul { display: none; }
+    .features-grid { grid-template-columns: 1fr; }
+    .pricing-grid { grid-template-columns: 1fr; }
+    .how-grid { grid-template-columns: 1fr 1fr; }
+    .terminal-wrap { grid-template-columns: 1fr; gap: 40px; }
+    .cia-flow-head { align-items: flex-start; flex-direction: column; }
+    .cia-flow-state { text-align: left; }
+    .cia-flow-grid { grid-template-columns: 1fr; }
+    .cia-module-stack { grid-template-columns: 1fr; }
+    .cia-link-stage { min-height: 34px; }
+    .cia-link { display: none; }
+    .monitor-grid { grid-template-columns: 1fr; }
+    .portfolio-row { grid-template-columns: 1fr; }
+    .stats-bar { grid-template-columns: repeat(2, 1fr); }
+    section { padding: 60px 24px; }
+    .terminal-section { padding: 60px 24px; }
+    footer { flex-direction: column; gap: 20px; text-align: center; }
+    .how-grid::before { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cia-link::after,
+    .cia-module-node.active::before {
+      animation: none;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="noise"></div>
+
+<!-- NAV -->
+<nav class="z1">
+  <a href="#" class="logo">RUG<span>BUSTER</span></a>
+  <ul>
+    <li><a href="#features">Protocol</a></li>
+    <li><a href="#scanner">Scanner</a></li>
+    <li><a href="#api">API</a></li>
+    <li><a href="#how">How</a></li>
+    <li><a href="#pricing">Access</a></li>
+    <li><a href="#scanner" class="nav-cta">Scan Now</a></li>
+    <li>
+      <button id="walletBtn" onclick="connectWallet()" style="
+        font-family:'Share Tech Mono',monospace;
+        font-size:12px;
+        letter-spacing:2px;
+        padding:8px 20px;
+        background:transparent;
+        border:1px solid var(--neon-green);
+        color:var(--neon-green);
+        cursor:crosshair;
+        text-transform:uppercase;
+        transition:all 0.2s;
+        text-shadow:0 0 8px rgba(0,255,136,0.4);
+        display:flex;align-items:center;gap:8px;
+      " onmouseover="this.style.background='rgba(0,255,136,0.1)'" onmouseout="if(!walletConnected)this.style.background='transparent'">
+        <span style="font-size:16px;">🦊</span>
+        <span id="walletBtnText">Connect BNB Wallet</span>
+      </button>
+    </li>
+  </ul>
+</nav>
+
+<!-- WALLET MODAL -->
+<div id="walletModal" style="
+  display:none;
+  position:fixed;inset:0;
+  background:rgba(5,8,17,0.92);
+  z-index:999;
+  align-items:center;
+  justify-content:center;
+">
+  <div style="
+    border:1px solid rgba(0,245,255,0.3);
+    background:var(--dark-card);
+    padding:48px;
+    max-width:460px;width:90%;
+    text-align:center;
+    box-shadow:0 0 80px rgba(0,245,255,0.08);
+    position:relative;
+  ">
+    <button onclick="closeWalletModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;color:var(--text-muted);font-size:20px;cursor:crosshair;">✕</button>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:4px;color:var(--neon-cyan);margin-bottom:24px;">// SELECT BNB WALLET</div>
+    <div id="walletModalBody">
+      <!-- metamask option -->
+      <div onclick="connectMetaMask()" style="
+        border:1px solid rgba(0,245,255,0.15);
+        padding:20px 24px;
+        margin-bottom:12px;
+        cursor:crosshair;
+        display:flex;align-items:center;gap:16px;
+        transition:all 0.2s;
+        background:rgba(0,245,255,0.02);
+      " onmouseover="this.style.borderColor='rgba(0,245,255,0.5)';this.style.background='rgba(0,245,255,0.05)'"
+         onmouseout="this.style.borderColor='rgba(0,245,255,0.15)';this.style.background='rgba(0,245,255,0.02)'">
+        <span style="font-size:32px;">🦊</span>
+        <div style="text-align:left;">
+          <div style="font-family:'Orbitron',monospace;font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">MetaMask</div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);">BNB Smart Chain / EVM wallet</div>
+        </div>
+        <div style="margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--neon-green);letter-spacing:2px;">RECOMMENDED</div>
+      </div>
+      <div style="
+        border:1px solid rgba(255,255,255,0.08);
+        padding:20px 24px;
+        display:flex;align-items:center;gap:16px;
+        background:rgba(255,255,255,0.01);
+      ">
+        <span style="font-size:32px;">🔗</span>
+        <div style="text-align:left;">
+          <div style="font-family:'Orbitron',monospace;font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">Any EVM Wallet</div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);">Core, Rabby, Brave, or other injected wallets</div>
+        </div>
+        <div style="margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:2px;">SUPPORTED</div>
+      </div>
+      <div style="margin-top:18px;font-family:'Share Tech Mono',monospace;font-size:11px;line-height:1.8;color:var(--text-muted);text-align:left;">
+        Portfolio scan uses your connected BNB Chain wallet.<br>
+        <span style="color:var(--neon-cyan);">PUBLISH REPORT</span> requires an authorized reviewer wallet.<br>
+        Each module write is confirmed in your wallet and burns BNB from that wallet.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAYMENT MODAL -->
+<div id="paymentModal" style="
+  display:none;
+  position:fixed;inset:0;
+  background:rgba(5,8,17,0.95);
+  z-index:1000;
+  align-items:center;
+  justify-content:center;
+">
+  <div style="
+    border:1px solid rgba(255,0,200,0.3);
+    background:var(--dark-card);
+    padding:48px;
+    max-width:500px;width:90%;
+    text-align:center;
+    box-shadow:0 0 80px rgba(255,0,200,0.08);
+    position:relative;
+  ">
+    <button onclick="closePaymentModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;color:var(--text-muted);font-size:20px;cursor:crosshair;">✕</button>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:4px;color:var(--neon-pink);margin-bottom:8px;">// ACTIVATE PLAN</div>
+    <div id="payPlanName" style="font-family:'Orbitron',monospace;font-size:28px;font-weight:900;color:var(--text-primary);margin-bottom:4px;"></div>
+    <div id="payPlanPrice" style="font-family:'Orbitron',monospace;font-size:48px;font-weight:900;color:var(--neon-pink);text-shadow:0 0 30px rgba(255,0,200,0.5);margin-bottom:32px;"></div>
+
+    <div style="font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--text-muted);margin-bottom:16px;">SELECT CURRENCY</div>
+    <div style="display:flex;gap:12px;margin-bottom:32px;">
+      <div id="paySOL" onclick="selectCurrency('SOL')" style="
+        flex:1;border:1px solid rgba(0,245,255,0.4);padding:16px;cursor:crosshair;
+        background:rgba(0,245,255,0.05);transition:all 0.2s;
+      ">
+        <div style="font-size:24px;margin-bottom:6px;">◎</div>
+        <div style="font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:var(--neon-cyan);">SOL</div>
+        <div id="solAmount" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);margin-top:4px;"></div>
+      </div>
+      <div id="payUSDC" onclick="selectCurrency('USDC')" style="
+        flex:1;border:1px solid rgba(255,255,255,0.08);padding:16px;cursor:crosshair;
+        background:transparent;transition:all 0.2s;
+      ">
+        <div style="font-size:24px;margin-bottom:6px;">💵</div>
+        <div style="font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:var(--text-primary);">USDC</div>
+        <div id="usdcAmount" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);margin-top:4px;"></div>
+      </div>
+    </div>
+
+    <div id="walletPayInfo" style="
+      border:1px solid rgba(0,245,255,0.1);
+      padding:12px 16px;
+      margin-bottom:24px;
+      font-family:'Share Tech Mono',monospace;
+      font-size:11px;
+      color:var(--text-muted);
+      letter-spacing:1px;
+      display:none;
+    ">
+      <span style="color:var(--neon-cyan);">FROM:</span> <span id="payFromAddr"></span>
+    </div>
+
+    <button id="payBtn" onclick="simulatePayment()" style="
+      width:100%;
+      font-family:'Orbitron',monospace;
+      font-size:13px;font-weight:700;
+      letter-spacing:3px;padding:16px;
+      background:var(--neon-pink);color:var(--dark-bg);
+      border:none;cursor:crosshair;
+      box-shadow:0 0 30px rgba(255,0,200,0.4);
+      transition:all 0.2s;
+    ">⚡ CONFIRM PAYMENT</button>
+    <div id="connectFirst" style="display:none;margin-top:12px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-orange);">
+      ⚠ Connect your wallet first to proceed
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS MODAL -->
+<div id="successModal" style="
+  display:none;
+  position:fixed;inset:0;
+  background:rgba(5,8,17,0.95);
+  z-index:1001;
+  align-items:center;
+  justify-content:center;
+">
+  <div style="
+    border:1px solid rgba(0,255,136,0.4);
+    background:var(--dark-card);
+    padding:56px 48px;
+    max-width:500px;width:90%;
+    text-align:center;
+    box-shadow:0 0 100px rgba(0,255,136,0.12);
+  ">
+    <div style="font-size:56px;margin-bottom:16px;animation:pulse-glow 2s infinite;">🛡️</div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:4px;color:var(--neon-green);margin-bottom:12px;">// ACCESS GRANTED</div>
+    <div id="successPlan" style="font-family:'Orbitron',monospace;font-size:32px;font-weight:900;color:var(--text-primary);margin-bottom:8px;"></div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--text-muted);margin-bottom:32px;line-height:2;">
+      Your wallet has been verified.<br>
+      <span style="color:var(--neon-green);">Full access activated.</span><br>
+      Transaction confirmed on Solana.
+    </div>
+    <div id="successAddr" style="
+      border:1px solid rgba(0,255,136,0.15);
+      padding:12px;margin-bottom:32px;
+      font-family:'Share Tech Mono',monospace;font-size:11px;
+      color:var(--neon-green);letter-spacing:1px;
+    "></div>
+    <button onclick="closeSuccess()" style="
+      font-family:'Orbitron',monospace;font-size:12px;letter-spacing:3px;
+      padding:14px 40px;background:var(--neon-green);color:var(--dark-bg);
+      border:none;cursor:crosshair;font-weight:700;
+    ">ENTER RUGBUSTER</button>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero z1">
+  <div class="hex-bg" style="top:120px;right:80px;opacity:0.4;">
+    0xDEAD 0xBEEF<br>
+    0x4RUG 0xBUST<br>
+    0xFF00 0xC800<br>
+    0x00F5 0xFF00
+  </div>
+  <div class="hex-bg" style="bottom:100px;left:60px;opacity:0.4;">
+    [SCAN] ACTIVE<br>
+    [SNIFF] PORT 443<br>
+    [FLAG] RUG DETECTED<br>
+    [BUST] INITIATED
+  </div>
+
+  <div class="hero-eyebrow">// BNB CHAIN SECURITY TOOLING v2.5</div>
+
+  <h1 class="hero-title">
+    <span class="line1">RUGBUSTER</span>
+    <span class="line2">BNB</span>
+  </h1>
+
+  <p class="hero-sub">
+    BNB Chain token intelligence with a verified mainnet registry, live scanner,
+    private evidence collector, and builder API for <strong>wallets, launchpads,
+    dashboards & future L1 security layers</strong>.
+  </p>
+
+  <div class="hero-buttons">
+    <a href="#scanner" class="btn-primary">Scan BNB Chain Token</a>
+    <a href="#api" class="btn-secondary">View Builder API</a>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-bar z1">
+  <div class="stat-item">
+    <span class="stat-number">6.4K+</span>
+    <span class="stat-label">BNB Scan Records</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-number">LIVE</span>
+    <span class="stat-label">Mainnet Registry</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-number">V2</span>
+    <span class="stat-label">Weighted Classifier</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-number">API</span>
+    <span class="stat-label">Builder Layer Online</span>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features" class="z1">
+  <div class="section-label">// core protocol</div>
+  <h2 class="section-title">Your AI Security<br><span>Strike Force</span></h2>
+  <p class="section-desc">A practical BNB Chain security stack: live scanner, collector evidence, on-chain registry, alerts, portfolio checks, and builder API access.</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🔍</div>
+      <div class="feature-title">Contract Autopsy</div>
+      <p class="feature-desc">BNB Chain token checks combine contract metadata, holder concentration, deployer signals, liquidity evidence, and market structure.</p>
+    </div>
+    <div class="feature-card pink">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">Launch Sniper Intel</div>
+      <p class="feature-desc">BNB collector workers continuously build a private evidence corpus for safer scoring, dashboards, and future model training.</p>
+    </div>
+    <div class="feature-card green">
+      <div class="feature-icon">🛡️</div>
+      <div class="feature-title">Wallet Firewall</div>
+      <p class="feature-desc">Reviewer-authorized wallet publishing writes verified token reports to the BNB Smart Chain registry using the reviewer's own wallet.</p>
+    </div>
+    <div class="feature-card green">
+      <div class="feature-icon">📡</div>
+      <div class="feature-title">Liquidity Radar</div>
+      <p class="feature-desc">Cache-first score lookups give wallets, DEX tools, launchpads, and dashboards a lightweight integration path without exposing raw data.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🤖</div>
+      <div class="feature-title">AI Threat Intel</div>
+      <p class="feature-desc">Our model trained on 50,000+ confirmed rugs. Pattern recognition that evolves daily faster than scammers can adapt.</p>
+    </div>
+    <div class="feature-card pink">
+      <div class="feature-icon">🔔</div>
+      <div class="feature-title">Telegram Alerts</div>
+      <p class="feature-desc">Instant push notifications to your Telegram when threats detected. Configure thresholds, chains, wallets — full control.</p>
+    </div>
+  </div>
+</section>
+
+<!-- WALLET SCANNER SECTION -->
+<div class="terminal-section" id="scanner">
+  <div class="terminal-wrap z1">
+    <div>
+      <div class="section-label">// live threat scanner</div>
+      <h2 class="section-title">Scan Any<br><span>Token Now</span></h2>
+      <p class="section-desc" style="margin-bottom:32px;">Paste any BNB or BNB Chain token address. Our engine analyzes live chain and market signals in real-time.</p>
+
+      <!-- INPUT -->
+      <div style="margin-bottom:16px;">
+        <div style="
+          display:flex;
+          border:1px solid rgba(0,245,255,0.3);
+          background:rgba(0,245,255,0.03);
+          overflow:hidden;
+        ">
+          <span style="
+            font-family:'Share Tech Mono',monospace;
+            font-size:13px;
+            color:var(--neon-cyan);
+            padding:14px 16px;
+            border-right:1px solid rgba(0,245,255,0.2);
+            white-space:nowrap;
+          ">RB&gt;</span>
+          <input
+            id="scanInput"
+            type="text"
+            placeholder="Paste token address (BNB / BNB Chain)..."
+            style="
+              flex:1;
+              background:transparent;
+              border:none;
+              outline:none;
+              font-family:'Share Tech Mono',monospace;
+              font-size:13px;
+              color:var(--text-primary);
+              padding:14px 16px;
+              letter-spacing:1px;
+            "
+          />
+        </div>
+      </div>
+
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <button onclick="runScan()" class="btn-primary" style="font-size:11px;padding:13px 32px;border:none;cursor:crosshair;">
+            ⚡ SCAN TOKEN
+          </button>
+          <button id="authorizeReviewerBtn" onclick="authorizeReviewerWallet()" style="
+            font-family:'Share Tech Mono',monospace;
+            font-size:11px;
+            letter-spacing:2px;
+            padding:12px 20px;
+            background:transparent;
+            border:1px solid rgba(0,245,255,0.22);
+            color:rgba(0,245,255,0.58);
+            cursor:crosshair;
+            transition:all 0.2s;
+          " onmouseover="if(!this.disabled){this.style.color='var(--neon-cyan)'}" onmouseout="if(!this.disabled){this.style.color='rgba(0,245,255,0.58)'}">
+            AUTHORIZE REVIEWER
+          </button>
+          <button id="publishBtn" onclick="publishCurrentReport()" style="
+            font-family:'Share Tech Mono',monospace;
+            font-size:11px;
+            letter-spacing:2px;
+            padding:12px 20px;
+            background:transparent;
+            border:1px solid rgba(255,0,200,0.22);
+            color:rgba(255,0,200,0.58);
+            cursor:crosshair;
+            transition:all 0.2s;
+          " onmouseover="if(!this.disabled){this.style.color='var(--neon-pink)'}" onmouseout="if(!this.disabled){this.style.color='rgba(255,0,200,0.58)'}" disabled>
+            PUBLISH REPORT
+          </button>
+          <button id="sendAlertBtn" onclick="sendTelegramAlert()" style="
+            font-family:'Share Tech Mono',monospace;
+            font-size:11px;
+            letter-spacing:2px;
+            padding:12px 20px;
+            background:transparent;
+            border:1px solid rgba(0,255,136,0.22);
+            color:rgba(0,255,136,0.55);
+            cursor:crosshair;
+            transition:all 0.2s;
+          " onmouseover="if(!this.disabled){this.style.color='var(--neon-green)'}" onmouseout="if(!this.disabled){this.style.color='rgba(0,255,136,0.55)'}" disabled>
+            SEND ALERT
+          </button>
+          <button onclick="loadExample('apex')" style="
+            font-family:'Share Tech Mono',monospace;
+            font-size:11px;
+            letter-spacing:2px;
+            padding:12px 20px;
+          background:transparent;
+          border:1px solid rgba(0,245,255,0.2);
+          color:var(--text-muted);
+          cursor:crosshair;
+          transition:all 0.2s;
+        " onmouseover="this.style.color='var(--neon-cyan)'" onmouseout="this.style.color='var(--text-muted)'">
+          TRY EXAMPLE
+        </button>
+      </div>
+
+      <!-- TOKEN IMAGE -->
+      <div id="tokenImageWrap" style="display:none;margin-top:28px;">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:3px;margin-bottom:10px;">TOKEN</div>
+        <div style="display:flex;align-items:center;gap:16px;">
+          <img id="tokenImage" src="" alt="token" style="
+            width:56px;height:56px;
+            border:1px solid rgba(0,245,255,0.3);
+            background:rgba(0,245,255,0.05);
+            object-fit:cover;
+            clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);
+          "/>
+          <div>
+            <div id="tokenImageName" style="font-family:'Orbitron',monospace;font-size:15px;font-weight:700;color:var(--text-primary);"></div>
+            <div id="tokenImageSymbol" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-cyan);letter-spacing:2px;margin-top:4px;"></div>
+          </div>
+        </div>
+      </div>
+
+        <!-- SCOREBOARD -->
+        <div id="scoreBoard" style="display:none;margin-top:32px;">
+          <div style="display:grid;grid-template-columns:1fr;gap:18px;">
+            <div style="border:1px solid rgba(0,245,255,0.12);padding:16px 16px 14px;background:rgba(0,245,255,0.02);">
+              <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:3px;margin-bottom:10px;">RUG SCORE // ON-CHAIN FACTS</div>
+              <div style="display:flex;align-items:center;gap:16px;">
+                <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);position:relative;overflow:hidden;">
+                  <div id="rugScoreBar" style="height:100%;width:0%;transition:width 1s ease;background:var(--neon-cyan);"></div>
+                </div>
+                <div id="rugScoreValue" style="font-family:'Orbitron',monospace;font-size:24px;font-weight:700;color:var(--neon-cyan);min-width:84px;text-align:right;">UNKNOWN</div>
+              </div>
+              <div id="rugScoreLabel" style="font-family:'Share Tech Mono',monospace;font-size:12px;margin-top:8px;letter-spacing:2px;"></div>
+            </div>
+            <div style="border:1px solid rgba(255,0,200,0.12);padding:16px 16px 14px;background:rgba(255,0,200,0.02);">
+              <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:3px;margin-bottom:10px;">SPECULATION SCORE // MARKET DATA</div>
+              <div style="display:flex;align-items:center;gap:16px;">
+                <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);position:relative;overflow:hidden;">
+                  <div id="specScoreBar" style="height:100%;width:0%;transition:width 1s ease;background:var(--neon-pink);"></div>
+                </div>
+                <div id="specScoreValue" style="font-family:'Orbitron',monospace;font-size:24px;font-weight:700;color:var(--neon-pink);min-width:84px;text-align:right;">UNKNOWN</div>
+              </div>
+              <div id="specScoreLabel" style="font-family:'Share Tech Mono',monospace;font-size:12px;margin-top:8px;letter-spacing:2px;"></div>
+            </div>
+          </div>
+        </div>
+
+    </div>
+
+    <!-- TERMINAL OUTPUT -->
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="t-dot r"></div>
+        <div class="t-dot y"></div>
+        <div class="t-dot g"></div>
+        <span class="terminal-title">RUGBUSTER // THREAT ANALYSIS ENGINE</span>
+      </div>
+      <div class="terminal-body" id="terminalBody" style="min-height:320px;max-height:420px;overflow-y:auto;">
+        <div><span class="t-prompt">RB&gt;</span> <span class="t-out">System ready. Awaiting target address...</span></div>
+        <div><span class="t-out">// Paste an BNB or BNB Chain 0x address and hit SCAN</span></div>
+        <div><span class="t-out">// Powered by RugBuster API + BNB Chain live market data</span></div>
+        <div><span class="t-pink">// ENGINE: RUGBUSTER BNB v1.0 — ONLINE</span></div>
+        <div>&nbsp;</div>
+        <div><span class="t-prompt">RB&gt;</span> <span class="cursor"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cia-flow-panel z1" id="ciaFlowPanel">
+    <div class="cia-flow-head">
+      <div>
+        <div class="cia-flow-kicker">// cia module trace</div>
+        <div class="cia-flow-title">Syndicate CIA Scan Path</div>
+      </div>
+      <div class="cia-flow-state" id="ciaFlowState">IDLE</div>
+    </div>
+
+    <div class="cia-flow-grid">
+      <div class="cia-node">
+        <div class="cia-node-label">Target Token</div>
+        <div class="cia-node-main" id="ciaTargetName">Awaiting target</div>
+        <div class="cia-node-sub" id="ciaTargetAddress">Paste an BNB Chain address and start scan.</div>
+      </div>
+
+      <div class="cia-module-stack" id="ciaModuleStack">
+        <div class="cia-module-node" data-cia-module="funding_origin">
+          <div class="cia-module-name">Funding Origin</div>
+          <div class="cia-module-detail">waiting</div>
+        </div>
+        <div class="cia-module-node" data-cia-module="deploy_latency">
+          <div class="cia-module-name">Deploy Latency</div>
+          <div class="cia-module-detail">waiting</div>
+        </div>
+        <div class="cia-module-node" data-cia-module="tx_entropy">
+          <div class="cia-module-name">TX Entropy</div>
+          <div class="cia-module-detail">waiting</div>
+        </div>
+        <div class="cia-module-node" data-cia-module="wash_pattern">
+          <div class="cia-module-name">Wash Pattern</div>
+          <div class="cia-module-detail">waiting</div>
+        </div>
+        <div class="cia-module-node" data-cia-module="holder_cluster">
+          <div class="cia-module-name">Holder Cluster</div>
+          <div class="cia-module-detail">waiting</div>
+        </div>
+        <div class="cia-module-node" data-cia-module="market_depth">
+          <div class="cia-module-name">Market Depth</div>
+          <div class="cia-module-detail">waiting</div>
+        </div>
+        <div class="cia-module-node" data-cia-module="syndicate_ai">
+          <div class="cia-module-name">Syndicate AI</div>
+          <div class="cia-module-detail">waiting</div>
+        </div>
+      </div>
+
+      <div class="cia-link-stage" aria-hidden="true">
+        <div class="cia-link"></div>
+        <div class="cia-link"></div>
+        <div class="cia-link"></div>
+        <div class="cia-link"></div>
+        <div class="cia-link"></div>
+      </div>
+
+      <div class="cia-node cia-final-node" id="ciaFinalNode">
+        <div class="cia-node-label">Final Scan</div>
+        <div class="cia-node-main" id="ciaFinalVerdict">Not analyzed</div>
+        <div class="cia-node-sub" id="ciaFinalScore">Rug and speculation scores will appear here.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="monitor-panel z1">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+      <div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-pink);letter-spacing:3px;">// live scan feed</div>
+        <div style="font-family:'Orbitron',monospace;font-size:16px;color:var(--text-primary);margin-top:6px;">Recent Chain Scans</div>
+      </div>
+      <div id="recentScanState" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-green);letter-spacing:2px;">SYNCING FEED</div>
+    </div>
+
+    <div id="recentScanList" style="display:grid;grid-template-columns:1fr;gap:8px;">
+      <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.8;border:1px solid rgba(0,245,255,0.08);background:rgba(0,245,255,0.03);padding:14px 16px;">
+        Awaiting recent scanner output.
+      </div>
+    </div>
+  </div>
+
+  <div class="portfolio-panel z1" id="portfolioPanel">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+      <div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-pink);letter-spacing:3px;">// my portfolio scan</div>
+        <div style="font-family:'Orbitron',monospace;font-size:16px;color:var(--text-primary);margin-top:6px;">Wallet Threat Surface</div>
+      </div>
+      <div id="portfolioState" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:2px;">CONNECT A BNB WALLET TO START</div>
+    </div>
+
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
+      <button id="portfolioConnectBtn" onclick="connectBNBWallet()" class="btn-secondary" style="font-size:11px;padding:12px 24px;">CONNECT BNB WALLET</button>
+      <button id="portfolioRefreshBtn" onclick="scanPortfolio()" style="
+        font-family:'Share Tech Mono',monospace;
+        font-size:11px;
+        letter-spacing:2px;
+        padding:12px 20px;
+        background:transparent;
+        border:1px solid rgba(0,245,255,0.2);
+        color:var(--text-muted);
+        cursor:crosshair;
+        transition:all 0.2s;
+      " disabled>REFRESH PORTFOLIO</button>
+      <div id="portfolioWallet" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:1px;"></div>
+    </div>
+
+    <div id="portfolioSummary" style="display:none;margin-bottom:14px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:1px;"></div>
+
+    <div id="portfolioList" style="display:none;"></div>
+    <div id="portfolioEmpty" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.9;border:1px solid rgba(0,245,255,0.08);background:rgba(0,245,255,0.03);padding:18px 20px;">
+      Connect an BNB Chain wallet and we will pull your token balances, score each asset with the Rug Engine, and flag suspicious positions without guessing market data.
+    </div>
+  </div>
+
+  <div class="monitor-panel z1" id="api">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+      <div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-green);letter-spacing:3px;">// bnb grant builder tooling</div>
+        <div style="font-family:'Orbitron',monospace;font-size:16px;color:var(--text-primary);margin-top:6px;">BNB Chain Builder API</div>
+      </div>
+      <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-cyan);letter-spacing:2px;">CACHE SCORE ONLINE</div>
+    </div>
+
+    <div class="monitor-grid">
+      <div class="monitor-card">
+        <div style="font-family:'Orbitron',monospace;font-size:13px;color:var(--text-primary);">Public Score Lookup</div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.8;word-break:break-all;">
+          GET https://rugbuster-api-production.up.railway.app/score?address=0x...
+        </div>
+      </div>
+
+      <div class="monitor-card">
+        <div style="font-family:'Orbitron',monospace;font-size:13px;color:var(--text-primary);">Protected Deep Scan</div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.8;">
+          GET /scan with X-API-Key for internal workers and trusted integrations.
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:18px;border:1px solid rgba(0,245,255,0.12);background:rgba(0,245,255,0.03);padding:18px 20px;">
+      <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-pink);letter-spacing:3px;margin-bottom:12px;">// live cache score demo</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+        <input id="apiScoreInput" value="0x2ce7788de3a177f8be43df6376a8513ef9182032" placeholder="0x token address" style="
+          flex:1;
+          min-width:260px;
+          background:rgba(5,8,17,0.8);
+          border:1px solid rgba(0,245,255,0.22);
+          color:var(--text-primary);
+          padding:13px 14px;
+          font-family:'Share Tech Mono',monospace;
+          font-size:12px;
+          letter-spacing:1px;
+          outline:none;
+        ">
+        <button onclick="fetchBuilderScore()" class="btn-primary" style="font-size:11px;padding:13px 24px;clip-path:none;">Check API Score</button>
+      </div>
+      <div id="apiScoreResult" style="margin-top:14px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.9;">
+        Ready. Example token is cached so reviewers can verify the public endpoint immediately.
+      </div>
+    </div>
+
+    <div style="margin-top:14px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.9;">
+      The API exposes compact BNB Chain risk intelligence from the private collector corpus without publishing raw evidence.
+      Current classifier: <span style="color:var(--neon-cyan);">weighted_v2</span>.
+      Registry proof remains on-chain at
+      <a href="https://bscscan.com/address/0x5F30276B3A5079E088Ec3072884286de5a868355" target="_blank" rel="noopener" style="color:var(--neon-pink);text-decoration:none;">0x5F30276B3A5079E088Ec3072884286de5a868355</a>.
+    </div>
+
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:18px;">
+      <a href="https://rugbuster-api-production.up.railway.app" target="_blank" rel="noopener" class="btn-secondary" style="font-size:11px;padding:12px 24px;">Open API</a>
+      <a href="https://github.com/rugbusteraipatrol/RugBuster-BNB/blob/main/docs/BNB_API.md" target="_blank" rel="noopener" class="btn-secondary" style="font-size:11px;padding:12px 24px;">API Docs</a>
+      <a href="https://github.com/rugbusteraipatrol/RugBuster-BNB/blob/main/docs/BNB_SECURITY_ROADMAP.md" target="_blank" rel="noopener" class="btn-secondary" style="font-size:11px;padding:12px 24px;">L1 Roadmap</a>
+      <a href="https://github.com/rugbusteraipatrol/RugBuster-BNB/blob/main/docs/BNB_GRANT_UPDATE_2026-06-05.md" target="_blank" rel="noopener" class="btn-secondary" style="font-size:11px;padding:12px 24px;">BNB Grant Update</a>
+    </div>
+  </div>
+</div>
+
+<!-- FINAL SCAN MODAL -->
+<div id="finalScanModal" style="
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(5,8,17,0.88);
+  z-index:998;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+">
+  <div style="
+    border:1px solid rgba(0,245,255,0.44);
+    background:linear-gradient(180deg, rgba(10,15,30,0.98), rgba(5,8,17,0.98));
+    padding:28px;
+    max-width:640px;
+    width:100%;
+    box-shadow:0 0 70px rgba(0,245,255,0.18), inset 0 0 30px rgba(0,245,255,0.04);
+    position:relative;
+  ">
+    <button onclick="closeFinalScanModal()" aria-label="Close final scan" style="
+      position:absolute;
+      top:14px;
+      right:14px;
+      width:34px;
+      height:34px;
+      border:1px solid rgba(0,245,255,0.26);
+      background:transparent;
+      color:var(--neon-cyan);
+      cursor:crosshair;
+      font-family:'Orbitron',monospace;
+      font-size:18px;
+    ">×</button>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:4px;color:var(--neon-pink);margin-bottom:12px;">FINAL SCAN COMPLETE</div>
+    <div id="finalScanTitle" style="font-family:'Orbitron',monospace;font-size:22px;font-weight:700;color:var(--text-primary);margin-bottom:8px;line-height:1.35;"></div>
+    <div id="finalScanAddress" style="font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--text-muted);word-break:break-all;margin-bottom:20px;"></div>
+    <div id="finalScanGrid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:18px;"></div>
+    <div id="finalScanAi" style="font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--neon-cyan);line-height:1.7;border:1px solid rgba(0,245,255,0.12);background:rgba(0,245,255,0.035);padding:14px 16px;margin-bottom:20px;"></div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:flex-end;">
+      <button onclick="closeFinalScanModal()" class="btn-secondary" style="font-size:11px;padding:12px 22px;">CLOSE</button>
+      <button onclick="closeFinalScanModal(); sendTelegramAlert();" id="finalScanAlertBtn" style="
+        font-family:'Share Tech Mono',monospace;
+        font-size:11px;
+        letter-spacing:2px;
+        padding:12px 20px;
+        background:transparent;
+        border:1px solid rgba(0,255,136,0.36);
+        color:var(--neon-green);
+        cursor:crosshair;
+      ">SEND ALERT</button>
+      <button onclick="closeFinalScanModal(); publishCurrentReport();" id="finalScanPublishBtn" style="
+        font-family:'Share Tech Mono',monospace;
+        font-size:11px;
+        letter-spacing:2px;
+        padding:12px 20px;
+        background:transparent;
+        border:1px solid rgba(255,0,200,0.36);
+        color:var(--neon-pink);
+        cursor:crosshair;
+      ">PUBLISH REPORT</button>
+    </div>
+  </div>
+</div>
+
+<!-- CRITICAL ALERT MODAL -->
+<div id="criticalAlert" style="
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(5,8,17,0.92);
+  z-index:999;
+  align-items:center;
+  justify-content:center;
+">
+  <div style="
+    border:2px solid #ff3d3d;
+    background:rgba(255,61,61,0.05);
+    padding:48px;
+    max-width:540px;
+    width:90%;
+    text-align:center;
+    box-shadow:0 0 80px rgba(255,61,61,0.3);
+    position:relative;
+  ">
+    <div style="font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:4px;color:#ff3d3d;margin-bottom:16px;animation:pulse-glow 1s infinite;">⚠ CRITICAL THREAT DETECTED ⚠</div>
+    <div id="alertTitle" style="font-family:'Orbitron',monospace;font-size:22px;font-weight:700;color:#ff3d3d;margin-bottom:16px;"></div>
+    <div id="alertBody" style="font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--text-muted);line-height:2;margin-bottom:32px;"></div>
+    <button onclick="closeAlert()" style="
+      font-family:'Orbitron',monospace;
+      font-size:12px;
+      letter-spacing:3px;
+      padding:13px 32px;
+      background:#ff3d3d;
+      color:var(--dark-bg);
+      border:none;
+      cursor:crosshair;
+      font-weight:700;
+    ">ACKNOWLEDGED — CLOSE</button>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section id="how" class="z1">
+  <div class="section-label">// deployment sequence</div>
+  <h2 class="section-title">Activate in<br><span>4 Steps</span></h2>
+
+  <div class="how-grid">
+    <div class="how-step">
+      <div class="how-num">01</div>
+      <div class="how-label">Connect</div>
+      <p class="how-desc">Link your wallet, Telegram, and select your chains. Takes 2 minutes.</p>
+    </div>
+    <div class="how-step">
+      <div class="how-num">02</div>
+      <div class="how-label">Configure</div>
+      <p class="how-desc">Set risk thresholds, alert types, and which token launches to monitor.</p>
+    </div>
+    <div class="how-step">
+      <div class="how-num">03</div>
+      <div class="how-label">Deploy</div>
+      <p class="how-desc">AI engine goes live. Scanning every new contract and wallet interaction.</p>
+    </div>
+    <div class="how-step">
+      <div class="how-num">04</div>
+      <div class="how-label">Stay Safe</div>
+      <p class="how-desc">Get instant alerts. Block threats automatically. Sleep while we watch.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="z1">
+  <div class="section-label">// access tiers</div>
+  <h2 class="section-title">Choose Your<br><span>Arsenal</span></h2>
+  <p class="section-desc">No subscriptions that rug you. Cancel anytime. Start free.</p>
+
+  <div class="pricing-grid">
+    <!-- FREE -->
+    <div class="pricing-card">
+      <div class="price-tier">Scout</div>
+      <div class="price-amount"><sup>$</sup>0</div>
+      <div class="price-period">// forever free</div>
+      <hr class="price-divider">
+      <ul class="price-features">
+        <li>10 manual scans / day</li>
+        <li>Basic risk score</li>
+        <li>Solana only (limited)</li>
+        <li>Telegram alerts (delayed)</li>
+        <li class="off">Wallet firewall</li>
+        <li class="off">Launch monitoring</li>
+        <li class="off">AI deep analysis</li>
+      </ul>
+      <a href="#" onclick="openPayment('Scout','0',event)" class="btn-secondary" style="display:block;text-align:center;padding:14px 24px;font-size:11px;clip-path:none;border-radius:0;">Start Free</a>
+    </div>
+
+    <!-- PRO -->
+    <div class="pricing-card featured">
+      <div class="featured-badge">Most Popular</div>
+      <div class="price-tier">Operator</div>
+      <div class="price-amount" style="color:var(--neon-pink);text-shadow:0 0 30px rgba(255,0,200,0.5);"><sup>$</sup>19</div>
+      <div class="price-period">// per month</div>
+      <hr class="price-divider">
+      <ul class="price-features">
+        <li>Unlimited scans</li>
+        <li>Full AI deep analysis</li>
+        <li>Solana + ETH + BSC + BASE + 5 more</li>
+        <li>Real-time Telegram alerts</li>
+        <li>Wallet firewall active</li>
+        <li>New launch monitoring</li>
+        <li class="off">API access</li>
+      </ul>
+      <a href="#" onclick="openPayment('Operator','19',event)" class="btn-primary" style="display:block;text-align:center;padding:14px 24px;font-size:11px;clip-path:none;background:var(--neon-pink);box-shadow:0 0 30px rgba(255,0,200,0.4);">Activate Now</a>
+    </div>
+
+    <!-- ELITE -->
+    <div class="pricing-card">
+      <div class="price-tier">Ghost</div>
+      <div class="price-amount"><sup>$</sup>79</div>
+      <div class="price-period">// per month</div>
+      <hr class="price-divider">
+      <ul class="price-features">
+        <li>Everything in Operator</li>
+        <li>API access (10k calls/mo)</li>
+        <li>Custom alert rules</li>
+        <li>Portfolio tracking</li>
+        <li>Priority scan queue</li>
+        <li>Discord bot included</li>
+        <li>White-label reports</li>
+      </ul>
+      <a href="#" onclick="openPayment('Ghost','79',event)" class="btn-secondary" style="display:block;text-align:center;padding:14px 24px;font-size:11px;clip-path:none;border-radius:0;">Go Ghost</a>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-section z1">
+  <h2 class="cta-title">BUILD ON<br><span>BNB CHAIN INTEL.</span></h2>
+  <p class="cta-sub">Use RugBuster BNB for token risk lookups, reviewer attestations, and Sentinel-ready monitoring.</p>
+  <div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap;">
+    <a href="#api" class="btn-primary">Test Builder API</a>
+    <a href="https://github.com/rugbusteraipatrol/RugBuster-BNB/blob/main/docs/BNB_SECURITY_ROADMAP.md" target="_blank" rel="noopener" class="btn-secondary">View L1 Roadmap</a>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="z1">
+  <span class="footer-copy">© 2025 RUGBUSTER AI // ALL SYSTEMS OPERATIONAL // <span style="color:var(--neon-pink);">POWERED BY THE SYNDICATE</span></span>
+  <ul class="footer-links">
+    <li><a href="https://github.com/rugbusteraipatrol/RugBuster-BNB/blob/main/docs/BNB_API.md" target="_blank" rel="noopener">Docs</a></li>
+    <li><a href="#api">API</a></li>
+    <li><a href="https://github.com/rugbusteraipatrol/RugBuster-BNB/blob/main/docs/BNB_GRANT_UPDATE_2026-06-05.md" target="_blank" rel="noopener">BNB Grant</a></li>
+    <li><a href="https://github.com/rugbusteraipatrol/RugBuster-BNB/blob/main/docs/BNB_SECURITY_ROADMAP.md" target="_blank" rel="noopener">Roadmap</a></li>
+  </ul>
+</footer>
+
+<script>
+  // =====================
+  // WALLET & PAYMENT LOGIC
+  // =====================
+  const RECEIVER = 'GwRUadL58katT5SJAeyNZSPFSgJfMP6Tng2dSQDEkhQA';
+  const REGISTRY_ADDRESS = '0x5F30276B3A5079E088Ec3072884286de5a868355';
+  const REGISTRY_ABI = [
+    'function owner() view returns (address)',
+    'function authorizedReviewers(address) view returns (bool)',
+    'function setReviewer(address reviewer, bool authorized) external',
+    'function updateScore(address token, uint8 score, bytes32 metadataHash) external'
+  ];
+  const SOL_PRICE = 145; // approx USD per SOL for demo
+  let walletConnected = false;
+  let walletAddress = null;
+  let connectedProvider = null;
+  let selectedCurrency = 'SOL';
+  let currentPlan = null;
+  let currentPrice = 0;
+  let lastScannedAddress = null;
+  let lastScanData = null;
+  let apexPortfolioAddress = null;
+  let walletListenersInstalled = false;
+
+  function updateWalletButtonState() {
+    const btn = document.getElementById('walletBtn');
+    const btnText = document.getElementById('walletBtnText');
+    const scanInput = document.getElementById('scanInput');
+
+    if (!btn || !btnText) return;
+
+    if (walletConnected && walletAddress) {
+      const short = walletAddress.slice(0,4) + '...' + walletAddress.slice(-4);
+      btnText.textContent = short;
+      btn.style.background = 'rgba(0,255,136,0.1)';
+      btn.style.borderColor = 'var(--neon-green)';
+      btn.style.boxShadow = '0 0 20px rgba(0,255,136,0.2)';
+      btn.onclick = disconnectWallet;
+
+      if (scanInput && !scanInput.value) {
+        scanInput.placeholder = `BNB Chain wallet connected: ${short} — paste token address to scan`;
+      }
+    } else {
+      btnText.textContent = 'Connect BNB Wallet';
+      btn.style.background = 'transparent';
+      btn.style.boxShadow = 'none';
+      btn.style.borderColor = 'rgba(0,255,255,0.3)';
+      btn.onclick = connectWallet;
+
+      if (scanInput && !scanInput.value) {
+        scanInput.placeholder = 'Paste token address (BNB / BNB Chain)...';
+      }
+    }
+  }
+
+  async function syncConnectedWallet(options = {}) {
+    const { silent = false } = options;
+    if (!window.ethereum) return;
+
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+      if (accounts && accounts.length > 0) {
+        walletAddress = accounts[0];
+        walletConnected = true;
+        connectedProvider = 'evm';
+      } else {
+        walletConnected = false;
+        walletAddress = null;
+        connectedProvider = null;
+      }
+      updateWalletButtonState();
+    } catch (err) {
+      if (!silent) console.log('Wallet sync failed', err);
+    }
+  }
+
+  function installWalletListeners() {
+    if (!window.ethereum || walletListenersInstalled) return;
+    walletListenersInstalled = true;
+
+    window.ethereum.on('accountsChanged', accounts => {
+      if (accounts && accounts.length > 0) {
+        walletAddress = accounts[0];
+        walletConnected = true;
+        connectedProvider = 'evm';
+        apexPortfolioAddress = walletAddress;
+        updateWalletButtonState();
+        renderPortfolioHeader();
+        termLine(`<span class="t-out">// Active wallet switched to ${shortAddress(walletAddress)}</span>`);
+        termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
+      } else {
+        disconnectWallet();
+        renderPortfolioHeader();
+      }
+    });
+
+    window.ethereum.on('chainChanged', async () => {
+      await syncConnectedWallet({ silent: true });
+      renderPortfolioHeader();
+    });
+  }
+
+  function connectWallet() {
+    document.getElementById('walletModal').style.display = 'flex';
+  }
+
+  function closeWalletModal() {
+    document.getElementById('walletModal').style.display = 'none';
+  }
+
+  async function ensureBscChain() {
+    if (!window.ethereum) throw new Error('No EVM wallet detected');
+    const bscChainId = '0x38';
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+    let chainId = await window.ethereum.request({ method: 'eth_chainId' });
+    if (chainId === bscChainId) return;
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: bscChainId }]
+      });
+    } catch (switchError) {
+      if (switchError.code === 4902) {
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId: bscChainId,
+            chainName: 'BNB Smart Chain',
+            nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+            rpcUrls: ['https://bsc-dataseed.binance.org/'],
+            blockExplorerUrls: ['https://bscscan.com']
+          }]
+        });
+      } else {
+        throw switchError;
+      }
+    }
+
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      chainId = await window.ethereum.request({ method: 'eth_chainId' });
+      if (chainId === bscChainId) return;
+      await sleep(250);
+    }
+    throw new Error('Wallet did not switch to BNB Smart Chain');
+  }
+
+  async function connectMetaMask() {
+    if (!window.ethereum) {
+      document.getElementById('walletModalBody').innerHTML = `
+        <div style="text-align:center;padding:24px 0;">
+          <div style="font-size:48px;margin-bottom:16px;">🦊</div>
+          <div style="font-family:'Orbitron',monospace;font-size:16px;color:var(--text-primary);margin-bottom:12px;">MetaMask Not Found</div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--text-muted);margin-bottom:24px;line-height:2;">
+            Install MetaMask or another EVM wallet to continue.<br>This BNB flow uses BNB Smart Chain wallets.
+          </div>
+          <a href="https://metamask.io/download/" target="_blank" class="btn-primary" style="font-size:11px;padding:13px 32px;text-decoration:none;display:inline-block;">
+            Install MetaMask →
+          </a>
+        </div>`;
+      return;
+    }
+
+    try {
+      installWalletListeners();
+      await ensureBscChain();
+
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      walletAddress = accounts[0];
+      walletConnected = true;
+      connectedProvider = 'evm';
+      closeWalletModal();
+      apexPortfolioAddress = walletAddress;
+      updateWalletButtonState();
+      renderPortfolioHeader();
+
+    } catch(err) {
+      console.log('Wallet connect cancelled or failed', err);
+    }
+  }
+
+  function disconnectWallet() {
+    walletConnected = false;
+    walletAddress = null;
+    connectedProvider = null;
+    apexPortfolioAddress = null;
+    updateWalletButtonState();
+  }
+
+  function openPayment(plan, price, e) {
+    e.preventDefault();
+    currentPlan = plan;
+    currentPrice = parseInt(price);
+
+    document.getElementById('payPlanName').textContent = plan.toUpperCase();
+
+    if (price === '0') {
+      document.getElementById('payPlanPrice').textContent = 'FREE';
+      document.getElementById('payPlanPrice').style.color = 'var(--neon-green)';
+      document.getElementById('payBtn').textContent = '⚡ ACTIVATE FREE PLAN';
+      document.getElementById('payBtn').style.background = 'var(--neon-green)';
+      document.getElementById('paySOL').style.display = 'none';
+      document.getElementById('payUSDC').style.display = 'none';
+    } else {
+      document.getElementById('payPlanPrice').textContent = '$' + price + '/mo';
+      document.getElementById('payPlanPrice').style.color = 'var(--neon-pink)';
+      document.getElementById('payBtn').textContent = '⚡ CONFIRM PAYMENT';
+      document.getElementById('payBtn').style.background = 'var(--neon-pink)';
+      document.getElementById('paySOL').style.display = 'block';
+      document.getElementById('payUSDC').style.display = 'block';
+      const solAmt = (currentPrice / SOL_PRICE).toFixed(3);
+      document.getElementById('solAmount').textContent = `≈ ${solAmt} SOL`;
+      document.getElementById('usdcAmount').textContent = `${currentPrice} USDC`;
+      selectCurrency('SOL');
+    }
+
+    if (walletConnected && walletAddress) {
+      const short = walletAddress.slice(0,6) + '...' + walletAddress.slice(-6);
+      document.getElementById('payFromAddr').textContent = short;
+      document.getElementById('walletPayInfo').style.display = 'block';
+      document.getElementById('connectFirst').style.display = 'none';
+    } else {
+      document.getElementById('walletPayInfo').style.display = 'none';
+      if (currentPrice > 0) document.getElementById('connectFirst').style.display = 'block';
+    }
+
+    document.getElementById('paymentModal').style.display = 'flex';
+  }
+
+  function closePaymentModal() {
+    document.getElementById('paymentModal').style.display = 'none';
+  }
+
+  function selectCurrency(cur) {
+    selectedCurrency = cur;
+    const solEl = document.getElementById('paySOL');
+    const usdcEl = document.getElementById('payUSDC');
+    if (cur === 'SOL') {
+      solEl.style.borderColor = 'rgba(0,245,255,0.6)';
+      solEl.style.background = 'rgba(0,245,255,0.08)';
+      usdcEl.style.borderColor = 'rgba(255,255,255,0.08)';
+      usdcEl.style.background = 'transparent';
+    } else {
+      usdcEl.style.borderColor = 'rgba(0,245,255,0.6)';
+      usdcEl.style.background = 'rgba(0,245,255,0.08)';
+      solEl.style.borderColor = 'rgba(255,255,255,0.08)';
+      solEl.style.background = 'transparent';
+    }
+  }
+
+  async function simulatePayment() {
+    if (currentPrice > 0 && !walletConnected) {
+      document.getElementById('connectFirst').style.display = 'block';
+      connectWallet();
+      return;
+    }
+
+    const btn = document.getElementById('payBtn');
+    btn.textContent = '⏳ PROCESSING...';
+    btn.style.opacity = '0.7';
+    btn.disabled = true;
+
+    // Simulate transaction delay
+    await new Promise(r => setTimeout(r, 2200));
+
+    closePaymentModal();
+    showSuccess(currentPlan);
+  }
+
+  function showSuccess(plan) {
+    document.getElementById('successPlan').textContent = plan.toUpperCase() + ' ACTIVATED';
+    const addr = walletAddress
+      ? walletAddress.slice(0,8) + '...' + walletAddress.slice(-8)
+      : 'DEMO MODE';
+    document.getElementById('successAddr').innerHTML =
+      `<span style="color:var(--text-muted);">WALLET:</span> ${addr}`;
+    document.getElementById('successModal').style.display = 'flex';
+  }
+
+  function closeSuccess() {
+    document.getElementById('successModal').style.display = 'none';
+    const btn = document.getElementById('payBtn');
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  }
+
+  // Close modals on backdrop click
+  document.getElementById('walletModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('walletModal')) closeWalletModal();
+  });
+  document.getElementById('paymentModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('paymentModal')) closePaymentModal();
+  });
+  document.getElementById('finalScanModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('finalScanModal')) closeFinalScanModal();
+  });
+  window.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeFinalScanModal();
+  });
+
+  const RUGCHECK_API = 'https://api.rugcheck.xyz/v1';
+  const DEXSCREENER_API = 'https://api.dexscreener.com/latest/dex/tokens';
+  const RUGBUSTER_API = (window.RUGBUSTER_API || 'https://web-production-376bf.up.railway.app').replace(/\/$/, '');
+  const RUGBUSTER_BUILDER_API = (window.RUGBUSTER_BUILDER_API || 'https://rugbuster-api-production.up.railway.app').replace(/\/$/, '');
+
+  // Glitch effect on stat numbers
+  document.querySelectorAll('.stat-number').forEach(el => {
+    const original = el.textContent;
+    el.addEventListener('mouseenter', () => {
+      let i = 0;
+      const chars = '0123456789ABCDEF$%#@!';
+      const interval = setInterval(() => {
+        el.textContent = original.split('').map((c, idx) =>
+          idx < i ? original[idx] : chars[Math.floor(Math.random() * chars.length)]
+        ).join('');
+        i++;
+        if (i > original.length) { el.textContent = original; clearInterval(interval); }
+      }, 40);
+    });
+  });
+
+  // Enter key on input
+  document.getElementById('scanInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') runScan();
+  });
+
+  const apiScoreInput = document.getElementById('apiScoreInput');
+  if (apiScoreInput) {
+    apiScoreInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') fetchBuilderScore();
+    });
+  }
+
+  function loadExample(type) {
+    const examples = {
+      apex: '0xBB4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'
+    };
+    document.getElementById('scanInput').value = examples[type] || examples.apex;
+  }
+
+  function formatUsd(value) {
+    if (value === null || value === undefined || value === '') return 'UNKNOWN';
+    const num = Number(value);
+    if (!Number.isFinite(num)) return 'UNKNOWN';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      notation: num >= 1000000 ? 'compact' : 'standard',
+      maximumFractionDigits: num >= 1000 ? 1 : 2
+    }).format(num);
+  }
+
+  function isBNBAddress(address) {
+    return /^0x[a-fA-F0-9]{40}$/.test(address);
+  }
+
+  async function fetchBuilderScore() {
+    const input = document.getElementById('apiScoreInput');
+    const result = document.getElementById('apiScoreResult');
+    if (!input || !result) return;
+
+    const address = input.value.trim();
+    if (!isBNBAddress(address)) {
+      result.innerHTML = `<span style="color:#ffcc00;">WARN</span> // Enter a valid BNB Chain 0x token address.`;
+      return;
+    }
+
+    result.innerHTML = `<span style="color:var(--neon-cyan);">QUERYING</span> // ${RUGBUSTER_BUILDER_API}/score`;
+
+    try {
+      const res = await fetch(`${RUGBUSTER_BUILDER_API}/score?address=${encodeURIComponent(address)}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+
+      const label = String(data.label || 'UNKNOWN').toUpperCase();
+      const labelColor = label === 'DANGER' ? '#ff3d3d' : label === 'WARN' ? '#ffcc00' : label === 'GOOD' ? 'var(--neon-green)' : 'var(--text-muted)';
+      const token = [data.token_name, data.token_symbol ? `(${data.token_symbol})` : ''].filter(Boolean).join(' ') || shortAddress(address);
+      const flags = Array.isArray(data.risk_flags) && data.risk_flags.length
+        ? data.risk_flags.map(flag => `<div>&gt; ${String(flag)}</div>`).join('')
+        : '<div>&gt; No risk flags returned for this cached score.</div>';
+
+      result.innerHTML = `
+        <div><span style="color:${labelColor};">${label}</span> // ${token}</div>
+        <div>source=${data.source || 'unknown'} classifier=${data.classifier_version || data.classifier || 'unknown'} chain=${data.chain || 'BNB'}</div>
+        ${flags}
+      `;
+    } catch (err) {
+      result.innerHTML = `<span style="color:#ff3d3d;">ERROR</span> // ${err.message || 'Builder API unavailable'}`;
+    }
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    }[char]));
+  }
+
+  function recentVerdictColor(verdict) {
+    const label = String(verdict || '').toUpperCase();
+    if (label === 'DANGER') return '#ff3d3d';
+    if (label === 'WARN') return '#ff7a00';
+    if (label === 'GOOD') return 'var(--neon-green)';
+    return 'var(--text-muted)';
+  }
+
+  function formatRecentTime(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '--:--';
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function renderRecentScans(items) {
+    const list = document.getElementById('recentScanList');
+    const state = document.getElementById('recentScanState');
+    if (!list || !state) return;
+
+    if (!Array.isArray(items) || !items.length) {
+      state.textContent = 'AWAITING DATA';
+      state.style.color = 'var(--text-muted)';
+      list.innerHTML = `
+        <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.8;border:1px solid rgba(0,245,255,0.08);background:rgba(0,245,255,0.03);padding:14px 16px;">
+          Awaiting recent scanner output.
+        </div>`;
+      return;
+    }
+
+    state.textContent = `${items.length} LATEST`;
+    state.style.color = 'var(--neon-green)';
+    list.innerHTML = items.slice(0, 10).map(item => {
+      const verdict = String(item.verdict || 'UNKNOWN').toUpperCase();
+      const symbol = item.token_symbol || item.token_name || shortAddress(item.address || '');
+      const name = item.token_name && item.token_symbol ? item.token_name : '';
+      const flag = item.flag || 'analysis complete';
+      const href = item.explorer_url || `https://bscscan.com/address/${item.address}`;
+      const chain = String(item.chain || 'bnb').toUpperCase();
+      return `
+        <a href="${escapeHtml(href)}" target="_blank" rel="noopener" style="
+          display:grid;
+          grid-template-columns:52px minmax(82px,0.8fr) 64px minmax(0,1.8fr);
+          gap:10px;
+          align-items:center;
+          min-height:38px;
+          padding:9px 12px;
+          border:1px solid rgba(0,245,255,0.10);
+          background:rgba(0,245,255,0.025);
+          text-decoration:none;
+          overflow:hidden;
+        ">
+          <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-muted);white-space:nowrap;">${formatRecentTime(item.created_at)}</span>
+          <span style="min-width:0;">
+            <span style="display:block;font-family:'Orbitron',monospace;font-size:12px;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(symbol)}</span>
+            <span style="display:block;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(chain)} · ${escapeHtml(name || shortAddress(item.address || ''))}</span>
+          </span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:${recentVerdictColor(verdict)};letter-spacing:1px;white-space:nowrap;">${escapeHtml(verdict)}</span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(flag)}</span>
+        </a>`;
+    }).join('');
+  }
+
+  async function loadRecentScans() {
+    try {
+      const res = await fetch(`${RUGBUSTER_API}/api/recent-scans?limit=10&t=${Date.now()}`, { cache: 'no-store' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      renderRecentScans(data.items || []);
+    } catch (err) {
+      const state = document.getElementById('recentScanState');
+      if (state) {
+        state.textContent = 'FEED OFFLINE';
+        state.style.color = '#ff7a00';
+      }
+    }
+  }
+
+  function shortAddress(address) {
+    return address.length > 16 ? address.slice(0, 8) + '...' + address.slice(-6) : address;
+  }
+
+  function sortDeep(value) {
+    if (Array.isArray(value)) return value.map(sortDeep);
+    if (value && typeof value === 'object') {
+      return Object.keys(value).sort().reduce((acc, key) => {
+        acc[key] = sortDeep(value[key]);
+        return acc;
+      }, {});
+    }
+    return value;
+  }
+
+  function stableJson(value) {
+    return JSON.stringify(sortDeep(value));
+  }
+
+  async function sha256Bytes32(value) {
+    const encoded = new TextEncoder().encode(stableJson(value));
+    const digest = await crypto.subtle.digest('SHA-256', encoded);
+    const bytes = Array.from(new Uint8Array(digest));
+    return `0x${bytes.map(b => b.toString(16).padStart(2, '0')).join('')}`;
+  }
+
+  async function getRegistryContractWithSigner() {
+    if (!window.ethereum || !window.ethers) {
+      throw new Error('MetaMask or another EVM wallet is required');
+    }
+    await ensureBscChain();
+    await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const provider = new window.ethers.BrowserProvider(window.ethereum, 'any');
+    const network = await provider.getNetwork();
+    if (network.chainId !== 56n) {
+      throw new Error('Wallet provider is not on BNB Smart Chain yet');
+    }
+    const signer = await provider.getSigner();
+    const contract = new window.ethers.Contract(REGISTRY_ADDRESS, REGISTRY_ABI, signer);
+    return { provider, signer, contract };
+  }
+
+  async function isAuthorizedReviewerAddress(address) {
+    const { contract } = await getRegistryContractWithSigner();
+    const [owner, reviewer] = await Promise.all([
+      contract.owner(),
+      contract.authorizedReviewers(address)
+    ]);
+    return owner.toLowerCase() === address.toLowerCase() || Boolean(reviewer);
+  }
+
+  async function authorizeReviewerWallet() {
+    setAuthorizeReviewerButtonState(false, 'AUTHORIZING...');
+    await termLineDelay(`<span class="t-out">RB&gt; authorize-reviewer --mainnet</span>`, 120);
+    await termLineDelay(`<span class="t-out">Preparing reviewer authorization flow...</span>`, 180);
+
+    try {
+      if (!walletConnected || connectedProvider !== 'evm' || !window.ethereum) {
+        throw new Error('Connect your owner MetaMask wallet first');
+      }
+
+      const reviewerInput = window.prompt('Enter the BNB Smart Chain wallet address to authorize for direct publish:');
+      if (!reviewerInput) {
+        throw new Error('Authorization canceled');
+      }
+
+      const reviewerAddress = window.ethers.getAddress(reviewerInput.trim());
+      const { signer, contract } = await getRegistryContractWithSigner();
+      const signerAddress = await signer.getAddress();
+      const ownerAddress = await contract.owner();
+
+      if (signerAddress.toLowerCase() !== ownerAddress.toLowerCase()) {
+        throw new Error(`Connected wallet ${shortAddress(signerAddress)} is not the registry owner`);
+      }
+
+      await termLineDelay(`<span class="t-out">// Owner wallet: ${shortAddress(signerAddress)}</span>`, 120);
+      await termLineDelay(`<span class="t-out">// Reviewer wallet: ${shortAddress(reviewerAddress)}</span>`, 120);
+
+      const tx = await contract.setReviewer(reviewerAddress, true);
+      const receipt = await tx.wait();
+
+      await termLineDelay(`<span class="t-success">✓ Reviewer wallet authorized for direct publish.</span>`, 220);
+      await termLineDelay(`<span class="t-out">// TX: ${tx.hash}</span>`, 120);
+      await termLineDelay(`<span class="t-out">// Gas used: ${receipt.gasUsed.toString()}</span>`, 120);
+      await termLineDelay(`<span class="t-out">// ${shortAddress(reviewerAddress)} can now publish reports from its own BNB balance.</span>`, 120);
+      setAuthorizeReviewerButtonState(true, 'AUTHORIZED');
+      setTimeout(() => setAuthorizeReviewerButtonState(true, 'AUTHORIZE REVIEWER'), 2600);
+    } catch (err) {
+      await termLineDelay(`<span class="t-danger">✗ REVIEWER AUTH FAILED: ${err.message}</span>`, 220);
+      await termLineDelay(`<span class="t-out">// Connect the owner wallet and confirm the target BNB Chain address.</span>`, 120);
+      setAuthorizeReviewerButtonState(true, 'AUTHORIZE REVIEWER');
+    }
+
+    termLine('');
+  }
+
+  function formatCompactTokenBalance(value) {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) return 'UNKNOWN';
+    const num = Number(value);
+    if (num >= 1000000) return `${(num / 1000000).toFixed(2)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(2)}K`;
+    if (num >= 1) return num.toFixed(4);
+    if (num === 0) return '0';
+    return num.toPrecision(4);
+  }
+
+  function termLine(html) {
+    const body = document.getElementById('terminalBody');
+    const line = document.createElement('div');
+    line.innerHTML = html;
+    // Remove old cursor
+    const oldCursor = body.querySelector('.cursor');
+    if (oldCursor) oldCursor.parentElement.remove();
+    body.appendChild(line);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function termLineDelay(html, delay) {
+    return new Promise(r => setTimeout(() => { termLine(html); r(); }, delay));
+  }
+
+  function clearTerminal() {
+    const body = document.getElementById('terminalBody');
+    body.innerHTML = '';
+  }
+
+  function setAlertButtonState(enabled, text = 'SEND ALERT') {
+    const btn = document.getElementById('sendAlertBtn');
+    btn.disabled = !enabled;
+    btn.textContent = text;
+    btn.style.opacity = enabled ? '1' : '0.6';
+    btn.style.borderColor = enabled ? 'rgba(0,255,136,0.45)' : 'rgba(0,255,136,0.22)';
+    btn.style.color = enabled ? 'var(--neon-green)' : 'rgba(0,255,136,0.55)';
+  }
+
+  function setPublishButtonState(enabled, text = 'PUBLISH REPORT') {
+    const btn = document.getElementById('publishBtn');
+    btn.disabled = !enabled;
+    btn.textContent = text;
+    btn.style.opacity = enabled ? '1' : '0.6';
+    btn.style.borderColor = enabled ? 'rgba(255,0,200,0.45)' : 'rgba(255,0,200,0.22)';
+    btn.style.color = enabled ? 'var(--neon-pink)' : 'rgba(255,0,200,0.58)';
+  }
+
+  function setAuthorizeReviewerButtonState(enabled, text = 'AUTHORIZE REVIEWER') {
+    const btn = document.getElementById('authorizeReviewerBtn');
+    if (!btn) return;
+    btn.disabled = !enabled;
+    btn.textContent = text;
+    btn.style.opacity = enabled ? '1' : '0.6';
+    btn.style.borderColor = enabled ? 'rgba(0,245,255,0.45)' : 'rgba(0,245,255,0.22)';
+    btn.style.color = enabled ? 'var(--neon-cyan)' : 'rgba(0,245,255,0.58)';
+  }
+
+  function scorePresentation(status) {
+    if (status === 'HIGH') {
+      return { color: '#ff3d3d', label: 'HIGH', text: '⚠ HIGH RISK — HARD EVIDENCE LOOKS BAD' };
+    }
+    if (status === 'ELEVATED') {
+      return { color: 'var(--neon-orange)', label: 'ELEVATED', text: '⚡ ELEVATED RISK — REVIEW BEFORE ACTION' };
+    }
+    if (status === 'LOW') {
+      return { color: 'var(--neon-green)', label: 'LOW', text: '✓ LOW RISK — EVIDENCE LOOKS CLEAN' };
+    }
+    return { color: 'var(--text-muted)', label: 'UNKNOWN', text: '· UNKNOWN — NOT ENOUGH EVIDENCE YET' };
+  }
+
+  function setScoreMeter(prefix, score, status, emptyText) {
+    const board = document.getElementById('scoreBoard');
+    const bar = document.getElementById(`${prefix}Bar`);
+    const scoreEl = document.getElementById(`${prefix}Value`);
+    const label = document.getElementById(`${prefix}Label`);
+    board.style.display = 'block';
+
+    const present = scorePresentation(status);
+    bar.style.background = present.color;
+    scoreEl.style.color = present.color;
+    scoreEl.style.textShadow = `0 0 20px ${present.color}`;
+    label.style.color = present.color;
+    label.textContent = score === null ? emptyText : present.text;
+
+    if (score === null) {
+      bar.style.width = '0%';
+      scoreEl.textContent = 'UNKNOWN';
+      return;
+    }
+
+    setTimeout(() => {
+      bar.style.width = `${score}%`;
+      let current = 0;
+      const step = setInterval(() => {
+        current += 2;
+        scoreEl.textContent = Math.min(current, score);
+        if (current >= score) clearInterval(step);
+      }, 20);
+    }, 100);
+  }
+
+  function portfolioRowClass(report) {
+    if (report.rug_status === 'HIGH' || report.rug_status === 'ELEVATED' || report.speculation_status === 'HIGH') return 'risk';
+    if (report.rug_status === 'UNKNOWN' || report.speculation_status === 'UNKNOWN' || report.speculation_status === 'ELEVATED') return 'warn';
+    return '';
+  }
+
+  function portfolioVerdict(report) {
+    if (report.rug_status === 'HIGH') return 'HARD RUG FLAGS';
+    if (report.speculation_status === 'HIGH') return 'HIGH SPECULATION';
+    if (report.rug_status === 'UNKNOWN' || report.speculation_status === 'UNKNOWN') return 'UNKNOWN / REVIEW';
+    return 'LOOKS CLEAN';
+  }
+
+  async function connectBNBWallet() {
+    if (!window.ethereum) {
+      document.getElementById('portfolioState').textContent = 'NO EVM WALLET DETECTED';
+      return;
+    }
+
+    try {
+      await ensureBscChain();
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      if (!accounts || !accounts.length) {
+        throw new Error('Wallet connection returned no accounts');
+      }
+
+      apexPortfolioAddress = accounts[0];
+      document.getElementById('portfolioWallet').textContent = `WALLET // ${shortAddress(apexPortfolioAddress)}`;
+      document.getElementById('portfolioState').textContent = 'PORTFOLIO LINKED — SCANNING LIVE HOLDINGS';
+      document.getElementById('portfolioRefreshBtn').disabled = false;
+      document.getElementById('portfolioConnectBtn').textContent = 'CONNECTED';
+      document.getElementById('portfolioConnectBtn').style.borderColor = 'rgba(0,255,136,0.45)';
+      document.getElementById('portfolioConnectBtn').style.color = 'var(--neon-green)';
+      await scanPortfolio();
+    } catch (err) {
+      document.getElementById('portfolioState').textContent = `WALLET CONNECT FAILED // ${err.message}`;
+    }
+  }
+
+  async function fetchPortfolioScanFromApi(address) {
+    const res = await fetch(`${RUGBUSTER_API}/api/portfolio`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok || !Array.isArray(data.entries)) {
+      throw new Error(data.error || `HTTP ${res.status} — Portfolio scan unavailable`);
+    }
+    return data;
+  }
+
+  function renderPortfolio(entries, suspicious) {
+    const panel = document.getElementById('portfolioPanel');
+    const list = document.getElementById('portfolioList');
+    const empty = document.getElementById('portfolioEmpty');
+    const summary = document.getElementById('portfolioSummary');
+    const state = document.getElementById('portfolioState');
+
+    panel.classList.toggle('alert', Boolean(suspicious));
+    empty.style.display = 'none';
+    list.style.display = 'block';
+    summary.style.display = 'block';
+
+    const suspiciousCount = entries.filter(entry =>
+      ['HIGH', 'ELEVATED'].includes(entry.report.rug_status) || entry.report.speculation_status === 'HIGH'
+    ).length;
+    const unknownCount = entries.filter(entry =>
+      entry.report.rug_status === 'UNKNOWN' || entry.report.speculation_status === 'UNKNOWN'
+    ).length;
+
+    if (!entries.length) {
+      panel.classList.remove('alert');
+      list.style.display = 'none';
+      summary.style.display = 'block';
+      empty.style.display = 'block';
+      state.textContent = 'PORTFOLIO STATUS — NO ERC-20 HOLDINGS DETECTED';
+      state.style.color = 'var(--neon-cyan)';
+      summary.innerHTML = `
+        <span style="color:var(--neon-cyan);">TOKENS:</span> 0
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        <span style="color:var(--text-muted);">SUSPICIOUS:</span> 0
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        <span style="color:var(--text-muted);">UNKNOWN:</span> 0
+      `;
+      empty.innerHTML = `
+        <div style="font-family:'Orbitron',monospace;font-size:18px;color:var(--text-primary);margin-bottom:8px;">Wallet is clean, but empty.</div>
+        <div style="margin-bottom:8px;">No BNB Chain ERC-20 holdings were detected in this address.</div>
+        <div style="color:var(--neon-cyan);">That is a valid result — not a scanner error.</div>
+      `;
+      return;
+    }
+
+    state.textContent = suspicious
+      ? 'PORTFOLIO STATUS — SUSPICIOUS ASSETS DETECTED'
+      : 'PORTFOLIO STATUS — NO HARD RUG SIGNALS DETECTED';
+    state.style.color = suspicious ? '#ff5f57' : 'var(--neon-green)';
+
+    summary.innerHTML = `
+      <span style="color:var(--neon-cyan);">TOKENS:</span> ${entries.length}
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span style="color:${suspiciousCount ? '#ff5f57' : 'var(--neon-green)'};">SUSPICIOUS:</span> ${suspiciousCount}
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span style="color:${unknownCount ? 'var(--neon-orange)' : 'var(--text-muted)'};">UNKNOWN:</span> ${unknownCount}
+    `;
+
+    list.innerHTML = entries.map(({ token, report }) => `
+      <div class="portfolio-row ${portfolioRowClass(report)}">
+        <div style="display:flex;align-items:center;gap:12px;">
+          ${report.image_url ? `<img src="${report.image_url}" alt="" style="width:34px;height:34px;border:1px solid rgba(0,245,255,0.2);background:rgba(0,245,255,0.04);object-fit:cover;">` : `<div style="width:34px;height:34px;border:1px solid rgba(0,245,255,0.15);background:rgba(0,245,255,0.04);display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:11px;color:var(--neon-cyan);">${(report.symbol || '?').slice(0,3)}</div>`}
+          <div>
+            <div style="font-family:'Orbitron',monospace;font-size:13px;color:var(--text-primary);">${report.token_name || token.name}</div>
+            <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-cyan);letter-spacing:2px;">${report.symbol || token.symbol}</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:2px;">BALANCE</div>
+          <div style="font-family:'Orbitron',monospace;font-size:13px;color:var(--text-primary);">${formatCompactTokenBalance(token.balance)}</div>
+        </div>
+        <div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:2px;">VALUE</div>
+          <div style="font-family:'Orbitron',monospace;font-size:13px;color:var(--text-primary);">${formatUsd(token.value_usd)}</div>
+        </div>
+        <div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:2px;">RUG</div>
+          <div style="font-family:'Orbitron',monospace;font-size:13px;color:${report.rug_status === 'HIGH' ? '#ff5f57' : report.rug_status === 'ELEVATED' ? 'var(--neon-orange)' : report.rug_status === 'LOW' ? 'var(--neon-green)' : 'var(--text-muted)'};">${report.rug_score === null ? 'UNKNOWN' : report.rug_score} // ${report.rug_status}</div>
+        </div>
+        <div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:2px;">SPEC</div>
+          <div style="font-family:'Orbitron',monospace;font-size:13px;color:${report.speculation_status === 'HIGH' ? '#ff5f57' : report.speculation_status === 'ELEVATED' ? 'var(--neon-orange)' : report.speculation_status === 'LOW' ? 'var(--neon-green)' : 'var(--text-muted)'};">${report.speculation_score === null ? 'UNKNOWN' : report.speculation_score} // ${report.speculation_status}</div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-muted);margin-top:4px;">${portfolioVerdict(report)}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function scanPortfolio() {
+    if (!apexPortfolioAddress) {
+      document.getElementById('portfolioState').textContent = 'CONNECT A BNB WALLET FIRST';
+      return;
+    }
+
+    const refreshBtn = document.getElementById('portfolioRefreshBtn');
+    refreshBtn.disabled = true;
+    refreshBtn.textContent = 'SCANNING...';
+    document.getElementById('portfolioState').textContent = 'QUERYING WALLET BALANCES AND SCORING TOKENS';
+
+    try {
+      const data = await fetchPortfolioScanFromApi(apexPortfolioAddress);
+      renderPortfolio(data.entries, data.suspicious);
+    } catch (err) {
+      document.getElementById('portfolioPanel').classList.remove('alert');
+      document.getElementById('portfolioEmpty').style.display = 'block';
+      document.getElementById('portfolioList').style.display = 'none';
+      document.getElementById('portfolioSummary').style.display = 'none';
+      document.getElementById('portfolioState').textContent = `PORTFOLIO SCAN FAILED // ${err.message}`;
+    } finally {
+      refreshBtn.disabled = false;
+      refreshBtn.textContent = 'REFRESH PORTFOLIO';
+    }
+  }
+
+  function showCriticalAlert(title, body) {
+    document.getElementById('alertTitle').textContent = title;
+    document.getElementById('alertBody').innerHTML = body;
+    const modal = document.getElementById('criticalAlert');
+    modal.style.display = 'flex';
+  }
+
+  function closeAlert() {
+    document.getElementById('criticalAlert').style.display = 'none';
+  }
+
+  async function showTokenImage(imageUrl, name, address) {
+    const wrap   = document.getElementById('tokenImageWrap');
+    const imgEl  = document.getElementById('tokenImage');
+    const nameEl = document.getElementById('tokenImageName');
+    const symEl  = document.getElementById('tokenImageSymbol');
+
+    // Extract name / symbol from "Name (SYM)" format
+    const match = name.match(/^(.+?)\s*\(([^)]+)\)$/);
+    const displayName = match ? match[1] : name;
+    const displaySym  = match ? match[2] : '';
+
+    nameEl.textContent = displayName;
+    symEl.textContent  = displaySym;
+
+    if (imageUrl) {
+      imgEl.src = imageUrl;
+      imgEl.style.display = 'block';
+      wrap.style.display  = 'block';
+      return;
+    }
+
+    // Fallback: try DexScreener for image
+    try {
+      const dex = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`);
+      const dexData = await dex.json();
+      const pairs = dexData.pairs || [];
+      const img = pairs[0]?.info?.imageUrl;
+      if (img) {
+        imgEl.src = img;
+        imgEl.style.display = 'block';
+        wrap.style.display  = 'block';
+        return;
+      }
+    } catch(e) { /* silent */ }
+
+    // No image found — show name card only (no img)
+    imgEl.style.display = 'none';
+    wrap.style.display  = 'block';
+  }
+
+  function toNumberOrNull(value) {
+    return value === null || value === undefined || value === '' ? null : Number(value);
+  }
+
+  function normalizeReasons(reasons, highPattern, mediumPattern) {
+    const list = Array.isArray(reasons) ? reasons : [];
+    return {
+      high: list.filter(reason => highPattern.test(reason)).map(reason => `✗ ${reason}`),
+      medium: list.filter(reason => !highPattern.test(reason) && mediumPattern.test(reason)).map(reason => `⚡ ${reason}`),
+      neutral: list.filter(reason => !highPattern.test(reason) && !mediumPattern.test(reason)),
+    };
+  }
+
+  function normalizeBNBApiReport(report) {
+    const sourceMap = {
+      dexscreener: 'RugBuster API (DexScreener + on-chain)',
+      onchain_pair_lookup: 'RugBuster API (factory pair lookup)',
+      none: 'RugBuster API (on-chain only, no live market evidence)'
+    };
+    const rugReasons = normalizeReasons(
+      report.rug_reasons,
+      /invalid|suspicious|zero or invalid|unusual/i,
+      /unavailable|unknown/i
+    );
+    const speculationReasons = normalizeReasons(
+      report.speculation_reasons,
+      /very thin|under 1%|heavy sell|very high/i,
+      /thin|low|elevated|unavailable|unknown/i
+    );
+
+    return {
+      tokenName: `${report.token_name || 'Unknown Token'}${report.symbol ? ` (${report.symbol})` : ''}`,
+      tokenImage: report.image_url || null,
+      dexId: String(report.dex_id || 'unknown').toUpperCase(),
+      pairLabel: report.symbol ? `${report.symbol} / BNB` : 'TOKEN / BNB',
+      liquidityUsd: toNumberOrNull(report.liquidity_usd),
+      fdv: toNumberOrNull(report.fdv),
+      marketCap: toNumberOrNull(report.fdv),
+      volume24h: toNumberOrNull(report.volume24h),
+      priceChange24h: toNumberOrNull(report.price_change24h),
+      buys24h: toNumberOrNull(report.buys24h),
+      sells24h: toNumberOrNull(report.sells24h),
+      pairAddress: report.pair_address || '',
+      pairUrl: report.pair_url || '',
+      rugScore: toNumberOrNull(report.rug_score),
+      rugStatus: report.rug_status || 'UNKNOWN',
+      rugReasons,
+      speculationScore: toNumberOrNull(report.speculation_score),
+      speculationStatus: report.speculation_status || 'UNKNOWN',
+      speculationReasons,
+      hasLiquidityEvidence: Boolean(report.has_liquidity_evidence),
+      source: sourceMap[report.source] || `RugBuster API (${report.source || 'live market + on-chain'})`,
+      aiVerdict: report.ai_verdict || ''
+    };
+  }
+
+  function normalizeBuilderScoreReport(score) {
+    const label = String(score.label || 'UNKNOWN').toUpperCase();
+    const rawFlags = Array.isArray(score.risk_flags) ? score.risk_flags : [];
+    const riskFlags = rawFlags.map(flag => {
+      const text = String(flag);
+      return /^[✗⚡·>]/.test(text) ? text : `✗ ${text}`;
+    });
+    const isDanger = label === 'DANGER';
+    const isWarn = label === 'WARN';
+    const isGood = label === 'GOOD';
+    const rugScore = isDanger ? 92 : isWarn ? 62 : isGood ? 18 : null;
+    const rugStatus = isDanger ? 'DANGER' : isWarn ? 'WARN' : isGood ? 'GOOD' : 'UNKNOWN';
+
+    return {
+      tokenName: `${score.token_name || 'Cached BNB Chain Token'}${score.token_symbol ? ` (${score.token_symbol})` : ''}`,
+      tokenImage: null,
+      dexId: 'RUGBUSTER CACHE',
+      pairLabel: 'BNB CHAIN / CACHED SCORE',
+      liquidityUsd: null,
+      fdv: null,
+      marketCap: null,
+      volume24h: null,
+      priceChange24h: null,
+      buys24h: null,
+      sells24h: null,
+      pairAddress: '',
+      pairUrl: '',
+      rugScore,
+      rugStatus,
+      rugReasons: {
+        high: isDanger ? riskFlags : [],
+        medium: isWarn ? riskFlags : [],
+        neutral: isGood ? ['Cached score has no major risk flags'] : label === 'UNKNOWN' ? [score.message || 'No cached RugBuster scan found for this address'] : []
+      },
+      speculationScore: null,
+      speculationStatus: 'UNKNOWN',
+      speculationReasons: {
+        high: [],
+        medium: ['Market speculation score unavailable from public cache endpoint'],
+        neutral: [`Classifier: ${score.classifier_version || 'weighted_v2'}`]
+      },
+      hasLiquidityEvidence: false,
+      source: `RugBuster Builder API (${score.source || 'cache'})`
+    };
+  }
+
+  function liquidityModuleScore(liquidityUsd) {
+    if (liquidityUsd === null || liquidityUsd === undefined || Number.isNaN(Number(liquidityUsd))) return 35;
+    const value = Number(liquidityUsd);
+    if (value < 5000) return 20;
+    if (value < 25000) return 45;
+    if (value < 100000) return 65;
+    if (value < 500000) return 80;
+    return 95;
+  }
+
+  function marketActivityModuleScore(report) {
+    const buys = report.buys24h;
+    const sells = report.sells24h;
+    const volume = report.volume24h;
+    if (buys === null && sells === null && volume === null) return 40;
+    const txCount = Number(buys || 0) + Number(sells || 0);
+    if (txCount === 0 && !volume) return 25;
+    if (txCount < 10) return 45;
+    if (txCount < 50) return 65;
+    return 80;
+  }
+
+  function flattenReasons(reasonGroups) {
+    if (!reasonGroups) return [];
+    return [
+      ...(reasonGroups.high || []),
+      ...(reasonGroups.medium || []),
+      ...(reasonGroups.neutral || [])
+    ].slice(0, 6);
+  }
+
+  function buildWalletReportModules(address, report) {
+    const base = {
+      token: address,
+      tokenName: report.tokenName,
+      ts: Math.floor(Date.now() / 1000),
+      source: report.source,
+      network: 'BNB Smart Chain Mainnet'
+    };
+    return [
+      {
+        module: 'token_metadata',
+        score: report.tokenName && !/^Unknown/i.test(report.tokenName) ? 100 : 40,
+        payload: { ...base, image: report.tokenImage, dexId: report.dexId }
+      },
+      {
+        module: 'liquidity',
+        score: liquidityModuleScore(report.liquidityUsd),
+        payload: {
+          ...base,
+          liquidityUsd: report.liquidityUsd,
+          hasLiquidityEvidence: report.hasLiquidityEvidence,
+          pairAddress: report.pairAddress,
+          pairUrl: report.pairUrl,
+          dexId: report.dexId
+        }
+      },
+      {
+        module: 'market_activity',
+        score: marketActivityModuleScore(report),
+        payload: {
+          ...base,
+          volume24h: report.volume24h,
+          buys24h: report.buys24h,
+          sells24h: report.sells24h,
+          priceChange24h: report.priceChange24h
+        }
+      },
+      {
+        module: 'rug_risk',
+        score: Number(report.rugScore || 0),
+        payload: {
+          ...base,
+          status: report.rugStatus,
+          reasons: flattenReasons(report.rugReasons)
+        }
+      },
+      {
+        module: 'speculation_risk',
+        score: Number(report.speculationScore || 0),
+        payload: {
+          ...base,
+          status: report.speculationStatus,
+          reasons: flattenReasons(report.speculationReasons),
+          fdv: report.fdv
+        }
+      },
+      {
+        module: 'final_verdict',
+        score: Number(report.rugScore || 0),
+        payload: {
+          ...base,
+          rugScore: report.rugScore,
+          rugStatus: report.rugStatus,
+          speculationScore: report.speculationScore,
+          speculationStatus: report.speculationStatus
+        }
+      }
+    ];
+  }
+
+  async function fetchBNBScanFromApi(address) {
+    const res = await fetch(`${RUGBUSTER_API}/api/scan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok || !data.report) {
+      throw new Error(data.error || `HTTP ${res.status} — RugBuster API unavailable`);
+    }
+      return normalizeBNBApiReport(data.report);
+    }
+
+  async function fetchBNBScoreFromBuilderApi(address) {
+    const res = await fetch(`${RUGBUSTER_BUILDER_API}/score?address=${encodeURIComponent(address)}`);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || `HTTP ${res.status} — RugBuster Builder API unavailable`);
+    }
+    return normalizeBuilderScoreReport(data);
+  }
+
+  async function fetchBuilderAiVerdict(address, report) {
+    const res = await fetch(`${RUGBUSTER_BUILDER_API}/explain`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        address,
+        token_name: report.tokenName,
+        label: report.rugStatus,
+        risk_flags: flattenReasons(report.rugReasons),
+        speculation_status: report.speculationStatus,
+        speculation_flags: flattenReasons(report.speculationReasons),
+        liquidity_usd: report.liquidityUsd,
+        fdv: report.fdv,
+        volume24h: report.volume24h
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || `HTTP ${res.status} — AI verdict unavailable`);
+    }
+    return data.ai_verdict || '';
+  }
+
+  async function postTelegramAlert(address) {
+      const res = await fetch(`${RUGBUSTER_API}/api/scan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address, notify: true, use_cached: true })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || `HTTP ${res.status} — Telegram alert failed`);
+      }
+      return data;
+    }
+
+  async function fetchBNBScanFromDex(address) {
+    const res = await fetch(`${DEXSCREENER_API}/${encodeURIComponent(address)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status} — token not found or unsupported`);
+
+    const data = await res.json();
+    const bnbPairs = (data.pairs || []).filter(pair => (pair.chainId || '').toLowerCase() === 'bsc');
+    if (!bnbPairs.length) {
+      throw new Error('Token not found on BNB Chain liquidity venues');
+    }
+
+    const bestPair = bnbPairs.sort((a, b) => {
+      const liqA = Number(a.liquidity?.usd || 0);
+      const liqB = Number(b.liquidity?.usd || 0);
+      return liqB - liqA;
+    })[0];
+
+    const normalized = address.toLowerCase();
+    const tokenSide = [bestPair.baseToken, bestPair.quoteToken].find(token => (token?.address || '').toLowerCase() === normalized) || bestPair.baseToken;
+    const pairSide = tokenSide === bestPair.baseToken ? bestPair.quoteToken : bestPair.baseToken;
+
+      const liquidityUsd = toNumberOrNull(bestPair.liquidity?.usd);
+      const fdv = toNumberOrNull(bestPair.fdv || bestPair.marketCap);
+      const marketCap = toNumberOrNull(bestPair.marketCap);
+      const volume24h = toNumberOrNull(bestPair.volume?.h24);
+      const priceChange24h = toNumberOrNull(bestPair.priceChange?.h24);
+      const txns24h = bestPair.txns?.h24 || {};
+      const buys24h = toNumberOrNull(txns24h.buys);
+      const sells24h = toNumberOrNull(txns24h.sells);
+      const imageUrl = bestPair.info?.imageUrl || null;
+      const rugScore = null;
+      const rugStatus = 'UNKNOWN';
+      const rugReasons = {
+        high: [],
+        medium: ['⚡ Rug score unavailable in client-only fallback'],
+        neutral: []
+      };
+
+      const speculationReasons = { high: [], medium: [], neutral: [] };
+      let speculationScore = 20;
+
+      if (liquidityUsd === null) {
+        speculationScore = null;
+        speculationReasons.medium.push('⚡ No priced liquidity evidence available');
+      } else {
+        if (liquidityUsd < 5000) {
+          speculationReasons.high.push(`✗ Very thin live liquidity at ${formatUsd(liquidityUsd)}`);
+          speculationScore += 42;
+        } else if (liquidityUsd < 25000) {
+          speculationReasons.high.push(`✗ Thin live liquidity at ${formatUsd(liquidityUsd)}`);
+          speculationScore += 24;
+        } else if (liquidityUsd < 100000) {
+          speculationReasons.medium.push(`⚡ Shallow live liquidity at ${formatUsd(liquidityUsd)}`);
+          speculationScore += 8;
+        } else if (liquidityUsd >= 500000) {
+          speculationScore -= 10;
+          speculationReasons.neutral.push(`Deep live liquidity at ${formatUsd(liquidityUsd)}`);
+        } else {
+          speculationScore -= 2;
+          speculationReasons.neutral.push(`Meaningful live liquidity at ${formatUsd(liquidityUsd)}`);
+        }
+
+        if (fdv && fdv > 0) {
+          const liquidityRatio = liquidityUsd / fdv;
+          if (liquidityRatio < 0.01) {
+            speculationReasons.high.push('✗ Liquidity to FDV ratio is under 1% — exit liquidity risk is extreme');
+            speculationScore += 45;
+          } else if (liquidityRatio < 0.03) {
+            speculationReasons.high.push('✗ Liquidity to FDV ratio is under 3% — market depth is dangerously thin');
+            speculationScore += 35;
+          } else if (liquidityRatio < 0.05) {
+            speculationReasons.high.push('✗ Liquidity to FDV ratio is under 5% — exit liquidity looks fragile');
+            speculationScore += 28;
+          } else if (liquidityRatio < 0.15) {
+            speculationReasons.medium.push('⚡ Liquidity to FDV ratio is under 15% — market depth is shallow');
+            speculationScore += 14;
+          } else if (liquidityRatio >= 0.3) {
+            speculationScore -= 8;
+            speculationReasons.neutral.push('Liquidity to FDV ratio is very healthy');
+          } else if (liquidityRatio >= 0.15) {
+            speculationScore -= 4;
+            speculationReasons.neutral.push('Liquidity to FDV ratio is healthy');
+          }
+        }
+
+        if (volume24h === null) {
+          speculationReasons.medium.push('⚡ 24h volume unavailable');
+        } else if (volume24h < 10000) {
+          speculationReasons.medium.push(`⚡ Low 24h volume at ${formatUsd(volume24h)}`);
+          speculationScore += 10;
+        } else if (volume24h >= 100000) {
+          speculationScore -= 4;
+          speculationReasons.neutral.push(`Strong 24h volume at ${formatUsd(volume24h)}`);
+        }
+
+        if (priceChange24h === null) {
+          speculationReasons.medium.push('⚡ 24h price change unavailable');
+        } else {
+          const absMove = Math.abs(priceChange24h);
+          if (absMove >= 60) {
+            speculationReasons.high.push(`✗ Very high 24h volatility at ${priceChange24h.toFixed(1)}%`);
+            speculationScore += 18;
+          } else if (absMove >= 25) {
+            speculationReasons.medium.push(`⚡ Elevated 24h volatility at ${priceChange24h.toFixed(1)}%`);
+            speculationScore += 8;
+          } else {
+            speculationReasons.neutral.push(`24h volatility is moderate at ${priceChange24h.toFixed(1)}%`);
+          }
+        }
+
+        if (buys24h === null || sells24h === null) {
+          speculationReasons.medium.push('⚡ 24h buy/sell flow unavailable');
+        } else {
+          if (sells24h > buys24h * 3 && sells24h > 20) {
+            speculationReasons.high.push(`✗ Heavy sell pressure: ${sells24h} sells vs ${buys24h} buys`);
+            speculationScore += 8;
+          } else if (buys24h > sells24h * 2 && buys24h > 20) {
+            speculationScore -= 2;
+            speculationReasons.neutral.push(`Buy-side demand leads: ${buys24h} buys vs ${sells24h} sells`);
+          }
+        }
+
+        speculationScore = Math.max(0, Math.min(100, Math.round(speculationScore)));
+      }
+
+      const speculationStatus = speculationScore === null
+        ? 'UNKNOWN'
+        : speculationScore >= 75
+          ? 'HIGH'
+          : speculationScore >= 45
+            ? 'ELEVATED'
+            : 'LOW';
+
+      return {
+        tokenName: `${tokenSide?.name || 'Unknown Token'}${tokenSide?.symbol ? ` (${tokenSide.symbol})` : ''}`,
+        tokenImage: imageUrl,
+        dexId: (bestPair.dexId || 'unknown').toUpperCase(),
+        pairLabel: `${pairSide?.symbol || 'PAIR'} / ${tokenSide?.symbol || 'TOKEN'}`,
+        liquidityUsd,
+        fdv,
+        marketCap,
+        volume24h,
+        priceChange24h,
+        buys24h,
+        sells24h,
+        pairAddress: bestPair.pairAddress,
+        pairUrl: bestPair.url,
+        rugScore,
+        rugStatus,
+        rugReasons,
+        speculationScore,
+        speculationStatus,
+        speculationReasons,
+        hasLiquidityEvidence: liquidityUsd !== null || Boolean(bestPair.pairAddress),
+        source: 'DexScreener fallback'
+      };
+    }
+
+  async function fetchBNBScan(address) {
+    try {
+      return await fetchBNBScanFromApi(address);
+    } catch (apiErr) {
+      console.warn('RugBuster scan API unavailable, trying Builder API cache:', apiErr);
+      try {
+        return await fetchBNBScoreFromBuilderApi(address);
+      } catch (scoreErr) {
+        console.warn('RugBuster Builder API unavailable, falling back to DexScreener:', scoreErr);
+        return await fetchBNBScanFromDex(address);
+      }
+    }
+  }
+
+  const CIA_MODULE_SEQUENCE = [
+    'funding_origin',
+    'deploy_latency',
+    'tx_entropy',
+    'wash_pattern',
+    'holder_cluster',
+    'market_depth',
+    'syndicate_ai'
+  ];
+
+  function ciaModuleEl(module) {
+    return document.querySelector(`[data-cia-module="${module}"]`);
+  }
+
+  function setCiaStatus(text, state = '') {
+    const el = document.getElementById('ciaFlowState');
+    if (!el) return;
+    el.textContent = text;
+    el.className = `cia-flow-state ${state}`.trim();
+  }
+
+  function resetCiaFlow() {
+    setCiaStatus('IDLE');
+    document.getElementById('ciaTargetName').textContent = 'Awaiting target';
+    document.getElementById('ciaTargetAddress').textContent = 'Paste an BNB Chain address and start scan.';
+    document.getElementById('ciaFinalVerdict').textContent = 'Not analyzed';
+    document.getElementById('ciaFinalScore').textContent = 'Rug and speculation scores will appear here.';
+    const finalNode = document.getElementById('ciaFinalNode');
+    finalNode.className = 'cia-node cia-final-node';
+
+    CIA_MODULE_SEQUENCE.forEach(module => {
+      const el = ciaModuleEl(module);
+      if (!el) return;
+      el.classList.remove('active', 'complete', 'warn', 'danger');
+      const detail = el.querySelector('.cia-module-detail');
+      if (detail) detail.textContent = 'waiting';
+    });
+  }
+
+  function setCiaTarget(address, report = null) {
+    document.getElementById('ciaTargetName').textContent = report?.tokenName || 'Scanning target';
+    document.getElementById('ciaTargetAddress').textContent = address || 'Unknown target';
+  }
+
+  function setCiaModuleState(module, state, detailText) {
+    const el = ciaModuleEl(module);
+    if (!el) return;
+    el.classList.remove('active', 'complete', 'warn', 'danger');
+    if (state) el.classList.add(state);
+    const detail = el.querySelector('.cia-module-detail');
+    if (detail) detail.textContent = detailText || state || 'waiting';
+  }
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function runCiaFlowStage(module, detailText, finalState = 'complete', delay = 180) {
+    setCiaModuleState(module, 'active', detailText);
+    await sleep(delay);
+    setCiaModuleState(module, finalState, detailText);
+  }
+
+  function finalScanLevel(report) {
+    if (!report) return 'complete';
+    if (report.rugStatus === 'HIGH' || report.speculationStatus === 'HIGH') return 'danger';
+    if (report.rugStatus === 'ELEVATED' || report.speculationStatus === 'ELEVATED') return 'warn';
+    return 'complete';
+  }
+
+  function finalScanVerdict(report) {
+    if (report.rugStatus === 'HIGH') return 'HIGH RUG RISK';
+    if (report.speculationStatus === 'HIGH') return 'HIGH SPECULATION';
+    if (report.speculationStatus === 'ELEVATED') return 'LOW RUG RISK / SHALLOW MARKET';
+    if (report.rugStatus === 'UNKNOWN' || report.speculationStatus === 'UNKNOWN') return 'INCOMPLETE EVIDENCE';
+    return 'LOW RISK';
+  }
+
+  function finalizeCiaFlow(report) {
+    const level = finalScanLevel(report);
+    const finalNode = document.getElementById('ciaFinalNode');
+    finalNode.className = `cia-node cia-final-node ${level}`;
+    document.getElementById('ciaFinalVerdict').textContent = finalScanVerdict(report);
+    document.getElementById('ciaFinalScore').textContent = `Rug ${report.rugScore ?? 'UNKNOWN'} · Spec ${report.speculationScore ?? 'UNKNOWN'} · ${report.dexId || 'DEX unknown'}`;
+    setCiaStatus(level === 'danger' ? 'DANGER' : level === 'warn' ? 'REVIEW' : 'COMPLETE', level);
+  }
+
+  function renderFinalScanMetric(label, value, color) {
+    return `
+      <div style="border:1px solid rgba(0,245,255,0.14);background:rgba(0,245,255,0.035);padding:14px 16px;min-height:78px;">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:2px;margin-bottom:8px;">${escapeHtml(label)}</div>
+        <div style="font-family:'Orbitron',monospace;font-size:18px;color:${color};line-height:1.35;">${escapeHtml(value)}</div>
+      </div>
+    `;
+  }
+
+  function showFinalScanModal(report, address) {
+    const modal = document.getElementById('finalScanModal');
+    if (!modal || !report) return;
+    const level = finalScanLevel(report);
+    const accent = level === 'danger' ? '#ff3d3d' : level === 'warn' ? 'var(--neon-orange)' : 'var(--neon-green)';
+    document.getElementById('finalScanTitle').innerHTML = `${escapeHtml(report.tokenName || shortAddress(address))} <span style="color:${accent};">/ ${escapeHtml(finalScanVerdict(report))}</span>`;
+    document.getElementById('finalScanAddress').textContent = address;
+    document.getElementById('finalScanGrid').innerHTML = [
+      renderFinalScanMetric('RUG RISK', `${report.rugScore ?? 'UNKNOWN'} · ${report.rugStatus || 'UNKNOWN'}`, accent),
+      renderFinalScanMetric('SPECULATION', `${report.speculationScore ?? 'UNKNOWN'} · ${report.speculationStatus || 'UNKNOWN'}`, report.speculationStatus === 'LOW' ? 'var(--neon-green)' : 'var(--neon-orange)'),
+      renderFinalScanMetric('LIQUIDITY', formatUsd(report.liquidityUsd), 'var(--neon-cyan)'),
+      renderFinalScanMetric('24H VOLUME', formatUsd(report.volume24h), 'var(--neon-pink)')
+    ].join('');
+    document.getElementById('finalScanAi').textContent = report.aiVerdict || 'Syndicate AI verdict unavailable; deterministic score remains active.';
+    modal.style.display = 'flex';
+  }
+
+  function closeFinalScanModal() {
+    const modal = document.getElementById('finalScanModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  async function runScan() {
+    const address = document.getElementById('scanInput').value.trim();
+    if (!address) {
+      document.getElementById('scanInput').style.borderColor = '#ff3d3d';
+      setTimeout(() => document.getElementById('scanInput').style.borderColor = '', 1000);
+      return;
+    }
+
+    clearTerminal();
+    resetCiaFlow();
+    document.getElementById('scoreBoard').style.display = 'none';
+    document.getElementById('tokenImageWrap').style.display = 'none';
+    setAlertButtonState(false, 'SEND ALERT');
+    setPublishButtonState(false, 'PUBLISH REPORT');
+    lastScannedAddress = null;
+    lastScanData = null;
+
+    const short = shortAddress(address);
+    const isBNB = isBNBAddress(address);
+
+    if (!isBNB) {
+      termLine(`<span class="t-prompt">RB&gt;</span> <span class="t-danger">Unsupported address format</span>`);
+      termLine(`<span class="t-out">// Use an BNB / BNB Chain 0x token address.</span>`);
+      termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
+      setCiaStatus('UNSUPPORTED', 'danger');
+      return;
+    }
+
+    const chain = 'BNB/BSC';
+    setCiaTarget(address);
+    setCiaStatus('SCANNING', 'scanning');
+
+    termLine(`<span class="t-prompt">RB&gt;</span> <span class="t-cmd">scan ${short} --chain ${chain} --deep --ai</span>`);
+    await termLineDelay(`<span class="t-out">Initializing threat engine...</span>`, 300);
+    await termLineDelay(`<span class="t-out">Connecting to BNB Chain live market feeds...</span>`, 500);
+    await termLineDelay(`<span class="t-out">Fetching BNB token pairs and liquidity...</span>`, 700);
+
+    let apexData;
+    try {
+      apexData = await fetchBNBScan(address);
+    } catch (err) {
+      await termLineDelay(`<span class="t-danger">✗ SCAN FAILED: ${err.message}</span>`, 400);
+      await termLineDelay(`<span class="t-out">// Ensure this is an BNB Chain token address with live liquidity.</span>`, 200);
+      termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
+      setCiaStatus('SCAN FAILED', 'danger');
+      return;
+    }
+
+      setCiaTarget(address, apexData);
+      await runCiaFlowStage('funding_origin', apexData.source || 'RugBuster live source');
+      await runCiaFlowStage('deploy_latency', apexData.dexId || 'BNB Chain token route');
+      await runCiaFlowStage('tx_entropy', apexData.buys24h === null || apexData.sells24h === null ? '24h flow unknown' : `${apexData.buys24h} buys / ${apexData.sells24h} sells`);
+      await runCiaFlowStage('wash_pattern', apexData.speculationStatus === 'LOW' ? 'no hard market anomaly' : `${apexData.speculationStatus} market review`, apexData.speculationStatus === 'LOW' ? 'complete' : 'warn');
+      await runCiaFlowStage('holder_cluster', apexData.rugStatus === 'LOW' ? 'hard facts clean' : `${apexData.rugStatus} on-chain facts`, apexData.rugStatus === 'HIGH' ? 'danger' : apexData.rugStatus === 'LOW' ? 'complete' : 'warn');
+      await runCiaFlowStage('market_depth', `liq ${formatUsd(apexData.liquidityUsd)}`, apexData.speculationStatus === 'HIGH' ? 'danger' : apexData.speculationStatus === 'LOW' ? 'complete' : 'warn');
+
+      const rugFlags = [
+        ...apexData.rugReasons.high,
+        ...apexData.rugReasons.medium,
+        ...apexData.rugReasons.neutral.map(reason => `· ${reason}`)
+      ];
+      const speculationFlags = [
+        ...apexData.speculationReasons.high,
+        ...apexData.speculationReasons.medium,
+        ...apexData.speculationReasons.neutral.map(reason => `· ${reason}`)
+      ];
+
+      await termLineDelay(`<span class="t-cyan">✓ Network:</span>  <span class="t-cmd">BNB / BSC</span>`, 200);
+      await termLineDelay(`<span class="t-cyan">✓ Token:</span>    <span class="t-cmd">${apexData.tokenName}</span>`, 220);
+      await termLineDelay(`<span class="t-cyan">✓ Address:</span>  <span class="t-out">${short}</span>`, 180);
+      await termLineDelay(`<span class="t-cyan">✓ Primary DEX:</span> <span class="t-cmd">${apexData.dexId}</span>`, 180);
+      await termLineDelay(`<span class="t-cyan">✓ Pair:</span>     <span class="t-out">${apexData.pairLabel}</span>`, 180);
+      await termLineDelay(`<span class="t-cyan">✓ Liquidity:</span> <span class="t-cmd">${formatUsd(apexData.liquidityUsd)}</span>`, 180);
+      await termLineDelay(`<span class="t-cyan">✓ FDV:</span>      <span class="t-cmd">${formatUsd(apexData.fdv)}</span>`, 180);
+      await termLineDelay(`<span class="t-cyan">✓ 24h Volume:</span> <span class="t-cmd">${formatUsd(apexData.volume24h)}</span>`, 180);
+      await termLineDelay(`<span class="t-cyan">✓ 24h Flow:</span> <span class="t-out">${apexData.buys24h === null || apexData.sells24h === null ? 'UNKNOWN' : `${apexData.buys24h} buys / ${apexData.sells24h} sells`}</span>`, 180);
+      await termLineDelay(`<span class="t-cyan">✓ 24h Price:</span> <span class="${apexData.priceChange24h !== null && apexData.priceChange24h < 0 ? 't-warn' : 't-success'}">${apexData.priceChange24h === null ? 'UNKNOWN' : `${apexData.priceChange24h.toFixed(1)}%`}</span>`, 180);
+      await termLineDelay(`<span class="t-out">&nbsp;</span>`, 80);
+      await termLineDelay(`<span class="t-out">── RUG SCORE // ON-CHAIN FACTS ───────────</span>`, 260);
+      await termLineDelay(`<span class="${apexData.rugStatus === 'HIGH' ? 't-danger' : apexData.rugStatus === 'ELEVATED' ? 't-warn' : apexData.rugStatus === 'LOW' ? 't-success' : 't-out'}">  ${apexData.rugStatus} : ${apexData.rugScore === null ? 'UNKNOWN' : apexData.rugScore}</span>`, 180);
+      if (!rugFlags.length) {
+        await termLineDelay(`<span class="t-success">  ✓ No hard-fact rug flags detected</span>`, 220);
+      }
+      for (let i = 0; i < rugFlags.length; i++) {
+        const flag = rugFlags[i];
+        const cls = flag.startsWith('✗') ? 't-danger' : flag.startsWith('⚡') ? 't-warn' : 't-out';
+        await termLineDelay(`<span class="${cls}">  ${flag}</span>`, 90 + i * 60);
+      }
+
+      await termLineDelay(`<span class="t-out">&nbsp;</span>`, 80);
+      await termLineDelay(`<span class="t-out">── SPECULATION SCORE // MARKET DATA ──────</span>`, 200);
+      await termLineDelay(`<span class="${apexData.speculationStatus === 'HIGH' ? 't-danger' : apexData.speculationStatus === 'ELEVATED' ? 't-warn' : apexData.speculationStatus === 'LOW' ? 't-success' : 't-out'}">  ${apexData.speculationStatus} : ${apexData.speculationScore === null ? 'UNKNOWN' : apexData.speculationScore}</span>`, 180);
+      if (!speculationFlags.length) {
+        await termLineDelay(`<span class="t-success">  ✓ No market-structure speculation flags detected</span>`, 220);
+      }
+      for (let i = 0; i < speculationFlags.length; i++) {
+        const flag = speculationFlags[i];
+        const cls = flag.startsWith('✗') ? 't-danger' : flag.startsWith('⚡') ? 't-warn' : 't-out';
+        await termLineDelay(`<span class="${cls}">  ${flag}</span>`, 90 + i * 60);
+      }
+
+      await termLineDelay(`<span class="t-out">&nbsp;</span>`, 80);
+      await termLineDelay(`<span class="t-out">── FINAL READOUT ──────────────────────────</span>`, 200);
+
+      if (apexData.rugStatus === 'HIGH') {
+        await termLineDelay(`<span class="t-danger">  ⚠ RUG STATUS   : HIGH</span>`, 230);
+        await termLineDelay(`<span class="t-danger">  ⚠ RESULT       : HARD ON-CHAIN FACTS LOOK BAD</span>`, 200);
+        await termLineDelay(`<span class="t-danger">  ✗ DO NOT INTERACT WITHOUT MANUAL REVIEW</span>`, 180);
+      } else if (apexData.speculationStatus === 'HIGH') {
+        await termLineDelay(`<span class="t-danger">  ⚠ SPECULATION  : HIGH</span>`, 230);
+        await termLineDelay(`<span class="t-danger">  ⚠ RESULT       : MARKET DEPTH LOOKS DANGEROUS</span>`, 200);
+        await termLineDelay(`<span class="t-danger">  ✗ EXIT LIQUIDITY MAY BE TOO THIN FOR SAFE SIZE</span>`, 180);
+      } else if (apexData.speculationStatus === 'ELEVATED') {
+        await termLineDelay(`<span class="t-warn">  ⚠ SPECULATION  : ELEVATED</span>`, 230);
+        await termLineDelay(`<span class="t-warn">  ⚠ RESULT       : LOW RUG RISK, BUT MARKET DEPTH IS SHALLOW</span>`, 200);
+        await termLineDelay(`<span class="t-warn">  ⚡ TREAT THIS AS A SPECULATIVE POSITION, NOT A STABLE ONE</span>`, 180);
+      } else if (apexData.speculationStatus === 'UNKNOWN') {
+        await termLineDelay(`<span class="t-out">  · SPECULATION  : UNKNOWN</span>`, 230);
+        await termLineDelay(`<span class="t-out">  · RESULT       : NO LIQUIDITY EVIDENCE, DO NOT GUESS</span>`, 200);
+      } else {
+        await termLineDelay(`<span class="t-success">  ✓ RUG STATUS   : ${apexData.rugStatus}</span>`, 230);
+        await termLineDelay(`<span class="t-success">  ✓ SPECULATION  : ${apexData.speculationStatus}</span>`, 200);
+      }
+
+      try {
+        const aiVerdict = apexData.aiVerdict || await fetchBuilderAiVerdict(address, apexData);
+        if (aiVerdict) {
+          apexData.aiVerdict = aiVerdict;
+          setCiaModuleState('syndicate_ai', 'complete', aiVerdict.slice(0, 46));
+          await termLineDelay(`<span class="t-out">&nbsp;</span>`, 80);
+          await termLineDelay(`<span class="t-out">── SYNDICATE AI VERDICT ──────────────────</span>`, 180);
+          await termLineDelay(`<span class="t-cyan">  ${aiVerdict}</span>`, 180);
+        }
+      } catch (aiErr) {
+        setCiaModuleState('syndicate_ai', 'warn', 'AI unavailable');
+        await termLineDelay(`<span class="t-out">// AI verdict unavailable; deterministic score remains active.</span>`, 100);
+      }
+
+      await termLineDelay(`<span class="t-out">&nbsp;</span>`, 80);
+      await termLineDelay(`<span class="t-success">✓ Scan complete · Powered by ${apexData.source || 'RugBuster BNB data'}</span>`, 200);
+    if (apexData.pairUrl) {
+      await termLineDelay(`<span class="t-out">// Pair URL: ${apexData.pairUrl}</span>`, 120);
+    }
+    termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
+
+    setScoreMeter('rugScore', apexData.rugScore, apexData.rugStatus, '· UNKNOWN — ON-CHAIN FACTS ARE INCOMPLETE');
+    setScoreMeter('specScore', apexData.speculationScore, apexData.speculationStatus, '· UNKNOWN — NO LIVE LIQUIDITY EVIDENCE');
+    showTokenImage(apexData.tokenImage, apexData.tokenName, address);
+    lastScannedAddress = address;
+    lastScanData = apexData;
+    setAlertButtonState(true, 'SEND ALERT');
+    setPublishButtonState(true, 'PUBLISH REPORT');
+    finalizeCiaFlow(apexData);
+    setTimeout(() => showFinalScanModal(apexData, address), 450);
+
+    return;
+  }
+
+  async function sendTelegramAlert() {
+    if (!lastScannedAddress || !lastScanData) {
+      termLine(`<span class="t-warn">⚡ Scan a token first before sending an alert.</span>`);
+      termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
+      return;
+    }
+
+    setAlertButtonState(false, 'SENDING...');
+    termLine(`<span class="t-prompt">RB&gt;</span> <span class="t-cmd">send-alert ${shortAddress(lastScannedAddress)} --telegram</span>`);
+    await termLineDelay(`<span class="t-out">Packaging final readout for Telegram...</span>`, 220);
+
+    try {
+      const response = await postTelegramAlert(lastScannedAddress);
+      if (!response.telegram || response.telegram.ok !== true) {
+        throw new Error('Telegram API did not confirm delivery');
+      }
+      await termLineDelay(`<span class="t-success">✓ Telegram alert delivered successfully.</span>`, 220);
+      await termLineDelay(`<span class="t-out">// Final readout sent to your configured Telegram channel.</span>`, 120);
+      setAlertButtonState(true, 'ALERT SENT');
+      setTimeout(() => setAlertButtonState(true, 'SEND ALERT'), 2400);
+    } catch (err) {
+      await termLineDelay(`<span class="t-danger">✗ TELEGRAM ALERT FAILED: ${err.message}</span>`, 220);
+      if (String(err.message || '').includes('429')) {
+        await termLineDelay(`<span class="t-out">// Market data source is rate-limiting us. Retry in a moment or re-scan later.</span>`, 120);
+      } else {
+        await termLineDelay(`<span class="t-out">// Check TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, and bot access in Railway.</span>`, 120);
+      }
+      setAlertButtonState(true, 'SEND ALERT');
+    }
+
+    termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
+  }
+
+  async function publishCurrentReport() {
+    if (!lastScannedAddress || !lastScanData) {
+      termLine(`<span class="t-warn">⚡ Scan a token first before publishing to the registry.</span>`);
+      termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
+      return;
+    }
+
+    setPublishButtonState(false, 'PUBLISHING...');
+    termLine(`<span class="t-prompt">RB&gt;</span> <span class="t-cmd">publish ${shortAddress(lastScannedAddress)} --registry</span>`);
+    await termLineDelay(`<span class="t-out">Preparing wallet-confirmed module registry writes...</span>`, 220);
+
+    try {
+      if (!walletConnected || connectedProvider !== 'evm' || !window.ethereum) {
+        throw new Error('Connect an BNB Chain wallet before publishing');
+      }
+
+      const { signer, contract } = await getRegistryContractWithSigner();
+      const signerAddress = await signer.getAddress();
+      const isReviewer = await isAuthorizedReviewerAddress(signerAddress);
+
+      if (!isReviewer) {
+        throw new Error('Connected wallet is not an authorized reviewer yet. Owner must approve it first.');
+      }
+
+      const modules = buildWalletReportModules(lastScannedAddress, lastScanData);
+      let totalGas = 0n;
+      await termLineDelay(`<span class="t-out">// Signing with ${shortAddress(signerAddress)}</span>`, 120);
+      await termLineDelay(`<span class="t-out">// Wallet will ask for ${modules.length} module confirmations.</span>`, 120);
+
+      for (const item of modules) {
+        const metadataHash = await sha256Bytes32({
+          module: item.module,
+          payload: item.payload
+        });
+        await termLineDelay(`<span class="t-out">// Confirm ${item.module} in wallet...</span>`, 90);
+        const tx = await contract.updateScore(
+          lastScannedAddress,
+          Math.max(0, Math.min(100, Number(item.score || 0))),
+          metadataHash
+        );
+        await termLineDelay(`<span class="t-out">// ${item.module} sent: ${tx.hash}</span>`, 90);
+        const receipt = await tx.wait();
+        totalGas += BigInt(receipt.gasUsed.toString());
+        await termLineDelay(`<span class="t-success">✓ ${item.module} confirmed · gas ${receipt.gasUsed.toString()}</span>`, 120);
+      }
+
+      await termLineDelay(`<span class="t-success">✓ Wallet-confirmed module publish complete.</span>`, 220);
+      await termLineDelay(`<span class="t-out">// Module TXs: ${modules.length}</span>`, 120);
+      await termLineDelay(`<span class="t-out">// Total gas used: ${totalGas.toString()}</span>`, 120);
+      setPublishButtonState(true, 'PUBLISHED');
+      setTimeout(() => setPublishButtonState(true, 'PUBLISH REPORT'), 2600);
+    } catch (err) {
+      await termLineDelay(`<span class="t-danger">✗ REGISTRY PUBLISH FAILED: ${err.message}</span>`, 220);
+      await termLineDelay(`<span class="t-out">// Connect BNB Smart Chain, authorize this reviewer wallet, and keep enough BNB for gas.</span>`, 120);
+      setPublishButtonState(true, 'PUBLISH REPORT');
+    }
+
+    termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
+  }
+
+  function startRecentScanFeed() {
+    loadRecentScans();
+    setInterval(loadRecentScans, 60000);
+  }
+
+  window.addEventListener('DOMContentLoaded', startRecentScanFeed);
+
+  window.addEventListener('load', async () => {
+    installWalletListeners();
+    try {
+      await syncConnectedWallet({ silent: true });
+    } finally {
+      renderPortfolioHeader();
+    }
+  });
+</script>
+
+</body>
+</html>

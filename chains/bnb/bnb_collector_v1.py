@@ -81,7 +81,7 @@ BNB_SCAN_LOG = Path(clean_env_value("BNB_SCAN_LOG", "bnb_scan_log.md"))
 BNB_STATE_FILE = Path(clean_env_value("BNB_STATE_FILE", "bnb_collector_state.json"))
 BNB_TELEGRAM_CHAT_ID = clean_env_value("BNB_TELEGRAM_CHAT_ID") or clean_env_value("TELEGRAM_CHAT_ID") or "@RugBusterBNB"
 TELEGRAM_BOT_TOKEN = clean_env_value("BNB_TELEGRAM_BOT_TOKEN") or clean_env_value("TELEGRAM_BOT_TOKEN")
-RECENT_SCAN_FEED_URL = clean_env_value("RECENT_SCAN_FEED_URL", "")
+RECENT_SCAN_FEED_URL = clean_env_value("RECENT_SCAN_FEED_URL", "https://web-production-376bf.up.railway.app/api/recent-scans")
 RECENT_SCAN_INGEST_TOKEN = clean_env_value("RECENT_SCAN_INGEST_TOKEN")
 ONCHAIN_LOG_ENABLED = os.getenv("ONCHAIN_LOG_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
 ONCHAIN_LOG_TO_ADDRESS = clean_env_value("BNB_ONCHAIN_LOG_TO_ADDRESS") or clean_env_value("BSC_ONCHAIN_LOG_TO_ADDRESS")
@@ -1170,7 +1170,7 @@ def build_training_record_v6(
         creator_risk = f"LOW RISK - {creator_stats['rug_rate']}% rug rate"
 
     input_text = f"""Token: {token_info.get('name', 'Unknown')} ({token_info.get('symbol', '')})
-Chain: BNB (C-Chain)
+Chain: BNB Smart Chain
 Contract: {contract_address}
 Explorer: https://bscscan.com/address/{contract_address}
 Deployer: {deployer[:20] + '...' if deployer else 'Unknown'}
