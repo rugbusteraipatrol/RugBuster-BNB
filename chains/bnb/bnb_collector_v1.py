@@ -96,8 +96,10 @@ GECKOTERMINAL_NEW_POOLS_URL = clean_env_value(
 GECKOTERMINAL_TOP_POOLS_ENABLED = os.getenv("GECKOTERMINAL_TOP_POOLS_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
 GECKOTERMINAL_POOL_PAGES = int(os.getenv("GECKOTERMINAL_POOL_PAGES", "3"))
 GECKOTERMINAL_QUEUE_LOW_WATERMARK = int(os.getenv("GECKOTERMINAL_QUEUE_LOW_WATERMARK", "10"))
+GECKOTERMINAL_NEW_POOLS_COOLDOWN_SECONDS = int(os.getenv("GECKOTERMINAL_NEW_POOLS_COOLDOWN_SECONDS", "300"))
 GECKOTERMINAL_TOP_POOLS_COOLDOWN_SECONDS = int(os.getenv("GECKOTERMINAL_TOP_POOLS_COOLDOWN_SECONDS", "900"))
 RESCAN_COOLDOWN_SECONDS = int(os.getenv("RESCAN_COOLDOWN_SECONDS", "2700"))
+MAX_PENDING_QUEUE = int(os.getenv("MAX_PENDING_QUEUE", "250"))
 V1_PAIR_CREATED_TOPIC = "0x0d3648bd0f6ba80134a33ba9275ac585d9d315f0ad8355cddefde31afa28d0e9"
 LB_PAIR_CREATED_TOPIC = "0x" + keccak(text="LBPairCreated(address,address,uint256,address,uint256)").hex()
 DEFAULT_V1_DEX_FACTORIES = [
@@ -2089,6 +2091,7 @@ def poll_loop(output_path: Path) -> None:
     log.info("Start blok: %d", current_block)
     pending_tokens: list[dict] = []
     queued_contracts: set[str] = set()
+    last_new_pool_refill_at = 0.0
     last_top_pool_refill_at = 0.0
     next_scan_at = 0.0
 
@@ -2097,6 +2100,9 @@ def poll_loop(output_path: Path) -> None:
         last_scan_at = float(seen_contracts.get(address, 0.0)) if address else 0.0
         recently_scanned = last_scan_at and time.time() - last_scan_at < RESCAN_COOLDOWN_SECONDS
         if not address or recently_scanned or address in queued_contracts:
+            return
+        if len(pending_tokens) >= MAX_PENDING_QUEUE:
+            log.info("Queue limit %d reached; dropping %s from %s.", MAX_PENDING_QUEUE, address[:12], token_data.get("source", "unknown"))
             return
         pending_tokens.append(token_data)
         queued_contracts.add(address)
@@ -2131,10 +2137,17 @@ def poll_loop(output_path: Path) -> None:
                 time.sleep(POLL_INTERVAL)
                 continue
 
-            gecko_tokens = get_geckoterminal_new_pool_tokens()
-            log.info("Nađeno %d GeckoTerminal BNB new-pool tokena", len(gecko_tokens))
-            for token_data in gecko_tokens:
-                enqueue_token(token_data)
+            if (
+                len(pending_tokens) < GECKOTERMINAL_QUEUE_LOW_WATERMARK
+                and time.time() - last_new_pool_refill_at >= GECKOTERMINAL_NEW_POOLS_COOLDOWN_SECONDS
+            ):
+                gecko_tokens = get_geckoterminal_new_pool_tokens()
+                last_new_pool_refill_at = time.time()
+                log.info("Nađeno %d GeckoTerminal BNB new-pool tokena", len(gecko_tokens))
+                for token_data in gecko_tokens:
+                    enqueue_token(token_data)
+            else:
+                log.info("GeckoTerminal new_pools preskočen; Queue=%d/%d.", len(pending_tokens), MAX_PENDING_QUEUE)
 
             if (
                 len(pending_tokens) < GECKOTERMINAL_QUEUE_LOW_WATERMARK
@@ -2146,17 +2159,23 @@ def poll_loop(output_path: Path) -> None:
                 for token_data in top_pool_tokens:
                     enqueue_token(token_data)
 
-            dex_tokens = get_new_dex_pair_tokens(current_block, new_block)
-            log.info("Nađeno %d novih DEX pair tokena u blokovima %d-%d",
-                     len(dex_tokens), current_block, new_block)
-            for token_data in dex_tokens:
-                enqueue_token(token_data)
+            if len(pending_tokens) < MAX_PENDING_QUEUE:
+                dex_tokens = get_new_dex_pair_tokens(current_block, new_block)
+                log.info("Nađeno %d novih DEX pair tokena u blokovima %d-%d",
+                         len(dex_tokens), current_block, new_block)
+                for token_data in dex_tokens:
+                    enqueue_token(token_data)
+            else:
+                log.info("DEX pair scan preskočen; Queue=%d/%d.", len(pending_tokens), MAX_PENDING_QUEUE)
 
-            deployments = get_new_token_deployments(current_block, new_block)
-            log.info("Nađeno %d novih fallback contract deploy-eva u blokovima %d-%d",
-                     len(deployments), current_block, new_block)
-            for token_data in deployments:
-                enqueue_token(token_data)
+            if len(pending_tokens) < MAX_PENDING_QUEUE:
+                deployments = get_new_token_deployments(current_block, new_block)
+                log.info("Nađeno %d novih fallback contract deploy-eva u blokovima %d-%d",
+                         len(deployments), current_block, new_block)
+                for token_data in deployments:
+                    enqueue_token(token_data)
+            else:
+                log.info("Fallback contract scan preskočen; Queue=%d/%d.", len(pending_tokens), MAX_PENDING_QUEUE)
 
             now = time.time()
             if pending_tokens and now >= next_scan_at:
