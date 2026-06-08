@@ -367,6 +367,7 @@ SCAM_NAME_PATTERNS = [
     "ai", "gpt", "agent", "swarm",
     "100x", "1000x", "x100", "x1000",
     "official", "real", "v2", "v3",
+    "bitcoin", "binance", "bnb chain", "bitcard", "card",
 ]
 
 def analyze_name_stylometry(token_name: str, ticker: str) -> dict:
@@ -1079,6 +1080,12 @@ def classify_BNB_token_v6(token_info: dict, cia_intel: dict, v5: dict, v6: dict,
     sweep    = v5.get("cex_sweep", {})
     style    = v5.get("name_style", {})
     xchain   = v5.get("cross_chain", {})
+    token_name = str(token_info.get("name") or "")
+    token_symbol = str(token_info.get("symbol") or "")
+    token_label = f"{token_name} {token_symbol}".strip()
+    non_ascii_chars = sum(1 for ch in token_label if ord(ch) > 127)
+    non_ascii_ratio = non_ascii_chars / max(len(token_label), 1)
+    holder_count = int(token_info.get("holders_count", 0) or 0)
 
     # CIA flags
     if funding.get("all_fresh"):       flags.append("Fresh funding chain")
@@ -1088,11 +1095,13 @@ def classify_BNB_token_v6(token_info: dict, cia_intel: dict, v5: dict, v6: dict,
     if wash.get("wash_detected"):      flags.append("Wash trading detected")
     if wash.get("dev_sold_fast"):      flags.append(f"Dev sold in {wash.get('dev_sell_latency_s')}s")
     if cluster.get("is_bot_farm"):     flags.append(f"Bot farm ({cluster.get('new_wallets_count')}/{cluster.get('total_checked')} new)")
-    if deployer_balance < 0.1:        flags.append("Near-zero deployer balance")
-    if token_info.get("holders_count", 0) < 10: flags.append("Less than 10 holders")
+    if deployer_balance < 0.01:       flags.append("Zero/near-zero deployer balance")
+    elif deployer_balance < 0.1:      flags.append("Low deployer balance")
+    if holder_count < 10:             flags.append("Less than 10 holders")
     # V5 flags
     if sweep.get("sweep_to_cex"):      flags.append(f"CEX sweep -> {sweep.get('cex_destination')}")
-    if style.get("name_scam_score", 0) > 50: flags.append(f"Scam name pattern ({style.get('matched_patterns')})")
+    if style.get("name_scam_score", 0) >= 25: flags.append(f"Scam name pattern ({style.get('matched_patterns')})")
+    if non_ascii_ratio > 0.35:         flags.append("High-noise/non-ASCII token name")
     if xchain.get("cross_chain_match"): flags.append(f"Cross-chain scam match ({xchain.get('match_chains')})")
     # V6 flags
     if backdoor.get("has_mint_function"):  flags.append("Mint function in bytecode")
@@ -1103,23 +1112,45 @@ def classify_BNB_token_v6(token_info: dict, cia_intel: dict, v5: dict, v6: dict,
         flags.append(f"High concentration (top5={conc.get('top5_pct')}%)")
     if vel.get("is_fast_rug"):             flags.append(f"Fast rug velocity ({vel.get('velocity_score')})")
 
-    # Scoring
-    danger_count = sum([
+    owner_controls = any(
+        fn in backdoor.get("backdoor_functions", [])
+        for fn in ("owner()", "transferOwnership(address)", "renounceOwnership()")
+    )
+    if owner_controls and holder_count < 25:
+        flags.append("Owner controls on very new token")
+
+    # Scoring. BNB new-pool spam needs stricter defaults than AVAX because many
+    # contracts are disposable launch tokens with thin history and fresh deployers.
+    hard_danger_count = sum([
         wash.get("wash_detected", False),
         cluster.get("is_bot_farm", False),
-        funding.get("all_fresh", False),
         entropy.get("is_bot_pattern", False),
         wash.get("linker_wallets_connected", False),
         backdoor.get("backdoor_risk_score", 0) >= 60,
+        backdoor.get("has_mint_function", False) and holder_count < 10,
+        backdoor.get("has_drain_function", False),
+        backdoor.get("has_blacklist", False),
+        backdoor.get("is_proxy", False),
         conc.get("concentration_risk") == "CRITICAL",
         vel.get("is_fast_rug", False),
         sweep.get("sweep_to_cex", False),
         xchain.get("cross_chain_match", False),
     ])
+    soft_risk_count = sum([
+        funding.get("all_fresh", False),
+        funding.get("is_fresh_wallet", False),
+        deployer_balance < 0.01,
+        holder_count < 10,
+        style.get("name_scam_score", 0) >= 25,
+        non_ascii_ratio > 0.35,
+        owner_controls and holder_count < 25,
+        conc.get("concentration_risk") in ("HIGH", "CRITICAL"),
+        backdoor.get("backdoor_risk_score", 0) >= 20,
+    ])
 
-    if danger_count >= 5:
+    if hard_danger_count >= 2 or (hard_danger_count >= 1 and soft_risk_count >= 3):
         return "DANGER", flags
-    elif danger_count >= 3 or len(flags) >= 4:
+    elif soft_risk_count >= 2 or hard_danger_count >= 1 or len(flags) >= 3:
         return "WARN", flags
     else:
         return "GOOD", flags
