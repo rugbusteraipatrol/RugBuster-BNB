@@ -1712,9 +1712,21 @@ def send_telegram_alert_BNB(record: dict, txs: list[dict]) -> None:
         log.info("Telegram preskočen: TELEGRAM_BOT_TOKEN/BNB_TELEGRAM_BOT_TOKEN nije postavljen.")
         return
     token = record.get("contract_address", "")
-    name = record.get("token_name") or "Unknown"
+    name = record.get("token_name") or ""
     symbol = record.get("token_symbol") or ""
-    token_label = f"{name} ({symbol})" if symbol else name
+
+    def readable(value: str) -> bool:
+        text = str(value or "").strip()
+        useful = sum(1 for char in text if char.isascii() and (char.isalpha() or char.isdigit()))
+        non_ascii = sum(1 for char in text if not char.isascii())
+        return useful >= 2 and (not non_ascii or useful / max(1, len(text)) >= 0.55)
+
+    display_name = name if readable(name) and not any(not char.isascii() for char in name) else ""
+    display_symbol = symbol if readable(symbol) else ""
+    if display_name and display_symbol and display_name.lower() != display_symbol.lower():
+        token_label = f"{display_name} ({display_symbol})"
+    else:
+        token_label = display_symbol or display_name or f"BNB token {token[:10]}"
     if txs:
         tx_lines = "\n".join(
             [f"• {item['module']}: https://bscscan.com/tx/{item['tx_hash']}" for item in txs[:6]]
