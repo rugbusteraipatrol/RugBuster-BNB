@@ -2237,8 +2237,9 @@
 
   const RUGCHECK_API = 'https://api.rugcheck.xyz/v1';
   const DEXSCREENER_API = 'https://api.dexscreener.com/latest/dex/tokens';
-  const RUGBUSTER_API = (window.RUGBUSTER_BNB_API || window.RUGBUSTER_API || '').replace(/\/$/, '');
-  const RUGBUSTER_BUILDER_API = (window.RUGBUSTER_BNB_BUILDER_API || window.RUGBUSTER_BUILDER_API || '').replace(/\/$/, '');
+  const DEFAULT_BNB_API = 'https://rugbuster-api-production.up.railway.app';
+  const RUGBUSTER_API = (window.RUGBUSTER_BNB_API || window.RUGBUSTER_API || DEFAULT_BNB_API).replace(/\/$/, '');
+  const RUGBUSTER_BUILDER_API = (window.RUGBUSTER_BNB_BUILDER_API || window.RUGBUSTER_BUILDER_API || DEFAULT_BNB_API).replace(/\/$/, '');
 
   // Glitch effect on stat numbers
   document.querySelectorAll('.stat-number').forEach(el => {
