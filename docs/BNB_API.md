@@ -14,9 +14,9 @@ access stays protected to control cost and prevent dataset scraping.
 ## Public Endpoints
 
 ```bash
-curl https://<bnb-railway-url>/
-curl https://<bnb-railway-url>/health
-curl "https://<bnb-railway-url>/score?address=0x55d398326f99059ff775485246999027b3197955"
+curl https://rugbuster-api-production.up.railway.app/
+curl https://rugbuster-api-production.up.railway.app/health
+curl "https://rugbuster-api-production.up.railway.app/score?address=0x34f573187f1249a589a68aa2daf1f25e834c4444"
 ```
 
 `GET /score?address=0x...` returns the latest cached score for a BNB Smart
@@ -26,7 +26,7 @@ Example response shape:
 
 ```json
 {
-  "address": "0x2ce7788de3a177f8be43df6376a8513ef9182032",
+  "address": "0x34f573187f1249a589a68aa2daf1f25e834c4444",
   "chain": "bnb",
   "label": "DANGER",
   "classifier": "weighted_v2",
@@ -39,7 +39,7 @@ Example response shape:
 ```bash
 curl \
   -H "X-API-Key: <partner_or_internal_key>" \
-  "https://<bnb-railway-url>/scan?address=0x..."
+  "https://rugbuster-api-production.up.railway.app/scan?address=0x..."
 ```
 
 `GET /scan?address=0x...` is protected because it can perform deeper scoring
