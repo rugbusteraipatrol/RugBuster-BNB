@@ -142,6 +142,21 @@ def compact_recent_flag(record: dict[str, Any]) -> str:
     return output[:96]
 
 
+def is_public_feed_text(value: Any) -> bool:
+    text = str(value or "").strip()
+    if not text:
+        return False
+    ascii_letters = sum(1 for char in text if char.isascii() and char.isalpha())
+    ascii_digits = sum(1 for char in text if char.isascii() and char.isdigit())
+    non_ascii = sum(1 for char in text if not char.isascii())
+    useful = ascii_letters + ascii_digits
+    if useful < 2:
+        return False
+    if non_ascii and useful / max(1, len(text)) < 0.55:
+        return False
+    return True
+
+
 def recent_scan_item(record: dict[str, Any], created_at: Any) -> dict[str, Any]:
     if isinstance(record, str):
         try:
@@ -161,6 +176,13 @@ def recent_scan_item(record: dict[str, Any], created_at: Any) -> dict[str, Any]:
         "created_at": created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at or ""),
         "explorer_url": record.get("explorer_url") or f"{explorer_base}/{address}",
     }
+
+
+def public_recent_scan_item(record: dict[str, Any], created_at: Any) -> dict[str, Any] | None:
+    item = recent_scan_item(record, created_at)
+    if not (is_public_feed_text(item.get("token_symbol")) or is_public_feed_text(item.get("token_name"))):
+        return None
+    return item
 
 
 def merge_recent_scans(*groups: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
@@ -300,10 +322,13 @@ def api_recent_scans():
                 return jsonify({"ok": False, "error": "Unauthorized"}), 401
         payload = request.get_json(silent=True) or {}
         record = payload.get("record") if isinstance(payload.get("record"), dict) else payload
-        item = recent_scan_item(record, payload.get("created_at") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
-        RECENT_SCANS.insert(0, item)
-        del RECENT_SCANS[100:]
-        return jsonify({"ok": True, "item": item})
+        created_at = payload.get("created_at") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        item = recent_scan_item(record, created_at)
+        public_item = public_recent_scan_item(record, created_at)
+        if public_item:
+            RECENT_SCANS.insert(0, public_item)
+            del RECENT_SCANS[100:]
+        return jsonify({"ok": True, "item": item, "public": bool(public_item)})
 
     db_items: list[dict[str, Any]] = []
     if not DATABASE_URL or psycopg2 is None:
@@ -319,9 +344,13 @@ def api_recent_scans():
                     ORDER BY created_at DESC
                     LIMIT %s
                     """,
-                    (limit,),
+                    (limit * 6,),
                 )
-                db_items = [recent_scan_item(record, created_at) for record, created_at in cur.fetchall()]
+                db_items = [
+                    item
+                    for record, created_at in cur.fetchall()
+                    if (item := public_recent_scan_item(record, created_at))
+                ]
         return jsonify({"ok": True, "items": merge_recent_scans(RECENT_SCANS, db_items, limit=limit)})
     except Exception as exc:
         return jsonify({"ok": True, "warning": str(exc), "items": merge_recent_scans(RECENT_SCANS, limit=limit)})
