@@ -100,6 +100,7 @@ GECKOTERMINAL_NEW_POOLS_COOLDOWN_SECONDS = int(os.getenv("GECKOTERMINAL_NEW_POOL
 GECKOTERMINAL_TOP_POOLS_COOLDOWN_SECONDS = int(os.getenv("GECKOTERMINAL_TOP_POOLS_COOLDOWN_SECONDS", "900"))
 RESCAN_COOLDOWN_SECONDS = int(os.getenv("RESCAN_COOLDOWN_SECONDS", "2700"))
 MAX_PENDING_QUEUE = int(os.getenv("MAX_PENDING_QUEUE", "250"))
+FALLBACK_CONTRACT_SCAN_ENABLED = os.getenv("FALLBACK_CONTRACT_SCAN_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
 V1_PAIR_CREATED_TOPIC = "0x0d3648bd0f6ba80134a33ba9275ac585d9d315f0ad8355cddefde31afa28d0e9"
 LB_PAIR_CREATED_TOPIC = "0x" + keccak(text="LBPairCreated(address,address,uint256,address,uint256)").hex()
 DEFAULT_V1_DEX_FACTORIES = [
@@ -2159,23 +2160,23 @@ def poll_loop(output_path: Path) -> None:
                 for token_data in top_pool_tokens:
                     enqueue_token(token_data)
 
-            if len(pending_tokens) < MAX_PENDING_QUEUE:
+            if len(pending_tokens) < GECKOTERMINAL_QUEUE_LOW_WATERMARK:
                 dex_tokens = get_new_dex_pair_tokens(current_block, new_block)
                 log.info("Nađeno %d novih DEX pair tokena u blokovima %d-%d",
                          len(dex_tokens), current_block, new_block)
                 for token_data in dex_tokens:
                     enqueue_token(token_data)
             else:
-                log.info("DEX pair scan preskočen; Queue=%d/%d.", len(pending_tokens), MAX_PENDING_QUEUE)
+                log.info("DEX pair scan preskočen; Queue=%d/%d, low watermark=%d.", len(pending_tokens), MAX_PENDING_QUEUE, GECKOTERMINAL_QUEUE_LOW_WATERMARK)
 
-            if len(pending_tokens) < MAX_PENDING_QUEUE:
+            if FALLBACK_CONTRACT_SCAN_ENABLED and len(pending_tokens) < GECKOTERMINAL_QUEUE_LOW_WATERMARK:
                 deployments = get_new_token_deployments(current_block, new_block)
                 log.info("Nađeno %d novih fallback contract deploy-eva u blokovima %d-%d",
                          len(deployments), current_block, new_block)
                 for token_data in deployments:
                     enqueue_token(token_data)
             else:
-                log.info("Fallback contract scan preskočen; Queue=%d/%d.", len(pending_tokens), MAX_PENDING_QUEUE)
+                log.info("Fallback contract scan preskočen; enabled=%s Queue=%d/%d, low watermark=%d.", FALLBACK_CONTRACT_SCAN_ENABLED, len(pending_tokens), MAX_PENDING_QUEUE, GECKOTERMINAL_QUEUE_LOW_WATERMARK)
 
             now = time.time()
             if pending_tokens and now >= next_scan_at:
