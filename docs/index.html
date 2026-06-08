@@ -1685,7 +1685,7 @@
     </div>
 
     <div style="margin-top:18px;border:1px solid rgba(240,185,11,0.12);background:rgba(240,185,11,0.03);padding:18px 20px;">
-      <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-pink);letter-spacing:3px;margin-bottom:12px;">// live cache score demo</div>
+      <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-pink);letter-spacing:3px;margin-bottom:12px;">// cache + live score demo</div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
         <input id="apiScoreInput" value="0x34f573187f1249a589a68aa2daf1f25e834c4444" placeholder="0x token address" style="
           flex:1;
@@ -2308,27 +2308,46 @@
       return;
     }
 
-    result.innerHTML = `<span style="color:var(--neon-cyan);">QUERYING</span> // ${RUGBUSTER_BUILDER_API}/score`;
+    result.innerHTML = `<span style="color:var(--neon-cyan);">QUERYING</span> // checking cache, then live scan if needed`;
 
     try {
       const res = await fetch(`${RUGBUSTER_BUILDER_API}/score?address=${encodeURIComponent(address)}`);
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.error || `HTTP ${res.status}`);
+      let rendered;
+
+      if (res.ok && data.ok !== false) {
+        const label = String(data.label || 'UNKNOWN').toUpperCase();
+        const labelColor = label === 'DANGER' ? '#ff3d3d' : label === 'WARN' ? '#ffcc00' : label === 'GOOD' ? 'var(--neon-green)' : 'var(--text-muted)';
+        const token = [data.token_name, data.token_symbol ? `(${data.token_symbol})` : ''].filter(Boolean).join(' ') || shortAddress(address);
+        const flags = Array.isArray(data.risk_flags) && data.risk_flags.length
+          ? data.risk_flags.map(flag => `<div>&gt; ${escapeHtml(flag)}</div>`).join('')
+          : '<div>&gt; Cached score returned without detailed flags.</div>';
+
+        rendered = `
+          <div><span style="color:${labelColor};">${label}</span> // ${escapeHtml(token)}</div>
+          <div>source=${escapeHtml(data.source || 'cache')} classifier=${escapeHtml(data.classifier_version || data.classifier || 'unknown')} chain=${escapeHtml(data.chain || 'BNB')}</div>
+          ${flags}
+        `;
+      } else {
+        result.innerHTML = `<span style="color:var(--neon-orange);">CACHE MISS</span> // no cached score yet, running live BNB scan...`;
+        const live = await fetchBNBScanFromApi(address);
+        const label = String(live.rugStatus || 'UNKNOWN').toUpperCase();
+        const labelColor = ['DANGER', 'HIGH'].includes(label) ? '#ff3d3d' : ['WARN', 'ELEVATED'].includes(label) ? '#ffcc00' : ['GOOD', 'LOW'].includes(label) ? 'var(--neon-green)' : 'var(--text-muted)';
+        const flags = flattenReasons(live.rugReasons).length
+          ? flattenReasons(live.rugReasons).map(flag => `<div>&gt; ${escapeHtml(flag)}</div>`).join('')
+          : '<div>&gt; Live scan returned without major risk flags.</div>';
+        const speculation = live.speculationStatus && live.speculationStatus !== 'UNKNOWN'
+          ? ` spec=${escapeHtml(live.speculationStatus)}`
+          : ' spec=UNKNOWN';
+
+        rendered = `
+          <div><span style="color:${labelColor};">${escapeHtml(label)}</span> // ${escapeHtml(live.tokenName || shortAddress(address))}</div>
+          <div>source=live_scan classifier=weighted_v2 chain=BNB${speculation}</div>
+          ${flags}
+        `;
       }
 
-      const label = String(data.label || 'UNKNOWN').toUpperCase();
-      const labelColor = label === 'DANGER' ? '#ff3d3d' : label === 'WARN' ? '#ffcc00' : label === 'GOOD' ? 'var(--neon-green)' : 'var(--text-muted)';
-      const token = [data.token_name, data.token_symbol ? `(${data.token_symbol})` : ''].filter(Boolean).join(' ') || shortAddress(address);
-      const flags = Array.isArray(data.risk_flags) && data.risk_flags.length
-        ? data.risk_flags.map(flag => `<div>&gt; ${String(flag)}</div>`).join('')
-        : '<div>&gt; No risk flags returned for this cached score.</div>';
-
-      result.innerHTML = `
-        <div><span style="color:${labelColor};">${label}</span> // ${token}</div>
-        <div>source=${data.source || 'unknown'} classifier=${data.classifier_version || data.classifier || 'unknown'} chain=${data.chain || 'BNB'}</div>
-        ${flags}
-      `;
+      result.innerHTML = rendered;
     } catch (err) {
       result.innerHTML = `<span style="color:#ff3d3d;">ERROR</span> // ${err.message || 'Builder API unavailable'}`;
     }
