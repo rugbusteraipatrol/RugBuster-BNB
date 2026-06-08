@@ -180,8 +180,14 @@ def recent_scan_item(record: dict[str, Any], created_at: Any) -> dict[str, Any]:
 
 def public_recent_scan_item(record: dict[str, Any], created_at: Any) -> dict[str, Any] | None:
     item = recent_scan_item(record, created_at)
-    if not (is_public_feed_text(item.get("token_symbol")) or is_public_feed_text(item.get("token_name"))):
+    has_symbol = is_public_feed_text(item.get("token_symbol"))
+    has_name = is_public_feed_text(item.get("token_name"))
+    if not (has_symbol or has_name):
         return None
+    if not has_symbol:
+        item["token_symbol"] = item.get("token_name") or "BNB"
+    if not has_name or (sum(1 for char in str(item.get("token_name") or "") if not char.isascii()) > 0):
+        item["token_name"] = ""
     return item
 
 
