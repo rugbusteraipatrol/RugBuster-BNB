@@ -1708,9 +1708,6 @@ def append_markdown_scan_log(record: dict, txs: list[dict]) -> None:
 
 
 def send_telegram_alert_BNB(record: dict, txs: list[dict]) -> None:
-    if not txs:
-        log.warning("  [TELEGRAM] Preskočen alert: nema potvrđenih on-chain module tx hash-eva.")
-        return
     if not TELEGRAM_BOT_TOKEN:
         log.info("Telegram preskočen: TELEGRAM_BOT_TOKEN/BNB_TELEGRAM_BOT_TOKEN nije postavljen.")
         return
@@ -1718,9 +1715,12 @@ def send_telegram_alert_BNB(record: dict, txs: list[dict]) -> None:
     name = record.get("token_name") or "Unknown"
     symbol = record.get("token_symbol") or ""
     token_label = f"{name} ({symbol})" if symbol else name
-    tx_lines = "\n".join(
-        [f"• {item['module']}: https://bscscan.com/tx/{item['tx_hash']}" for item in txs[:6]]
-    )
+    if txs:
+        tx_lines = "\n".join(
+            [f"• {item['module']}: https://bscscan.com/tx/{item['tx_hash']}" for item in txs[:6]]
+        )
+    else:
+        tx_lines = "• off-chain scan recorded in RugBuster BNB dataset"
     message = (
         "🛡️ RugBuster BNB Alert\n"
         f"Token: {token_label}\n"
@@ -1728,7 +1728,7 @@ def send_telegram_alert_BNB(record: dict, txs: list[dict]) -> None:
         f"Verdict: {record.get('label')}\n"
         f"Flags: {record.get('output', '')[:400]}\n"
         f"Explorer: https://bscscan.com/address/{token}\n\n"
-        f"On-chain module writes:\n{tx_lines}"
+        f"Evidence:\n{tx_lines}"
     )
     response = requests.post(
         f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
