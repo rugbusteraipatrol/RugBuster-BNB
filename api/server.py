@@ -137,7 +137,14 @@ def compact_recent_flag(record: dict[str, Any]) -> str:
         output = output.split("Flags:", 1)[1].strip()
     if "CIA/V6 flags:" in output:
         output = output.split("CIA/V6 flags:", 1)[1].strip()
-    output = output.replace("No major red flags.", "clean").replace("Low risk BNB token.", "low risk")
+    output = (
+        output
+        .replace("No major red flags.", "clean")
+        .replace("No major red flags detected.", "clean")
+        .replace("Low risk BNB token.", "low risk")
+        .replace("Low risk SOLANA token.", "low risk")
+        .replace("Low risk Solana token.", "low risk")
+    )
     output = " ".join(output.split())
     return output[:96]
 
@@ -163,9 +170,13 @@ def recent_scan_item(record: dict[str, Any], created_at: Any) -> dict[str, Any]:
             record = json.loads(record)
         except json.JSONDecodeError:
             record = {}
-    chain = str(record.get("chain") or "BNB").lower()
-    explorer_base = "https://bscscan.com/address" if chain in {"bnb", "bsc"} else "https://bscscan.com/address"
-    address = record.get("contract_address") or ""
+    chain = normalize_recent_chain(str(record.get("chain") or "BNB"))
+    explorer_base = {
+        "solana": "https://solscan.io/token",
+        "bnb": "https://bscscan.com/address",
+        "avax": "https://snowtrace.io/address",
+    }.get(chain, "https://bscscan.com/address")
+    address = record.get("contract_address") or record.get("mint") or record.get("address") or ""
     return {
         "token_name": record.get("token_name") or "Unknown",
         "token_symbol": record.get("token_symbol") or "",
@@ -185,10 +196,29 @@ def public_recent_scan_item(record: dict[str, Any], created_at: Any) -> dict[str
     if not (has_symbol or has_name):
         return None
     if not has_symbol:
-        item["token_symbol"] = item.get("token_name") or "BNB"
+        item["token_symbol"] = item.get("token_name") or item.get("chain", "token").upper()
     if not has_name or (sum(1 for char in str(item.get("token_name") or "") if not char.isascii()) > 0):
         item["token_name"] = ""
     return item
+
+
+def normalize_recent_chain(chain: str) -> str:
+    value = (chain or "bnb").strip().lower()
+    if value in {"sol", "solana"}:
+        return "solana"
+    if value in {"avax", "avalanche"}:
+        return "avax"
+    if value in {"bsc", "bnb", "binance"}:
+        return "bnb"
+    return value
+
+
+def recent_table_for_chain(chain: str) -> str | None:
+    return {
+        "bnb": "bnb_scans",
+        "solana": "solana_scans",
+        "avax": "avax_scans",
+    }.get(normalize_recent_chain(chain))
 
 
 def merge_recent_scans(*groups: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
@@ -321,6 +351,7 @@ def api_recent_scans():
         return jsonify({"ok": True})
 
     limit = max(1, min(int(request.args.get("limit", RECENT_SCAN_LIMIT)), 25))
+    chain = normalize_recent_chain(str(request.args.get("chain") or "bnb"))
     if request.method == "POST":
         if RECENT_SCAN_INGEST_TOKEN:
             token = request.headers.get("X-RugBuster-Feed-Token", "")
@@ -328,25 +359,31 @@ def api_recent_scans():
                 return jsonify({"ok": False, "error": "Unauthorized"}), 401
         payload = request.get_json(silent=True) or {}
         record = payload.get("record") if isinstance(payload.get("record"), dict) else payload
+        record.setdefault("chain", chain.upper())
         created_at = payload.get("created_at") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         item = recent_scan_item(record, created_at)
         public_item = public_recent_scan_item(record, created_at)
         if public_item:
             RECENT_SCANS.insert(0, public_item)
             del RECENT_SCANS[100:]
-        return jsonify({"ok": True, "item": item, "public": bool(public_item)})
+        return jsonify({"ok": True, "chain": chain, "item": item, "public": bool(public_item)})
 
     db_items: list[dict[str, Any]] = []
     if not DATABASE_URL or psycopg2 is None:
-        return jsonify({"ok": True, "items": merge_recent_scans(RECENT_SCANS, limit=limit)})
+        memory_items = [item for item in RECENT_SCANS if normalize_recent_chain(item.get("chain", "")) == chain]
+        return jsonify({"ok": True, "chain": chain, "items": merge_recent_scans(memory_items, limit=limit)})
+
+    table = recent_table_for_chain(chain)
+    if table is None:
+        return jsonify({"ok": False, "error": "Unsupported chain", "chain": chain}), 400
 
     try:
         with psycopg2.connect(DATABASE_URL) as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    """
+                    f"""
                     SELECT full_record, created_at
-                    FROM bnb_scans
+                    FROM {table}
                     ORDER BY created_at DESC
                     LIMIT %s
                     """,
@@ -357,9 +394,11 @@ def api_recent_scans():
                     for record, created_at in cur.fetchall()
                     if (item := public_recent_scan_item(record, created_at))
                 ]
-        return jsonify({"ok": True, "items": merge_recent_scans(RECENT_SCANS, db_items, limit=limit)})
+        memory_items = [item for item in RECENT_SCANS if normalize_recent_chain(item.get("chain", "")) == chain]
+        return jsonify({"ok": True, "chain": chain, "items": merge_recent_scans(memory_items, db_items, limit=limit)})
     except Exception as exc:
-        return jsonify({"ok": True, "warning": str(exc), "items": merge_recent_scans(RECENT_SCANS, limit=limit)})
+        memory_items = [item for item in RECENT_SCANS if normalize_recent_chain(item.get("chain", "")) == chain]
+        return jsonify({"ok": True, "chain": chain, "warning": str(exc), "items": merge_recent_scans(memory_items, limit=limit)})
 
 
 @app.route("/api/scan", methods=["POST", "OPTIONS"])
