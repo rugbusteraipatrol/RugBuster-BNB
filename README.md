@@ -4,6 +4,26 @@ AI-powered token security registry and live risk scanner for BNB Smart Chain.
 
 RugBuster BNB extends the RugBusterAI security engine into the BNB Chain ecosystem as a public, verifiable risk layer for tokens, launchpads, wallets, DEX interfaces, and builder tooling.
 
+## Multi-chain coverage
+
+All three collectors share the same detection engine: **CIA Intelligence Engine V6** (funding origin tracing, deployment latency, transaction entropy, wash trading detection, holder cluster analysis, cross-chain wallet matching, lifecycle prediction, CEX sweep detection, contract backdoor detection, holder concentration risk, rug velocity score).
+
+| Chain | Collector | Status | Table | Notes |
+|---|---|---|---|---|
+| **Solana** | `dataset_collector_v6.py` | Live on Railway | `solana_scans` | |
+| **Avalanche C-Chain** | `avax_collector_v6.py` | Live on Railway | `avax_scans` | |
+| **BNB Smart Chain** | `bnb_collector_v1.py` | Live on Railway | `bnb_scans` | 840+ tokens scanned, all 12 CIA/V5/V6 modules |
+
+Each collector writes to its own PostgreSQL table. The canonical BNB collector lives in this repo (`chains/bnb/bnb_collector_v1.py`).
+
+## Agent transaction safety on BNB Chain
+
+Sa pojavom ERC-8004 ("Trustless Agents") standarda na EVM mrežama uključujući BNB Chain, sve veći broj autonomnih AI agenata izvršava on-chain transakcije bez ljudskog nadzora. ERC-8004 (live na Ethereum mainnet od januara 2026) rešava identitet i reputaciju agenata kroz on-chain Identity, Reputation i Validation registre — ali ne procenjuje bezbednost tokena i ugovora sa kojima agent interaguje.
+
+RugBuster popunjava taj sloj: pre-transaction risk scoring koji agent može da pozove kroz RugBuster API (`rugbuster-api-production.up.railway.app`) pre interakcije sa nepoznatim tokenom. Agent dobija risk score baziran na CIA Engine analizi (funding origin, holder concentration, rug velocity, backdoor detection) i može da odbije transakciju ako token nosi rizik.
+
+Praktično: agent šalje `GET /score?address=0x...` pre svakog token swap-a ili liquidity deposit-a na BNB Chain. API vraća `GOOD / WARN / DANGER` label sa modularnim detaljima. Nema dependency-a na off-chain oracle-e niti na centralizovane liste — score se generiše iz live on-chain evidencije.
+
 ## Grant Thesis
 
 BNB Chain does not need another isolated off-chain scanner. It needs security tooling that can collect live token evidence, score risk consistently, expose builder-friendly APIs, and create a public trail for integrations.
@@ -117,7 +137,8 @@ The API is designed to expose compact risk intelligence without publishing the r
 
 ## Current Status
 
-- BNB collector worker is implemented.
+- BNB collector worker is live on Railway, writing to `bnb_scans` (840+ tokens scanned).
+- All 12 CIA/V5/V6 detection modules active.
 - BNB site and scanner UI are adapted from the existing RugBuster EVM scanner.
 - BNB API docs and grant notes are included.
 - On-chain logging is optional and disabled by default for cost control.
