@@ -6,7 +6,7 @@ RugBuster Syndicate AI is a multichain threat intelligence layer. The system
 becomes stronger as it observes token deployments, funding patterns, holder
 concentration, liquidity behavior, and rug velocity across multiple networks.
 
-BNB Smart Chain is the next target network after Solana and BNB Chain.
+BNB Smart Chain is the next target network for the RugBuster EVM security stack.
 
 ## Grant Track Fit
 
@@ -55,7 +55,7 @@ public verification.
 
 ## Not Ready Until
 
-- BNB collector runs without affecting the BNB Chain worker.
+- BNB collector runs without affecting the Avalanche worker.
 - BNB token names and symbols appear correctly in alerts.
 - The website can show recent BNB scans.
 - BNB registry writes are live or a clear milestone is defined.
