@@ -12,7 +12,7 @@ All three collectors share the same detection engine: **CIA Intelligence Engine 
 |---|---|---|---|---|
 | **Solana** | `dataset_collector_v6.py` | Live on Railway | `solana_scans` | |
 | **Avalanche C-Chain** | `avax_collector_v6.py` | Live on Railway | `avax_scans` | |
-| **BNB Smart Chain** | `bnb_collector_v1.py` | Live on Railway | `bnb_scans` | 840+ tokens scanned, all 12 CIA/V5/V6 modules |
+| **BNB Smart Chain** | `bnb_collector_v1.py` | Live on Railway | `bnb_scans` | 3,695+ tokens scanned, all 12 CIA/V5/V6 modules |
 
 Each collector writes to its own PostgreSQL table. The canonical BNB collector lives in this repo (`chains/bnb/bnb_collector_v1.py`).
 
@@ -93,7 +93,7 @@ BOT_PUBLISH_TO_REGISTRY=false
 MAX_TOKENS_PER_DAY=120
 MIN_SCAN_DELAY_MINUTES=2
 MAX_SCAN_DELAY_MINUTES=3
-RUN_UNTIL_DATE=2026-07-01
+RUN_UNTIL_DATE=2099-12-31
 ```
 
 Optional Telegram/feed variables:
@@ -137,7 +137,7 @@ The API is designed to expose compact risk intelligence without publishing the r
 
 ## Current Status
 
-- BNB collector worker is live on Railway, writing to `bnb_scans` (840+ tokens scanned).
+- BNB collector worker is live on Railway, writing to `bnb_scans` (3,695+ tokens scanned).
 - All 12 CIA/V5/V6 detection modules active.
 - BNB site and scanner UI are adapted from the existing RugBuster EVM scanner.
 - BNB API docs and grant notes are included.
