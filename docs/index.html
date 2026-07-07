@@ -1170,8 +1170,7 @@
       </div>
       <div style="margin-top:18px;font-family:'Share Tech Mono',monospace;font-size:11px;line-height:1.8;color:var(--text-muted);text-align:left;">
         Portfolio scan uses your connected BNB Chain wallet.<br>
-        <span style="color:var(--neon-cyan);">PUBLISH REPORT</span> requires an authorized reviewer wallet.<br>
-        Each module write is confirmed in your wallet and burns BNB from that wallet.
+        Alert delivery stays off-chain and sends the current scan result to the configured Telegram channel.
       </div>
     </div>
   </div>
@@ -1428,32 +1427,6 @@
         <div style="display:flex;gap:12px;flex-wrap:wrap;">
           <button onclick="runScan()" class="btn-primary" style="font-size:11px;padding:13px 32px;border:none;cursor:crosshair;">
             ⚡ SCAN TOKEN
-          </button>
-          <button id="authorizeReviewerBtn" onclick="authorizeReviewerWallet()" style="
-            font-family:'Share Tech Mono',monospace;
-            font-size:11px;
-            letter-spacing:2px;
-            padding:12px 20px;
-            background:transparent;
-            border:1px solid rgba(240,185,11,0.22);
-            color:rgba(240,185,11,0.58);
-            cursor:crosshair;
-            transition:all 0.2s;
-          " onmouseover="if(!this.disabled){this.style.color='var(--neon-cyan)'}" onmouseout="if(!this.disabled){this.style.color='rgba(240,185,11,0.58)'}">
-            AUTHORIZE REVIEWER
-          </button>
-          <button id="publishBtn" onclick="publishCurrentReport()" style="
-            font-family:'Share Tech Mono',monospace;
-            font-size:11px;
-            letter-spacing:2px;
-            padding:12px 20px;
-            background:transparent;
-            border:1px solid rgba(240,185,11,0.22);
-            color:rgba(240,185,11,0.58);
-            cursor:crosshair;
-            transition:all 0.2s;
-          " onmouseover="if(!this.disabled){this.style.color='var(--neon-pink)'}" onmouseout="if(!this.disabled){this.style.color='rgba(240,185,11,0.58)'}" disabled>
-            PUBLISH REPORT
           </button>
           <button id="sendAlertBtn" onclick="sendTelegramAlert()" style="
             font-family:'Share Tech Mono',monospace;
@@ -1773,16 +1746,6 @@
         color:var(--neon-green);
         cursor:crosshair;
       ">SEND ALERT</button>
-      <button onclick="closeFinalScanModal(); publishCurrentReport();" id="finalScanPublishBtn" style="
-        font-family:'Share Tech Mono',monospace;
-        font-size:11px;
-        letter-spacing:2px;
-        padding:12px 20px;
-        background:transparent;
-        border:1px solid rgba(240,185,11,0.36);
-        color:var(--neon-pink);
-        cursor:crosshair;
-      ">PUBLISH REPORT</button>
     </div>
   </div>
 </div>
@@ -2578,6 +2541,7 @@
 
   function setPublishButtonState(enabled, text = 'PUBLISH REPORT') {
     const btn = document.getElementById('publishBtn');
+    if (!btn) return;
     btn.disabled = !enabled;
     btn.textContent = text;
     btn.style.opacity = enabled ? '1' : '0.6';

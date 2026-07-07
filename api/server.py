@@ -490,8 +490,24 @@ def api_portfolio():
 
 @app.route("/health/telegram", methods=["GET"])
 def telegram_health():
-    ready = bool(os.getenv("TELEGRAM_BOT_TOKEN")) and bool(os.getenv("TELEGRAM_CHAT_ID"))
+    ready = bool(resolve_telegram_env("bot_token")) and bool(resolve_telegram_env("chat_id"))
     return jsonify({"ok": True, "telegram_ready": ready})
+
+
+def resolve_telegram_env(kind: str) -> str | None:
+    if kind == "bot_token":
+        return get_optional_env("TELEGRAM_BOT_TOKEN", "BNB_TELEGRAM_BOT_TOKEN")
+    if kind == "chat_id":
+        return get_optional_env("TELEGRAM_CHAT_ID", "BNB_TELEGRAM_CHAT_ID")
+    raise ValueError(f"Unknown Telegram environment kind: {kind}")
+
+
+def require_telegram_env(kind: str) -> str:
+    value = resolve_telegram_env(kind)
+    if value:
+        return value
+    names = "TELEGRAM_BOT_TOKEN/BNB_TELEGRAM_BOT_TOKEN" if kind == "bot_token" else "TELEGRAM_CHAT_ID/BNB_TELEGRAM_CHAT_ID"
+    raise RuntimeError(f"Missing required environment variable: {names}")
 
 
 def require_env(name: str) -> str:
@@ -1073,8 +1089,8 @@ def notify_report(
     publish_result: dict[str, Any] | None,
     module_publish_result: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    bot_token = require_env("TELEGRAM_BOT_TOKEN")
-    chat_id = require_env("TELEGRAM_CHAT_ID")
+    bot_token = require_telegram_env("bot_token")
+    chat_id = require_telegram_env("chat_id")
     lines = [
         "🛡️ <b>RugBuster BNB Alert</b>",
         f"💎 <b>Token:</b> {escape_html(report['token_name'])} ({escape_html(report['symbol'])})",
