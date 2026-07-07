@@ -33,13 +33,32 @@ BSCSCAN_API_KEY = os.getenv("BSCSCAN_API_KEY", "").strip()
 STABLE_QUOTES = {
     "0x8AC76a51cc950d9822d68b83fE1Ad97B32Cd580d": 1.0,  # USDC
     "0x55d398326f99059fF775485246999027B3197955": 1.0,  # USDT
+    "0xe9e7cea3dedca5984780bafc599bd69add087d56": 1.0,  # BUSD
 }
 COMMON_QUOTES = [
     "0xBB4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",  # WBNB
     "0x8AC76a51cc950d9822d68b83fE1Ad97B32Cd580d",  # USDC
     "0x55d398326f99059fF775485246999027B3197955",  # USDT
+    "0xe9e7cea3dedca5984780bafc599bd69add087d56",  # BUSD
     "0x2170Ed0880ac9A755fd29B2688956BD959F933F8",  # ETH
 ]
+KNOWN_TOKEN_METADATA = {
+    "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c": {
+        "name": "Wrapped BNB",
+        "symbol": "WBNB",
+        "decimals": 18,
+    },
+    "0xe9e7cea3dedca5984780bafc599bd69add087d56": {
+        "name": "BUSD Token",
+        "symbol": "BUSD",
+        "decimals": 18,
+    },
+    "0x55d398326f99059ff775485246999027b3197955": {
+        "name": "Tether USD",
+        "symbol": "USDT",
+        "decimals": 18,
+    },
+}
 MAINNET_FACTORIES = {
     "PANCAKESWAP": "0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73",
     "BISWAP": "0x858E3312ed3A876947EA49d572A7C42DE08af7EE",
@@ -645,17 +664,32 @@ def fetch_portfolio_tokens(address: str) -> list[dict[str, Any]]:
 
 
 def get_onchain_metadata(web3: Web3, address: str) -> dict[str, Any]:
+    checksum = Web3.to_checksum_address(address)
+    known = KNOWN_TOKEN_METADATA.get(checksum.lower(), {})
     token = web3.eth.contract(address=Web3.to_checksum_address(address), abi=ERC20_ABI)
+    name = call_optional(token, "name")
+    symbol = call_optional(token, "symbol")
+    decimals = call_optional(token, "decimals")
+    total_supply = call_optional(token, "totalSupply")
     return {
-        "name": call_optional(token, "name") or "Unknown",
-        "symbol": call_optional(token, "symbol") or "Unknown",
-        "decimals": call_optional(token, "decimals"),
-        "total_supply": call_optional(token, "totalSupply"),
+        "name": name or known.get("name") or "Unknown",
+        "symbol": symbol or known.get("symbol") or "Unknown",
+        "decimals": decimals if decimals is not None else known.get("decimals"),
+        "total_supply": total_supply,
+        "is_known_chain_asset": bool(known),
+        "metadata_source": "erc20_call" if name or symbol or decimals is not None or total_supply is not None else "known_token_fallback" if known else "unavailable",
     }
 
 
 def build_report_from_metadata(address: str, metadata: dict[str, Any], pair_data: dict[str, Any] | None, source: str) -> dict[str, Any]:
     pair_data = pair_data or {}
+    token_checksum = Web3.to_checksum_address(address)
+    market_token = token_side_from_pair(pair_data, token_checksum)
+    if market_token:
+        if metadata.get("name") in (None, "", "Unknown") and market_token.get("name"):
+            metadata["name"] = market_token.get("name")
+        if metadata.get("symbol") in (None, "", "Unknown") and market_token.get("symbol"):
+            metadata["symbol"] = market_token.get("symbol")
     liquidity_raw = pair_data.get("liquidity", {}).get("usd")
     fdv_raw = pair_data.get("fdv") or pair_data.get("marketCap")
     volume_raw = pair_data.get("volume", {}).get("h24")
@@ -693,6 +727,7 @@ def build_report_from_metadata(address: str, metadata: dict[str, Any], pair_data
         "website_count": len(websites),
         "image_url": pair_data.get("info", {}).get("imageUrl"),
         "contract_tx_count": metadata.get("contract_tx_count", 0),
+        "is_known_chain_asset": metadata.get("is_known_chain_asset", False),
     }
 
     scores = score_token(scoring_input)
@@ -717,6 +752,8 @@ def build_report_from_metadata(address: str, metadata: dict[str, Any], pair_data
         "pair_url": scoring_input["pair_url"],
         "dex_id": scoring_input["dex_id"],
         "image_url": scoring_input["image_url"],
+        "metadata_source": metadata.get("metadata_source"),
+        "is_known_chain_asset": metadata.get("is_known_chain_asset", False),
         "network": NETWORKS[resolve_network()]["label"],
         "source": source,
     }
@@ -729,13 +766,38 @@ def fetch_dexscreener_pairs(address: str) -> list[dict[str, Any]]:
     return [pair for pair in (data.get("pairs") or []) if (pair.get("chainId") or "").lower() in {"bsc", "bnb"}]
 
  
+def token_side_from_pair(pair: dict[str, Any], address: str) -> dict[str, Any] | None:
+    if not pair:
+        return None
+    target = Web3.to_checksum_address(address).lower()
+    for side in ("baseToken", "quoteToken"):
+        token = pair.get(side) or {}
+        token_address = token.get("address")
+        if token_address and Web3.to_checksum_address(token_address).lower() == target:
+            return token
+    return None
+
+
+def pair_contains_token(pair: dict[str, Any], address: str) -> bool:
+    return token_side_from_pair(pair, address) is not None
+
+
+def pair_base_is_token(pair: dict[str, Any], address: str) -> bool:
+    token = (pair.get("baseToken") or {}).get("address")
+    return bool(token and Web3.to_checksum_address(token).lower() == Web3.to_checksum_address(address).lower())
+
+
 def get_market_data(address: str) -> dict[str, Any]:
     bnb_pairs = fetch_dexscreener_pairs(address)
+    bnb_pairs = [pair for pair in bnb_pairs if pair_contains_token(pair, address)]
     if not bnb_pairs:
         raise RuntimeError("Token not found on BNB Chain liquidity venues")
 
+    base_token_pairs = [pair for pair in bnb_pairs if pair_base_is_token(pair, address)]
+    candidate_pairs = base_token_pairs or bnb_pairs
+
     return sorted(
-        bnb_pairs,
+        candidate_pairs,
         key=lambda pair: float(pair.get("liquidity", {}).get("usd") or 0),
         reverse=True,
     )[0]
