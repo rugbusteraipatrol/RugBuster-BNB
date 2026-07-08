@@ -76,6 +76,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 20px;
     padding: 18px 48px;
     background: rgba(17, 19, 24, 0.88);
     backdrop-filter: blur(12px);
@@ -94,9 +95,50 @@
 
   .logo span { color: var(--neon-pink); text-shadow: 0 0 20px rgba(240,185,11,0.45); }
 
+  .rb-chain-switch {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-left: 20px;
+    margin-right: auto;
+  }
+
+  .rb-cs {
+    width: 86px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 86px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    line-height: 1;
+    text-align: center;
+    text-decoration: none;
+    text-transform: uppercase;
+    clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+    opacity: .78;
+    transition: opacity .18s ease, transform .18s ease, box-shadow .18s ease;
+  }
+
+  .rb-cs:hover,
+  .rb-cs.active {
+    opacity: 1;
+    transform: translateY(-1px);
+  }
+
+  .rb-cs-avax { background: #E84142; color: #fff; }
+  .rb-cs-bnb { background: #F3BA2F; color: #1a1500; box-shadow: 0 0 18px rgba(240,185,11,.55); }
+  .rb-cs-base { background: #0052ff; color: #fff; }
+  .rb-cs-sol { background: #9945FF; color: #fff; }
+  .rb-cs-tron { background: #ef0027; color: #fff; }
+
   nav ul {
     display: flex;
-    gap: 36px;
+    gap: 24px;
+    align-items: center;
     list-style: none;
   }
 
@@ -1050,9 +1092,14 @@
     background-size: 128px;
   }
 
+  @media (max-width: 1360px) {
+    nav ul { display: none; }
+  }
+
   @media (max-width: 900px) {
     nav { padding: 16px 24px; }
-    nav ul { display: none; }
+    .rb-chain-switch { gap: 10px; margin-left: 8px; }
+    .rb-cs { width: 74px; flex-basis: 74px; font-size: 11px; }
     .features-grid { grid-template-columns: 1fr; }
     .pricing-grid { grid-template-columns: 1fr; }
     .how-grid { grid-template-columns: 1fr 1fr; }
@@ -1087,6 +1134,13 @@
 <!-- NAV -->
 <nav class="z1">
   <a href="#" class="logo">RUG<span>BUSTER</span></a>
+  <div class="rb-chain-switch" aria-label="RugBuster chain sites">
+    <a class="rb-cs rb-cs-avax" href="https://rugbuster.io/">AVAX</a>
+    <a class="rb-cs rb-cs-bnb active" href="https://rugbusteraipatrol.github.io/RugBuster-BNB/">BNB</a>
+    <a class="rb-cs rb-cs-base" href="https://rugbusteraipatrol.github.io/RugBuster-Base/">BASE</a>
+    <a class="rb-cs rb-cs-sol" href="https://rugbuster.io/solana/">SOL</a>
+    <a class="rb-cs rb-cs-tron" href="https://rugbusteraipatrol.github.io/RugBuster-TRON/">TRON</a>
+  </div>
   <ul>
     <li><a href="#features">Protocol</a></li>
     <li><a href="#scanner">Scanner</a></li>
