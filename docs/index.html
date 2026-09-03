@@ -140,7 +140,11 @@
     gap: 24px;
     align-items: center;
     list-style: none;
+    flex: 0 0 auto;
+    min-width: 0;
   }
+
+  nav ul li { flex: 0 0 auto; }
 
   nav a {
     font-family: 'Share Tech Mono', monospace;
@@ -158,11 +162,16 @@
   }
 
   .nav-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     font-family: 'Share Tech Mono', monospace;
     font-size: 12px;
     color: var(--neon-pink) !important;
     border: 1px solid var(--neon-pink);
     padding: 8px 20px;
+    min-height: 38px;
+    white-space: nowrap;
     letter-spacing: 2px;
     text-transform: uppercase;
     transition: all 0.2s !important;
@@ -1092,14 +1101,33 @@
     background-size: 128px;
   }
 
-  @media (max-width: 1360px) {
-    nav ul { display: none; }
+  @media (max-width: 1800px) {
+    nav { gap: 14px; padding-inline: 24px; }
+    .rb-chain-switch { gap: 10px; margin-left: 10px; }
+    .rb-cs { width: 74px; flex-basis: 74px; }
+    nav ul { gap: 16px; }
+  }
+
+  @media (max-width: 1500px) {
+    nav ul li:nth-child(-n+5) { display: none; }
+  }
+
+  @media (max-width: 1180px) {
+    nav { padding-inline: 18px; }
+    .logo { font-size: 19px; letter-spacing: 2px; }
+    .rb-chain-switch { gap: 7px; }
+    .rb-cs { width: 62px; flex-basis: 62px; }
+    nav ul { gap: 10px; }
+    .nav-cta { padding-inline: 14px; }
   }
 
   @media (max-width: 900px) {
-    nav { padding: 16px 24px; }
-    .rb-chain-switch { gap: 10px; margin-left: 8px; }
-    .rb-cs { width: 74px; flex-basis: 74px; font-size: 11px; }
+    nav { gap: 10px; padding: 14px 16px; }
+    .rb-chain-switch { gap: 6px; margin: 0 auto 0 4px; }
+    .rb-cs { width: 54px; flex-basis: 54px; font-size: 10px; letter-spacing: 1px; }
+    nav ul { display: flex; gap: 8px; }
+    .nav-cta { min-height: 36px; padding-inline: 10px; }
+    #walletBtn { padding: 8px 10px !important; white-space: nowrap; }
     .features-grid { grid-template-columns: 1fr; }
     .pricing-grid { grid-template-columns: 1fr; }
     .how-grid { grid-template-columns: 1fr 1fr; }
@@ -1117,6 +1145,21 @@
     .terminal-section { padding: 60px 24px; }
     footer { flex-direction: column; gap: 20px; text-align: center; }
     .how-grid::before { display: none; }
+  }
+
+  @media (max-width: 720px) {
+    .logo { font-size: 17px; letter-spacing: 1px; }
+    .rb-chain-switch .rb-cs:not(.active) { display: none; }
+    .rb-chain-switch { margin-left: 2px; }
+    #walletBtnText { display: none; }
+    #walletBtn { min-width: 38px; justify-content: center; }
+  }
+
+  @media (max-width: 460px) {
+    nav { padding-inline: 10px; }
+    .logo { font-size: 15px; }
+    .rb-cs { width: 48px; flex-basis: 48px; }
+    .nav-cta { font-size: 11px; padding-inline: 8px; }
   }
 
   @media (prefers-reduced-motion: reduce) {
