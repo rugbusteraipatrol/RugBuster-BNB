@@ -283,9 +283,35 @@ def health():
     return jsonify({"ok": True, "network": network, "label": NETWORKS[network]["label"]})
 
 
+def public_label_from_report(report: dict[str, Any]) -> str:
+    """Derive a verdict from the two component scores.
+
+    Collector records carry a label from classify_BNB_token_v6, which runs the
+    full CIA/V5/V6 pipeline. A live scan runs the lighter metadata-and-market
+    path and produces rug_status and speculation_status but no combined label,
+    so every live result read as UNKNOWN -- USDT came back UNKNOWN while the
+    same response carried rug LOW, speculation LOW and $41.5M of detected
+    liquidity.
+
+    Mapping copied from the Base API rather than invented here, so two chains
+    do not disagree about what LOW plus LOW means.
+    """
+    rug_status = str(report.get("rug_status") or "").upper()
+    speculation_status = str(report.get("speculation_status") or "").upper()
+    if rug_status == "HIGH" or speculation_status == "HIGH":
+        return "DANGER"
+    if rug_status in {"ELEVATED", "WARN"} or speculation_status in {"ELEVATED", "WARN"}:
+        return "WARN"
+    if rug_status == "LOW" and speculation_status == "LOW":
+        return "GOOD"
+    return "UNKNOWN"
+
+
 def compact_score_response(record: dict[str, Any], source: str) -> dict[str, Any]:
     address = record.get("contract_address") or record.get("address") or ""
-    label = record.get("label") or record.get("verdict") or "UNKNOWN"
+    # A collector record's own label is richer than anything derivable here,
+    # so it wins. Deriving is only for live scans, which have no label at all.
+    label = record.get("label") or record.get("verdict") or public_label_from_report(record)
     return {
         "ok": True,
         "address": Web3.to_checksum_address(address) if Web3.is_address(address) else address,
@@ -342,7 +368,27 @@ def public_score():
     if score:
         status = 200 if score.get("ok") else 500
         return jsonify(score), status
-    return jsonify({"ok": False, "error": "No cached BNB score for this token yet", "address": address}), 404
+
+    # Nothing cached is not the same as nothing to say. This endpoint used to
+    # answer 404 for any token the collector had not already seen, which on
+    # 2026-09-07 meant USDT, CAKE, WBNB and BUSD -- every canonical token on
+    # the chain, and the first thing a user tries.
+    #
+    # scan_token only reads: web3 metadata, market data, a transaction count.
+    # It does not write Postgres, publish to the registry or send an alert;
+    # those live behind /scan-and-publish and stay behind it. The result goes
+    # into the in-process cache so a refresh costs nothing.
+    try:
+        report = scan_token(address)
+    except Exception as exc:
+        return jsonify({
+            "ok": False,
+            "error": "live_scan_failed",
+            "detail": type(exc).__name__,
+            "address": address,
+        }), 502
+    put_cached_report(address, report)
+    return jsonify(compact_score_response(report, "live_scan"))
 
 
 @app.route("/scan", methods=["GET"])
