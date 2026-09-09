@@ -168,3 +168,34 @@ def test_every_declared_power_has_a_field():
 def test_the_old_name_still_resolves_for_anything_importing_it():
     assert collector.BACKDOOR_SIGNATURES
     assert set(collector.BACKDOOR_SIGNATURES) == set(collector.FUNCTION_SIGNATURES)
+
+
+# --- the table must not be able to lie about itself ------------------------
+
+def test_every_selector_hashes_to_the_name_beside_it():
+    """Three of seventeen did not, and all three carried a power: 51cff8d9 was
+    labelled withdrawToken(address) and is really withdraw(address);
+    044df020 and 537df3b6 were labelled blacklist and unBlacklist and hash to
+    nothing identifiable. Recomputing the selector is the whole check."""
+    from eth_utils import keccak
+
+    wrong = {
+        selector: (name, keccak(text=name)[:4].hex())
+        for selector, (name, _power) in collector.FUNCTION_SIGNATURES.items()
+        if keccak(text=name)[:4].hex() != selector
+    }
+    assert not wrong, f"selectors that do not hash to their own name: {wrong}"
+
+
+def test_burning_someone_elses_balance_is_a_power():
+    reading = _read("burn(address,uint256)")
+    assert reading["powers"] == ["burn_others"]
+
+
+def test_an_allowance_based_burn_is_not():
+    """burnFrom spends the caller's allowance; the holder approved it."""
+    assert _read("burnFrom(address,uint256)")["powers"] == []
+
+
+def test_an_ambiguous_withdraw_grants_nothing():
+    assert _read("withdraw(address)")["powers"] == []
