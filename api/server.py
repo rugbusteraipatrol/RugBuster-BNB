@@ -20,17 +20,9 @@ except ImportError:  # pragma: no cover - optional when DATABASE_URL is absent
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "chains" / "bnb"))
 sys.path.insert(0, str(ROOT / "scripts"))
-# This directory too. Production runs `gunicorn api.server:app`, which imports
-# this file as part of a package and leaves api/ off sys.path, so a sibling
-# module imported by bare name is only found when something else happened to
-# put api/ there -- which a test does and gunicorn does not.
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from bridge import publish_score, publish_score_modules, send_telegram_alert  # noqa: E402
-from risk_engine import LOCAL_ENGINE_VERSION, score_token  # noqa: E402
-from build_identity import build_identity  # noqa: E402
-from evidence import build_evidence  # noqa: E402
-from plain_language import describe  # noqa: E402
+from risk_engine import score_token  # noqa: E402
 from network_config import NETWORKS, load_env, resolve_network, resolve_rpc  # noqa: E402
 
 load_env()
@@ -320,7 +312,7 @@ def compact_score_response(record: dict[str, Any], source: str) -> dict[str, Any
     # A collector record's own label is richer than anything derivable here,
     # so it wins. Deriving is only for live scans, which have no label at all.
     label = record.get("label") or record.get("verdict") or public_label_from_report(record)
-    response = {
+    return {
         "ok": True,
         "address": Web3.to_checksum_address(address) if Web3.is_address(address) else address,
         "chain": "bnb",
@@ -334,13 +326,6 @@ def compact_score_response(record: dict[str, Any], source: str) -> dict[str, Any
         "classifier": "weighted_v2",
         "source": source,
     }
-    # Which code answered, what it could read, and a sentence saying which kind
-    # of answer this is. All additive: no verdict field is read or written.
-    response.update(build_identity(local_engine_version=LOCAL_ENGINE_VERSION))
-    response["is_known_chain_asset"] = record.get("is_known_chain_asset")
-    response["evidence"] = build_evidence(record)
-    response.update(describe({**response, "v6": record.get("v6")}))
-    return response
 
 
 def lookup_cached_score(address: str) -> dict[str, Any] | None:
