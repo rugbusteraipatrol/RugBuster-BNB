@@ -20,6 +20,11 @@ except ImportError:  # pragma: no cover - optional when DATABASE_URL is absent
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "chains" / "bnb"))
 sys.path.insert(0, str(ROOT / "scripts"))
+# This directory too. Production runs `gunicorn api.server:app`, which imports
+# this file as part of a package and leaves api/ off sys.path, so a sibling
+# module imported by bare name is only found when something else happened to
+# put api/ there -- which a test does and gunicorn does not.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from bridge import publish_score, publish_score_modules, send_telegram_alert  # noqa: E402
 from risk_engine import LOCAL_ENGINE_VERSION, score_token  # noqa: E402
