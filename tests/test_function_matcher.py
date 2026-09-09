@@ -199,3 +199,23 @@ def test_an_allowance_based_burn_is_not():
 
 def test_an_ambiguous_withdraw_grants_nothing():
     assert _read("withdraw(address)")["powers"] == []
+
+
+# --- this chain cannot confirm, and says so --------------------------------
+
+def test_a_reading_here_is_possible_and_never_confirmed():
+    """Avalanche reads the published source before reporting a power. There is
+    no explorer lookup here -- BscScan and Basescan need an API key this
+    deployment does not hold -- so a reading rests on the selector alone.
+
+    The field says so. What it cannot fix is that the scorer still reads
+    `powers`, so this chain still scores on selector evidence while Avalanche
+    scores on read source. That inconsistency is real and unresolved."""
+    reading = _read("mint(address,uint256)")
+    assert reading["possible_powers"] == ["mint"]
+    assert reading["possible_functions"] == ["mint(address,uint256)"]
+    assert reading["control"] == "unknown"
+    assert reading["source_status"] == "NOT_QUERIED"
+    assert reading["powers"] == reading["possible_powers"], (
+        "kept as an alias for the scorer; see the note in the collector"
+    )

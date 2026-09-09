@@ -455,6 +455,21 @@ def detect_cex_sweep_BNB(deployer: str, deploy_timestamp: int) -> dict:
 # ---------------------------------------------------------------------------
 # V6 MODULE 1: Contract Backdoor Detection (EVM bytecode)
 # ---------------------------------------------------------------------------
+# NOT the same claim as on Avalanche, and the difference matters.
+#
+# There, a power is only reported after the contract's published source has
+# been read and every access modifier and internal call in the declaration
+# resolved. Here there is no explorer lookup -- BscScan and Basescan need an
+# API key this deployment does not hold -- so nothing can be confirmed and
+# these readings rest on the selector alone.
+#
+# So the field is `possible_powers`: the bytes are present, and what the
+# function does and who may call it are unestablished. `powers` is kept as an
+# alias because the scorer still reads it, which means this chain still scores
+# on selector evidence while Avalanche scores on read source. That is a real
+# inconsistency between the chains, it is not resolved here, and it is written
+# down rather than left for someone to discover.
+#
 # Each selector says what the function *is*, not what its name resembles.
 #
 # The previous version matched substrings of the human-readable name, and the
@@ -581,6 +596,10 @@ def detect_contract_backdoor_BNB(contract_address: str) -> dict:
         "has_blacklist": False,
         "is_proxy": False,
         "has_owner": False,
+        "possible_functions": [],
+        "possible_powers": [],
+        "control": "unknown",
+        "source_status": "NOT_QUERIED",
         "powers": [],
         "backdoor_risk_score": 0,
     }
@@ -599,6 +618,7 @@ def detect_contract_backdoor_BNB(contract_address: str) -> dict:
                 if sig not in bytecode_clean:
                     continue
                 result["backdoor_functions"].append(func_name)
+                result["possible_functions"].append(func_name)
                 if sig in PROXY_MARKERS:
                     result["is_proxy"] = True
                 if sig in OWNERSHIP_MARKERS:
@@ -607,9 +627,10 @@ def detect_contract_backdoor_BNB(contract_address: str) -> dict:
                     result["powers"].append(power)
                     result[POWER_FIELDS[power]] = True
 
-            result["powers"] = sorted(set(result["powers"]))
+            result["possible_powers"] = sorted(set(result["powers"]))
+            result["powers"] = list(result["possible_powers"])
             # A function that grants the controller nothing is not a backdoor.
-            result["has_backdoor"] = bool(result["powers"])
+            result["has_backdoor"] = bool(result["possible_powers"])
 
     except Exception as e:
         log.debug("  [V6] Bytecode analiza greška: %s", e)
