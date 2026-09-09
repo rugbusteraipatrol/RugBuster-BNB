@@ -37,7 +37,7 @@ class DualScoreResult:
 # served July code for two months behind a green /health, and no response said
 # which rules produced it. `qa/test_engine_version.py` fails if this file
 # changes and this constant does not.
-LOCAL_ENGINE_VERSION = "2026.09.1"
+LOCAL_ENGINE_VERSION = "2026.09.2"
 
 
 def risk_status(score: int | None) -> str:
