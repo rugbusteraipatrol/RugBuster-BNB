@@ -32,6 +32,14 @@ class DualScoreResult:
         }
 
 
+# Bump with any change to how a score is derived. Without it, a scoring change
+# is invisible to anyone holding an old answer: `tron-api`, a sibling service,
+# served July code for two months behind a green /health, and no response said
+# which rules produced it. `qa/test_engine_version.py` fails if this file
+# changes and this constant does not.
+LOCAL_ENGINE_VERSION = "2026.09.1"
+
+
 def risk_status(score: int | None) -> str:
     if score is None:
         return "INSUFFICIENT_DATA"
