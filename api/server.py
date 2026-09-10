@@ -619,6 +619,53 @@ def deepseek_enabled() -> bool:
     return bool(DEEPSEEK_API_KEY)
 
 
+# Plain words for the checks a clean verdict was withheld on.
+WITHHELD_CHECK_NAMES = {
+    "contract_capability": "what a matched contract function can do",
+    "contract_backdoor": "the contract's functions",
+}
+
+REASSURING_TERMS = (
+    "safe", "clean", "low risk", "no risk", "looks fine", "looks good",
+    "appears safe", "appears clean", "healthy", "legitimate", "no red flags",
+    "no concerns", "trustworthy", "secure",
+)
+
+# A sentence stating the scan could not conclude is not reassuring even when
+# it contains a word like "safe".
+UNCERTAINTY_MARKERS = (
+    "not enough data", "insufficient", "could not check", "could not be",
+    "unable to", "cannot determine", "cannot judge", "unverified",
+    "incomplete", "not a verdict", "not established",
+)
+
+
+def withheld_checks(report: dict[str, Any]) -> list[str]:
+    """Checks a clean verdict was withheld on, in plain words.
+
+    The API withholds GOOD when the contract check did not finish. The model
+    has to be told: otherwise it summarises LOW rug and LOW speculation as a
+    safe token, which is the exact claim the verdict refused to make.
+    """
+    return [WITHHELD_CHECK_NAMES.get(str(gap), str(gap).replace("_", " "))
+            for gap in (report.get("blocking_data_gaps") or [])]
+
+
+def _reads_as_reassuring(text: str) -> bool:
+    lowered = text.lower()
+    if any(marker in lowered for marker in UNCERTAINTY_MARKERS):
+        return False
+    return any(term in lowered for term in REASSURING_TERMS)
+
+
+def withheld_verdict_text(report: dict[str, Any]) -> str:
+    return (
+        "Not enough data to judge this token. Not established: "
+        + ", ".join(withheld_checks(report))
+        + ". This is not a pass and not a warning."
+    )[:240]
+
+
 def build_ai_scan_context(report: dict[str, Any]) -> dict[str, Any]:
     return {
         "token": report.get("address"),
@@ -638,6 +685,7 @@ def build_ai_scan_context(report: dict[str, Any]) -> dict[str, Any]:
         "sells24h": report.get("sells24h"),
         "dex_id": report.get("dex_id"),
         "source": report.get("source"),
+        "checks_that_could_not_run": withheld_checks(report),
     }
 
 
@@ -648,7 +696,11 @@ def fetch_deepseek_verdict(report: dict[str, Any]) -> str | None:
     prompt = (
         "Analyze this BNB Chain token security scan. "
         "Return one concise RugBuster verdict in max 28 words. "
-        "Mention the main risk driver if any. Do not give financial advice.\n\n"
+        "Mention the main risk driver if any. Do not give financial advice.\n"
+        "If checks_that_could_not_run is non-empty, no clean verdict was given: say plainly "
+        "that there is not enough data to judge, name what was not established, and do "
+        "NOT describe the token as safe, clean, low risk or fine. Do not call it dangerous "
+        "either -- an unfinished check is not evidence against the token.\n\n"
         f"{json.dumps(context, ensure_ascii=False, sort_keys=True)}"
     )
     response = requests.post(
@@ -676,7 +728,15 @@ def fetch_deepseek_verdict(report: dict[str, Any]) -> str | None:
         .get("content", "")
         .strip()
     )
-    return " ".join(verdict.split())[:240] if verdict else None
+    if not verdict:
+        return None
+    verdict = " ".join(verdict.split())[:240]
+    # A prompt instruction is not a guarantee, and this sentence is the one
+    # most people read. A withheld verdict that comes back sounding
+    # reassuring is replaced rather than trusted.
+    if withheld_checks(report) and _reads_as_reassuring(verdict):
+        return withheld_verdict_text(report)
+    return verdict
 
 
 def env_enabled(name: str) -> bool:
