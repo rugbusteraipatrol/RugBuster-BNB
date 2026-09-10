@@ -6,11 +6,17 @@ positives here. Measured on this chain with real contracts:
     WBNB   drain 20 -> 0    withdraw(uint256) is the unwrap: it burns the
                         caller's own wrapper and returns their own BNB.
     USDT   backdoor -> none  owner() and a plain ERC-20 burn.
-    CAKE   mint 20        kept: PancakeSwap can mint CAKE.
+    CAKE   mint             matched: PancakeSwap's contract has mint.
 
 The table is a statement about EVM selectors, so it is identical to the
 Avalanche one by intent rather than by accident; the tests are separate because
 the collectors are.
+
+What changed after review: this chain cannot read source, so a matched selector
+is a *possible* power and nothing more. The previous version of this file
+pinned `powers` as an alias of `possible_powers` because the scorer read it --
+which is how a selector reached the verdict as an established power. The alias
+is gone and these tests now pin the opposite.
 """
 
 from __future__ import annotations
@@ -22,6 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "chains" / "bnb"))
 
 import bnb_collector_v1 as collector  # noqa: E402
+import contract_functions as functions  # noqa: E402
 
 SELECTORS = {name: sig for sig, (name, _p) in collector.FUNCTION_SIGNATURES.items()}
 
@@ -43,6 +50,15 @@ def _read(*function_names: str) -> dict:
         collector.requests.post = original
 
 
+def _nothing_established(reading: dict) -> None:
+    assert reading["powers"] == []
+    assert reading["source_read_powers"] == []
+    assert reading["has_backdoor"] is False
+    assert reading["backdoor_risk_score"] == 0
+    for field in collector.POWER_FIELDS.values():
+        assert reading[field] is False, field
+
+
 # --- the false positives this replaces -------------------------------------
 
 def test_the_unwrap_on_a_wrapped_native_is_not_a_drain():
@@ -50,72 +66,72 @@ def test_the_unwrap_on_a_wrapped_native_is_not_a_drain():
     native token. It is the whole purpose of the contract."""
     reading = _read("withdraw(uint256)")
     assert reading["has_drain_function"] is False
-    assert reading["backdoor_risk_score"] == 0
+    assert reading["possible_powers"] == []
     assert reading["backdoor_functions"] == ["withdraw(uint256)"]
+    assert reading["capability_check"] == functions.CAPABILITY_COMPLETE
 
 
 def test_a_plain_erc20_burn_is_not_a_backdoor():
     """burn(uint256) burns the caller's own balance."""
     reading = _read("burn(uint256)")
-    assert reading["has_backdoor"] is False
-    assert reading["powers"] == []
+    assert reading["possible_powers"] == []
+    _nothing_established(reading)
 
 
 def test_a_view_getter_is_not_a_power():
-    for name in ("paused()", "isBlacklisted(address)", "owner()", "implementation()"):
+    for name in ("paused()", "isBlacklisted(address)", "owner()"):
         reading = _read(name)
-        assert reading["powers"] == [], f"{name} was read as granting a power"
-        assert reading["backdoor_risk_score"] == 0, name
+        assert reading["possible_powers"] == [], f"{name} was read as granting a power"
+        _nothing_established(reading)
 
 
 def test_renouncing_ownership_is_not_a_power():
-    assert _read("renounceOwnership()")["powers"] == []
+    assert _read("renounceOwnership()")["possible_powers"] == []
 
 
-def test_a_proxy_is_counted_once():
-    """is_proxy and has_upgrade_authority describe the same fact, and
-    implementation() is a getter beside them."""
+def test_a_proxy_is_reported_and_never_a_finished_check():
+    """is_proxy and upgradeTo describe one fact, and the implementation behind
+    the proxy is not read at all."""
     reading = _read("upgradeTo(address)", "upgradeToAndCall(address,bytes)", "implementation()")
     assert reading["is_proxy"] is True
-    assert reading["has_upgrade_authority"] is True
-    assert reading["powers"] == ["upgrade"]
-    assert reading["backdoor_risk_score"] == 20
+    assert reading["possible_powers"] == ["upgrade"]
+    _nothing_established(reading)
+    assert reading["capability_check"] == functions.CAPABILITY_INCOMPLETE
+    assert "proxy implementation" in reading["unread_restrictions"]
 
 
-# --- what must still bite --------------------------------------------------
+# --- what is still seen, as possible ---------------------------------------
 
-def test_minting_is_a_power():
+def test_minting_is_a_possible_power_and_nothing_more():
     reading = _read("mint(address,uint256)")
-    assert reading["has_mint_function"] is True
-    assert reading["has_backdoor"] is True
-    assert reading["backdoor_risk_score"] == 20
+    assert reading["possible_powers"] == ["mint"]
+    assert reading["unconfirmed_powers"] == ["mint"]
+    _nothing_established(reading)
 
 
-def test_pausing_transfers_is_a_power_and_the_getter_beside_it_is_not():
+def test_pausing_is_possible_and_the_getter_beside_it_is_not():
     reading = _read("pause()", "unpause()", "paused()")
-    assert reading["has_pause_function"] is True
-    assert reading["powers"] == ["pause"]
-    assert reading["backdoor_risk_score"] == 20
+    assert reading["possible_powers"] == ["pause"]
+    _nothing_established(reading)
 
 
-def test_blacklisting_is_a_power():
+def test_blacklisting_is_possible():
     reading = _read("blacklist(address)", "isBlacklisted(address)")
-    assert reading["has_blacklist"] is True
-    assert reading["powers"] == ["blacklist"]
+    assert reading["possible_powers"] == ["blacklist"]
+    _nothing_established(reading)
 
 
-def test_sweeping_arbitrary_tokens_is_still_a_drain():
-    """withdrawToken(address) takes tokens the contract holds for others. This
-    is the one withdraw-shaped function that keeps the flag."""
+def test_sweeping_arbitrary_tokens_is_possible():
     reading = _read("withdrawToken(address)")
-    assert reading["has_drain_function"] is True
-    assert reading["powers"] == ["sweep"]
+    assert reading["possible_powers"] == ["sweep"]
+    _nothing_established(reading)
 
 
-def test_several_powers_accumulate():
+def test_several_possible_powers_accumulate_and_score_nothing():
     reading = _read("mint(address,uint256)", "pause()", "blacklist(address)")
-    assert reading["backdoor_risk_score"] == 60
-    assert reading["powers"] == ["blacklist", "mint", "pause"]
+    assert reading["possible_powers"] == ["blacklist", "mint", "pause"]
+    _nothing_established(reading)
+    assert reading["capability_check"] == functions.CAPABILITY_INCOMPLETE
 
 
 # --- ownership is reported, not scored -------------------------------------
@@ -125,17 +141,14 @@ def test_an_owner_is_reported_without_being_scored():
     anyone's balance, and counting it put every Ownable contract at 20."""
     reading = _read("owner()", "transferOwnership(address)")
     assert reading["has_owner"] is True
-    assert reading["powers"] == []
+    assert reading["possible_powers"] == []
     assert reading["backdoor_risk_score"] == 0
+    assert reading["capability_check"] == functions.CAPABILITY_COMPLETE
 
 
 # --- absent is not clean ---------------------------------------------------
 
-def test_unreadable_bytecode_reports_no_powers_rather_than_a_clean_read():
-    """Weaker than the Avalanche version deliberately: this collector has no
-    per-module status field, so "no backdoor found" and "never read the
-    bytecode" still come out the same. That gap is real and is recorded here
-    rather than papered over -- powers being empty is all this can assert."""
+def test_an_address_with_no_bytecode_says_so():
     class _Empty:
         @staticmethod
         def json():
@@ -147,11 +160,24 @@ def test_unreadable_bytecode_reports_no_powers_rather_than_a_clean_read():
         reading = collector.detect_contract_backdoor_BNB("0xtest")
     finally:
         collector.requests.post = original
-    assert reading["powers"] == []
-    assert reading["has_backdoor"] is False
-    assert "status" not in reading, (
-        "a status field appeared; tighten this test to assert it is not OK"
-    )
+    assert reading["status"] == functions.STATUS_NOT_FOUND
+    _nothing_established(reading)
+
+
+def test_an_rpc_failure_is_a_failure_and_not_a_clean_reading():
+    """The earlier version of this collector had no status, so "no backdoor
+    found" and "never read the bytecode" came out the same. They do not now."""
+    def _raise(*_a, **_k):
+        raise TimeoutError("rpc")
+
+    original = collector.requests.post
+    collector.requests.post = _raise
+    try:
+        reading = collector.detect_contract_backdoor_BNB("0xtest")
+    finally:
+        collector.requests.post = original
+    assert reading["status"] == functions.STATUS_FETCH_FAILED
+    assert reading["capability_check"] == functions.CAPABILITY_NOT_RUN
 
 
 # --- the table cannot name a power it has no field for ---------------------
@@ -187,35 +213,31 @@ def test_every_selector_hashes_to_the_name_beside_it():
     assert not wrong, f"selectors that do not hash to their own name: {wrong}"
 
 
-def test_burning_someone_elses_balance_is_a_power():
+def test_burning_someone_elses_balance_is_possible():
     reading = _read("burn(address,uint256)")
-    assert reading["powers"] == ["burn_others"]
+    assert reading["possible_powers"] == ["burn_others"]
+    _nothing_established(reading)
 
 
 def test_an_allowance_based_burn_is_not():
     """burnFrom spends the caller's allowance; the holder approved it."""
-    assert _read("burnFrom(address,uint256)")["powers"] == []
+    assert _read("burnFrom(address,uint256)")["possible_powers"] == []
 
 
 def test_an_ambiguous_withdraw_grants_nothing():
-    assert _read("withdraw(address)")["powers"] == []
+    assert _read("withdraw(address)")["possible_powers"] == []
 
 
 # --- this chain cannot confirm, and says so --------------------------------
 
-def test_a_reading_here_is_possible_and_never_confirmed():
-    """Avalanche reads the published source before reporting a power. There is
-    no explorer lookup here -- BscScan and Basescan need an API key this
-    deployment does not hold -- so a reading rests on the selector alone.
-
-    The field says so. What it cannot fix is that the scorer still reads
-    `powers`, so this chain still scores on selector evidence while Avalanche
-    scores on read source. That inconsistency is real and unresolved."""
+def test_a_reading_here_is_possible_and_never_established():
+    """No explorer lookup runs here, so a reading rests on the selector alone.
+    `powers` is not an alias for it any more: that alias is how a selector
+    reached the scorer as an established power."""
     reading = _read("mint(address,uint256)")
     assert reading["possible_powers"] == ["mint"]
     assert reading["possible_functions"] == ["mint(address,uint256)"]
     assert reading["control"] == "unknown"
     assert reading["source_status"] == "NOT_QUERIED"
-    assert reading["powers"] == reading["possible_powers"], (
-        "kept as an alias for the scorer; see the note in the collector"
-    )
+    assert reading["powers"] == []
+    assert "selector only" in reading["unread_restrictions"]["mint(address,uint256)"]

@@ -92,6 +92,21 @@ def _headline(payload: dict[str, Any]) -> tuple[str, str]:
     backdoor = backdoor.get("backdoor") if isinstance(backdoor, dict) else {}
     backdoor = backdoor if isinstance(backdoor, dict) else {}
 
+    gaps = payload.get("blocking_data_gaps") or []
+    if label == "INSUFFICIENT_DATA" and "contract_capability" in gaps:
+        return (
+            "A function in this contract could give its controller power over "
+            "holders, and whether it does was not established: its selector was "
+            "matched and its code was not read. No clean verdict is given. That is "
+            "a gap in our check, not a finding against the token.",
+            REFUSAL,
+        )
+    if label == "INSUFFICIENT_DATA" and "contract_backdoor" in gaps:
+        return (
+            "The contract's functions were not read, so no clean verdict is given. "
+            "That is a gap in our check, not a finding against the token.",
+            REFUSAL,
+        )
     if label in {"INSUFFICIENT_DATA", "UNKNOWN"} or rug_status == "INSUFFICIENT_DATA":
         return (
             "Too little was readable to judge this token. That is our answer, "

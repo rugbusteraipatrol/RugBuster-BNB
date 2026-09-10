@@ -118,9 +118,19 @@ def test_an_invalid_address_is_still_rejected_before_scanning(server, client):
 
 # --- label derivation, because a live scan carries no label of its own ---
 
-def test_low_and_low_reads_good(server):
+COMPLETE_READING = {"v6": {"backdoor": {"status": "OK", "capability_check": "COMPLETE"}}}
+
+
+def test_low_and_low_reads_good_once_the_contract_was_read(server):
     assert server.public_label_from_report(
-        {"rug_status": "LOW", "speculation_status": "LOW"}) == "GOOD"
+        {"rug_status": "LOW", "speculation_status": "LOW", **COMPLETE_READING}) == "GOOD"
+
+
+def test_low_and_low_without_a_contract_reading_is_not_good(server):
+    """What this test used to pin as GOOD: metadata and a DEX pair, and no
+    look at the contract at all."""
+    assert server.public_label_from_report(
+        {"rug_status": "LOW", "speculation_status": "LOW"}) == "INSUFFICIENT_DATA"
 
 
 def test_high_on_either_side_reads_danger(server):
@@ -150,5 +160,5 @@ def test_a_collector_label_is_never_overridden(server):
 
 
 def test_a_live_report_gets_a_derived_label(server):
-    record = {"address": USDT, "rug_status": "LOW", "speculation_status": "LOW"}
+    record = {"address": USDT, "rug_status": "LOW", "speculation_status": "LOW", **COMPLETE_READING}
     assert server.compact_score_response(record, "live_scan")["label"] == "GOOD"

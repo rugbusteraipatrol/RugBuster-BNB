@@ -455,154 +455,38 @@ def detect_cex_sweep_BNB(deployer: str, deploy_timestamp: int) -> dict:
 # ---------------------------------------------------------------------------
 # V6 MODULE 1: Contract Backdoor Detection (EVM bytecode)
 # ---------------------------------------------------------------------------
-# NOT the same claim as on Avalanche, and the difference matters.
-#
-# There, a power is only reported after the contract's published source has
-# been read and every access modifier and internal call in the declaration
-# resolved. Here there is no explorer lookup -- BscScan and Basescan need an
-# API key this deployment does not hold -- so nothing can be confirmed and
-# these readings rest on the selector alone.
-#
-# So the field is `possible_powers`: the bytes are present, and what the
-# function does and who may call it are unestablished. `powers` is kept as an
-# alias because the scorer still reads it, which means this chain still scores
-# on selector evidence while Avalanche scores on read source. That is a real
-# inconsistency between the chains, it is not resolved here, and it is written
-# down rather than left for someone to discover.
-#
-# Each selector says what the function *is*, not what its name resembles.
-#
-# The previous version matched substrings of the human-readable name, and the
-# names lie in both directions:
-#
-#   burn(uint256)        set has_backdoor, because any known selector did.
-#                        It burns the caller's own balance. LINK.e -- a
-#                        Chainlink bridge asset scored GOOD -- was reported as
-#                        holding a controller power over holders on this alone.
-#   withdraw(uint256)    matched "withdraw" and set has_drain_function. On
-#                        Wrapped AVAX it is the unwrap: it burns the caller's
-#                        own wrapper and returns their own native token. The
-#                        chain's most canonical asset was reported as drainable.
-#   paused()             matched "pause" and set has_pause_function. It is a
-#                        view getter that returns a bool.
-#   isBlacklisted(addr)  matched "blacklist" and set has_blacklist. Also a view
-#                        getter.
-#   renounceOwnership()  matched nothing, correctly, but is worth naming: it
-#                        removes a power rather than granting one.
-#
-# So the power is declared per selector. `None` means the function is present
-# and grants the controller nothing over anyone else -- it is still reported
-# under backdoor_functions, because presence is a fact and suppression is not
-# what this table is for.
-#
-# What this still cannot do: a 4-byte selector is matched by searching the
-# bytecode for those bytes, so a coincidental byte sequence reads as a
-# function. That is a separate weakness, unfixed, and it argues for reading
-# these as "possible" rather than "present".
-POWER_MINT = "mint"
-POWER_SWEEP = "sweep"
-POWER_UPGRADE = "upgrade"
-POWER_PAUSE = "pause"
-POWER_BLACKLIST = "blacklist"
-POWER_BURN_OTHERS = "burn_others"
+import os as _os
+import sys as _sys
 
-# Structural markers: they indicate a proxy without themselves being a power.
-PROXY_MARKERS = {"3659cfe6", "4f1ef286", "5c60da1b"}
-
-FUNCTION_SIGNATURES = {
-    # selector: (name, power granted over other holders, or None)
-    "8da5cb5b": ("owner()", None),                              # view getter
-    # An owner exists. That is centralisation and it is reported, but on its
-    # own it grants nothing over anyone's balance -- what the owner can do is
-    # the powers list below. Counting it as a power put every scam token and
-    # every ordinary Ownable contract at the same 20.
-    "f2fde38b": ("transferOwnership(address)", None),
-    "715018a6": ("renounceOwnership()", None),                  # gives a power up
-    "42966c68": ("burn(uint256)", None),                        # caller's own balance
-    "40c10f19": ("mint(address,uint256)", POWER_MINT),
-    "3ccfd60b": ("withdraw()", None),                           # caller's own funds
-    "2e1a7d4d": ("withdraw(uint256)", None),                    # caller's own; the unwrap
-    # Corrected on review. This selector was labelled withdrawToken(address),
-    # which is really 89476069. 51cff8d9 is withdraw(address), and what that
-    # does is not established from the name alone -- it may send the caller's
-    # own balance to an address, or sweep the contract's. It is reported and
-    # grants no power until something reads the code.
-    "51cff8d9": ("withdraw(address)", None),
-    # The real withdrawToken(address). This one takes tokens the contract holds
-    # on behalf of others.
-    "89476069": ("withdrawToken(address)", POWER_SWEEP),
-    "3659cfe6": ("upgradeTo(address)", POWER_UPGRADE),
-    "4f1ef286": ("upgradeToAndCall(address,bytes)", POWER_UPGRADE),
-    "5c60da1b": ("implementation()", None),                     # view getter
-    "8456cb59": ("pause()", POWER_PAUSE),
-    "3f4ba83a": ("unpause()", POWER_PAUSE),
-    "5c975abb": ("paused()", None),                             # view getter
-    # Corrected on review. 044df020 and 537df3b6 were labelled blacklist and
-    # unBlacklist; neither hashes to either name, and neither resolves to any
-    # signature I could identify. Two byte sequences of unknown meaning were
-    # granting a power. Removed rather than guessed at.
-    "f9f92be4": ("blacklist(address)", POWER_BLACKLIST),
-    "1a895266": ("unBlacklist(address)", POWER_BLACKLIST),
-    # Burning someone else's balance without their consent. Absent from this
-    # table entirely until a review asked what TIME's concrete risk was.
-    #
-    # Non-standard: ERC-20 has no two-argument burn, and implementations that
-    # add one almost always gate it on the owner. That is an inference from
-    # convention, not from reading the modifier, and it is the weakest link in
-    # this entry -- what is certain is that the function exists and that no
-    # standard requires the holder's consent for it.
-    "9dc29fac": ("burn(address,uint256)", POWER_BURN_OTHERS),
-    # Not a power. OpenZeppelin's ERC20Burnable burnFrom spends the caller's
-    # allowance -- the holder has to have approved it. Grouping it with
-    # burn(address,uint256) put SDOG and BLS in the same bracket as TIME on a
-    # function that cannot touch an unwilling holder.
-    "79cc6790": ("burnFrom(address,uint256)", None),
-    "fe575a87": ("isBlacklisted(address)", None),               # view getter
-}
-
-# Kept under the old name so nothing that imports it breaks; it is now derived.
-BACKDOOR_SIGNATURES = {sig: name for sig, (name, _power) in FUNCTION_SIGNATURES.items()}
-
-OWNERSHIP_MARKERS = {"8da5cb5b", "f2fde38b", "715018a6"}
-
-POWER_FIELDS = {
-    POWER_MINT: "has_mint_function",
-    POWER_SWEEP: "has_drain_function",
-    POWER_UPGRADE: "has_upgrade_authority",
-    POWER_PAUSE: "has_pause_function",
-    POWER_BLACKLIST: "has_blacklist",
-    POWER_BURN_OTHERS: "has_burn_others",
-}
-
-# Checked at import, not at scan time. The first version of this table named a
-# power with no field behind it; the KeyError was raised inside the scan's
-# broad `except`, which reported it as "bytecode could not be read from RPC".
-# A misconfiguration became an outage message, and an outage message reads as
-# an absent signal -- the exact failure this module documents elsewhere.
-_declared = {power for _name, power in FUNCTION_SIGNATURES.values() if power}
-assert _declared <= set(POWER_FIELDS), (
-    f"FUNCTION_SIGNATURES names powers with no field: {sorted(_declared - set(POWER_FIELDS))}"
+# The selector table and what a reading may claim live beside this file, so
+# the API can read a contract without importing this module.
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+from contract_functions import (  # noqa: E402
+    BACKDOOR_SIGNATURES,
+    FUNCTION_SIGNATURES,
+    FUNCTION_SIGNATURES_BY_NAME,
+    OWNERSHIP_MARKERS,
+    POWER_BLACKLIST,
+    POWER_BURN_OTHERS,
+    POWER_FIELDS,
+    POWER_MINT,
+    POWER_PAUSE,
+    POWER_SWEEP,
+    POWER_UPGRADE,
+    PROXY_MARKERS,
+    capability_gaps,
+    established_powers,
+    read_bytecode,
+    reading_failed,
 )
 
 
 def detect_contract_backdoor_BNB(contract_address: str) -> dict:
-    result = {
-        "has_backdoor": False,
-        "backdoor_functions": [],
-        "has_upgrade_authority": False,
-        "has_pause_function": False,
-        "has_mint_function": False,
-        "has_drain_function": False,
-        "has_blacklist": False,
-        "is_proxy": False,
-        "has_owner": False,
-        "possible_functions": [],
-        "possible_powers": [],
-        "control": "unknown",
-        "source_status": "NOT_QUERIED",
-        "powers": [],
-        "backdoor_risk_score": 0,
-    }
+    """What this contract's bytecode says about its functions.
+
+    Possible powers only: see contract_functions.py. A failure to read the
+    bytecode is reported as FETCH_FAILED, never as a contract with no powers.
+    """
     try:
         payload = {
             "jsonrpc": "2.0", "id": 1,
@@ -610,36 +494,10 @@ def detect_contract_backdoor_BNB(contract_address: str) -> dict:
             "params": [contract_address, "latest"]
         }
         resp = requests.post(BNB_RPC, json=payload, timeout=RPC_TIMEOUT)
-        bytecode = resp.json().get("result", "0x")
-
-        if bytecode and len(bytecode) > 10:
-            bytecode_clean = bytecode.lower().replace("0x", "")
-            for sig, (func_name, power) in FUNCTION_SIGNATURES.items():
-                if sig not in bytecode_clean:
-                    continue
-                result["backdoor_functions"].append(func_name)
-                result["possible_functions"].append(func_name)
-                if sig in PROXY_MARKERS:
-                    result["is_proxy"] = True
-                if sig in OWNERSHIP_MARKERS:
-                    result["has_owner"] = True
-                if power:
-                    result["powers"].append(power)
-                    result[POWER_FIELDS[power]] = True
-
-            result["possible_powers"] = sorted(set(result["powers"]))
-            result["powers"] = list(result["possible_powers"])
-            # A function that grants the controller nothing is not a backdoor.
-            result["has_backdoor"] = bool(result["possible_powers"])
-
+        return read_bytecode(resp.json().get("result", "0x"))
     except Exception as e:
         log.debug("  [V6] Bytecode analiza greška: %s", e)
-
-    # Count powers, once each. `is_proxy` used to be counted alongside
-    # has_upgrade_authority, double-counting the same fact, and
-    # implementation() -- a view getter -- could raise the score alone.
-    result["backdoor_risk_score"] = min(len(result["powers"]) * 20, 100)
-    return result
+        return reading_failed(f"bytecode could not be read from RPC: {type(e).__name__}")
 
 # ---------------------------------------------------------------------------
 # V6 MODULE 2: Holder Concentration Risk
@@ -1215,11 +1073,16 @@ def classify_BNB_token_v6(token_info: dict, cia_intel: dict, v5: dict, v6: dict,
     if style.get("name_scam_score", 0) >= 25: flags.append(f"Scam name pattern ({style.get('matched_patterns')})")
     if non_ascii_ratio > 0.35:         flags.append("High-noise/non-ASCII token name")
     if xchain.get("cross_chain_match"): flags.append(f"Cross-chain scam match ({xchain.get('match_chains')})")
-    # V6 flags
-    if backdoor.get("has_mint_function"):  flags.append("Mint function in bytecode")
-    if backdoor.get("has_drain_function"): flags.append("Withdraw/drain function")
-    if backdoor.get("is_proxy"):           flags.append("Upgradeable proxy contract")
-    if backdoor.get("has_blacklist"):      flags.append("Blacklist function")
+    # V6 flags. Only powers established from source count, which on this chain
+    # is none until source can be read. A selector-matched function is a gap in
+    # the check, carried beside the label -- never a flag, because flags are
+    # counted and counting one would score it by the back door.
+    powers = established_powers(backdoor)
+    if POWER_MINT in powers:        flags.append("Mint power read from published source")
+    if POWER_SWEEP in powers:       flags.append("Sweep power read from published source")
+    if POWER_UPGRADE in powers:     flags.append("Upgrade power read from published source")
+    if POWER_BLACKLIST in powers:   flags.append("Blacklist power read from published source")
+    if POWER_BURN_OTHERS in powers: flags.append("Burn-others power read from published source")
     if conc.get("concentration_risk") in ("HIGH", "CRITICAL"):
         flags.append(f"High concentration (top5={conc.get('top5_pct')}%)")
     if vel.get("is_fast_rug"):             flags.append(f"Fast rug velocity ({vel.get('velocity_score')})")
@@ -1238,11 +1101,11 @@ def classify_BNB_token_v6(token_info: dict, cia_intel: dict, v5: dict, v6: dict,
         cluster.get("is_bot_farm", False),
         entropy.get("is_bot_pattern", False),
         wash.get("linker_wallets_connected", False),
-        backdoor.get("backdoor_risk_score", 0) >= 60,
-        backdoor.get("has_mint_function", False) and holder_count < 10,
-        backdoor.get("has_drain_function", False),
-        backdoor.get("has_blacklist", False),
-        backdoor.get("is_proxy", False),
+        len(powers) * 20 >= 60,
+        POWER_MINT in powers and holder_count < 10,
+        POWER_SWEEP in powers,
+        POWER_BLACKLIST in powers,
+        POWER_UPGRADE in powers,
         conc.get("concentration_risk") == "CRITICAL",
         vel.get("is_fast_rug", False),
         sweep.get("sweep_to_cex", False),
@@ -1257,15 +1120,18 @@ def classify_BNB_token_v6(token_info: dict, cia_intel: dict, v5: dict, v6: dict,
         non_ascii_ratio > 0.35,
         owner_controls and holder_count < 25,
         conc.get("concentration_risk") in ("HIGH", "CRITICAL"),
-        backdoor.get("backdoor_risk_score", 0) >= 20,
+        bool(powers),
     ])
 
     if hard_danger_count >= 2 or (hard_danger_count >= 1 and soft_risk_count >= 3):
         return "DANGER", flags
     elif soft_risk_count >= 2 or hard_danger_count >= 1 or len(flags) >= 3:
         return "WARN", flags
-    else:
-        return "GOOD", flags
+    # GOOD asserts the contract was looked at. When that check did not finish,
+    # the answer is withheld; nothing above is weakened by it.
+    if capability_gaps({"v6": {"backdoor": backdoor}}):
+        return "INSUFFICIENT_DATA", flags
+    return "GOOD", flags
 
 # ---------------------------------------------------------------------------
 # Dataset writer
@@ -1346,6 +1212,10 @@ Rug Velocity: score={vel.get('velocity_score', 0)} | Fast rug: {vel.get('is_fast
         output = f"DANGER - High risk BNB token. Top flags: {', '.join(risk_flags[:3])}.{cia_flags} Deployer rug rate: {creator_stats['rug_rate']}%."
     elif label == "WARN":
         output = f"WARN - Moderate risk BNB token. Flags: {', '.join(risk_flags[:3])}.{cia_flags}"
+    elif label == "INSUFFICIENT_DATA":
+        output = ("INSUFFICIENT_DATA - The contract check did not finish: a function "
+                  "that could grant a power was matched by selector and not read. No "
+                  "clean verdict is given.")
     else:
         output = f"GOOD - Low risk BNB token. No major red flags. Deployer history: {creator_risk}."
 
@@ -1387,6 +1257,10 @@ Rug Velocity: score={vel.get('velocity_score', 0)} | Fast rug: {vel.get('is_fast
         "v6_is_proxy": backdoor.get("is_proxy", False),
         "v6_has_mint": backdoor.get("has_mint_function", False),
         "v6_has_blacklist": backdoor.get("has_blacklist", False),
+        "v6_possible_powers": backdoor.get("possible_powers", []),
+        "v6_source_read_powers": backdoor.get("source_read_powers", []),
+        "v6_unconfirmed_powers": backdoor.get("unconfirmed_powers", []),
+        "v6_capability_check": backdoor.get("capability_check"),
         "v6_top5_concentration_pct": conc.get("top5_pct", 0.0),
         "v6_concentration_risk": conc.get("concentration_risk", "LOW"),
         "v6_rug_velocity_score": vel.get("velocity_score", 0.0),

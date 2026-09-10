@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from bridge import publish_score, publish_score_modules, send_telegram_alert  # noqa: E402
 from risk_engine import LOCAL_ENGINE_VERSION, score_token  # noqa: E402
+from contract_functions import capability_gaps, read_bytecode, reading_failed  # noqa: E402
 from build_identity import build_identity  # noqa: E402
 from evidence import build_evidence  # noqa: E402
 from plain_language import describe  # noqa: E402
@@ -311,7 +312,9 @@ def public_label_from_report(report: dict[str, Any]) -> str:
     if rug_status in {"ELEVATED", "WARN"} or speculation_status in {"ELEVATED", "WARN"}:
         return "WARN"
     if rug_status == "LOW" and speculation_status == "LOW":
-        return "GOOD"
+        # GOOD asserts the contract was looked at and nothing possible was
+        # left unsettled. Without that it is withheld, not softened.
+        return "INSUFFICIENT_DATA" if capability_gaps(report) else "GOOD"
     return "UNKNOWN"
 
 
@@ -320,6 +323,12 @@ def compact_score_response(record: dict[str, Any], source: str) -> dict[str, Any
     # A collector record's own label is richer than anything derivable here,
     # so it wins. Deriving is only for live scans, which have no label at all.
     label = record.get("label") or record.get("verdict") or public_label_from_report(record)
+    # A stored collector label is kept, except that GOOD cannot survive an
+    # unfinished contract check. Records written before the check had a
+    # name are re-read through the current function table.
+    gaps = capability_gaps(record)
+    if label == "GOOD" and gaps:
+        label = "INSUFFICIENT_DATA"
     response = {
         "ok": True,
         "address": Web3.to_checksum_address(address) if Web3.is_address(address) else address,
@@ -333,6 +342,7 @@ def compact_score_response(record: dict[str, Any], source: str) -> dict[str, Any
         "token_symbol": record.get("token_symbol") or record.get("symbol"),
         "classifier": "weighted_v2",
         "source": source,
+        "blocking_data_gaps": gaps,
     }
     # Which code answered, what it could read, and a sentence saying which kind
     # of answer this is. All additive: no verdict field is read or written.
@@ -727,6 +737,14 @@ def fetch_portfolio_tokens(address: str) -> list[dict[str, Any]]:
 def get_onchain_metadata(web3: Web3, address: str) -> dict[str, Any]:
     checksum = Web3.to_checksum_address(address)
     known = KNOWN_TOKEN_METADATA.get(checksum.lower(), {})
+    # The contract check this path never ran. GOOD used to be reached on
+    # ERC-20 metadata and a DEX pair alone, which asserts a contract nobody
+    # looked at. One eth_getCode.
+    try:
+        contract_capability = read_bytecode(web3.eth.get_code(checksum))
+    except Exception as exc:
+        contract_capability = reading_failed(
+            f"bytecode could not be read from RPC: {type(exc).__name__}")
     token = web3.eth.contract(address=Web3.to_checksum_address(address), abi=ERC20_ABI)
     name = call_optional(token, "name")
     symbol = call_optional(token, "symbol")
@@ -738,6 +756,7 @@ def get_onchain_metadata(web3: Web3, address: str) -> dict[str, Any]:
         "decimals": decimals if decimals is not None else known.get("decimals"),
         "total_supply": total_supply,
         "is_known_chain_asset": bool(known),
+        "contract_capability": contract_capability,
         "metadata_source": "erc20_call" if name or symbol or decimals is not None or total_supply is not None else "known_token_fallback" if known else "unavailable",
     }
 
@@ -792,7 +811,7 @@ def build_report_from_metadata(address: str, metadata: dict[str, Any], pair_data
     }
 
     scores = score_token(scoring_input)
-    return {
+    report = {
         "address": scoring_input["token"],
         "token_name": scoring_input["name"],
         "symbol": scoring_input["symbol"],
@@ -817,7 +836,11 @@ def build_report_from_metadata(address: str, metadata: dict[str, Any], pair_data
         "is_known_chain_asset": metadata.get("is_known_chain_asset", False),
         "network": NETWORKS[resolve_network()]["label"],
         "source": source,
+        "v6": {"backdoor": metadata["contract_capability"]}
+        if metadata.get("contract_capability") else {},
     }
+    report["blocking_data_gaps"] = capability_gaps(report)
+    return report
 
 
 def fetch_dexscreener_pairs(address: str) -> list[dict[str, Any]]:
