@@ -353,9 +353,19 @@ def compact_score_response(record: dict[str, Any], source: str) -> dict[str, Any
     return response
 
 
+def cached_record_is_answerable(record: dict[str, Any]) -> bool:
+    """Whether a stored record carries what the public label is derived from.
+
+    Same guard as Base (f5b0a75): a row without rug_status reads as UNKNOWN
+    with nothing checked, while a live scan of the address can answer. Such a
+    row is passed over, not served.
+    """
+    return bool(str(record.get("rug_status") or "").strip())
+
+
 def lookup_cached_score(address: str) -> dict[str, Any] | None:
     cached = get_cached_report(address)
-    if cached:
+    if cached and cached_record_is_answerable(cached):
         return compact_score_response(cached, "memory_cache")
     if not DATABASE_URL or psycopg2 is None:
         return None
@@ -378,9 +388,14 @@ def lookup_cached_score(address: str) -> dict[str, Any] | None:
         record = row[0]
         if isinstance(record, str):
             record = json.loads(record)
+        if not isinstance(record, dict) or not cached_record_is_answerable(record):
+            return None
         return compact_score_response(record, "postgres_cache")
-    except Exception as exc:
-        return {"ok": False, "error": str(exc), "source": "postgres_cache"}
+    except Exception:
+        # The cache being unreachable is not an answer about the token. It
+        # used to return a 500 carrying the exception text and never tried
+        # the live scan; now the live scan answers, or reports its own failure.
+        return None
 
 
 @app.route("/score", methods=["GET"])
@@ -409,8 +424,13 @@ def public_score():
         return jsonify({
             "ok": False,
             "error": "live_scan_failed",
+            "message": (
+                "The check did not complete: this token could not be read right now. "
+                "That is a failure on our side, not a finding about the token. Try again shortly."
+            ),
             "detail": type(exc).__name__,
             "address": address,
+            "chain": "bnb",
         }), 502
     put_cached_report(address, report)
     return jsonify(compact_score_response(report, "live_scan"))
