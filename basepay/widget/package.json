@@ -1,0 +1,21 @@
+{
+  "name": "@basepay/widget",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "qrcode-generator": "^1.4.4"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.12",
+    "jsdom": "^30.0.1",
+    "typescript": "^5.7.2",
+    "vitest": "^5.0.0"
+  }
+}

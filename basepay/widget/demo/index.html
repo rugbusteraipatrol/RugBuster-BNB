@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BasePay demo checkout</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        margin: 0;
+        padding: 32px 16px;
+        font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background: #f5f7fb;
+        color: #0b0d12;
+      }
+      /* minmax(0, 1fr) rather than 1fr: a grid track's default min size is
+         min-content, which the <pre> blocks below would push past the page. */
+      main {
+        max-width: 980px; margin: 0 auto; display: grid; gap: 24px;
+        grid-template-columns: minmax(0, 1fr);
+      }
+      @media (min-width: 860px) {
+        main { grid-template-columns: minmax(0, 1fr) 420px; align-items: start; }
+      }
+      .panel { background: #fff; border: 1px solid #e3e7ee; border-radius: 14px; padding: 20px; min-width: 0; }
+      h1 { font-size: 22px; margin: 0 0 4px; }
+      h2 { font-size: 15px; margin: 20px 0 8px; text-transform: uppercase; letter-spacing: .06em; color: #5b6472; }
+      p { margin: 0 0 12px; color: #3b4453; }
+      label { display: block; font-size: 13px; color: #5b6472; margin-bottom: 4px; }
+      input {
+        font: inherit; width: 100%; padding: 9px 11px; border-radius: 9px;
+        border: 1px solid #e3e7ee; background: #fbfcfe; color: inherit;
+      }
+      .row { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); margin-bottom: 12px; }
+      button {
+        font: inherit; font-weight: 600; cursor: pointer; width: 100%;
+        padding: 12px 16px; border-radius: 10px; border: 1px solid #0052ff;
+        background: #0052ff; color: #fff;
+      }
+      button:focus-visible, input:focus-visible { outline: 3px solid #0052ff; outline-offset: 2px; }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+      pre {
+        background: #0b0d12; color: #e6ebf5; padding: 12px; border-radius: 10px;
+        overflow-x: auto; font-size: 12.5px;
+      }
+      #log { font-size: 13px; color: #5b6472; margin-top: 12px; min-height: 1.5em; }
+      @media (prefers-color-scheme: dark) {
+        body { background: #0e1014; color: #f2f4f8; }
+        .panel { background: #14161c; border-color: #2a2f3a; }
+        p, label, h2 { color: #9aa4b5; }
+        input { background: #1c2029; border-color: #2a2f3a; color: inherit; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="panel">
+        <h1>Anvil Supply Co.</h1>
+        <p>A demo storefront wired to the local BasePay stack. Nothing here is real money.</p>
+
+        <div class="row">
+          <div>
+            <label for="amount">Amount (USD)</label>
+            <input id="amount" type="text" inputmode="decimal" value="45.00" />
+          </div>
+          <div>
+            <label for="merchant">Merchant ID</label>
+            <input id="merchant" type="text" value="demo" />
+          </div>
+        </div>
+        <label for="order">Order reference</label>
+        <input id="order" type="text" value="DEMO-1001" style="margin-bottom: 12px" />
+        <button id="checkout" type="button">Checkout</button>
+        <p id="log" role="status" aria-live="polite"></p>
+
+        <h2>Pay it from anvil</h2>
+        <p>With the local stack running, send the exact quoted amount from a funded anvil account:</p>
+        <pre><code>cd basepay
+npm run dev:pay --workspace server -- &lt;amount-usdc&gt; &lt;merchant-address&gt;</code></pre>
+        <p>Then watch the widget move <code>pending → confirming → paid</code>.</p>
+
+        <h2>The Webflow embed</h2>
+        <pre><code>&lt;script src="https://pay.example.com/widget/widget.js"
+        data-merchant="demo"
+        data-amount-usd="45.00"
+        data-order-ref="ORDER-1001"
+        data-target="#basepay"&gt;&lt;/script&gt;</code></pre>
+      </section>
+
+      <section class="panel">
+        <div id="basepay"></div>
+      </section>
+    </main>
+
+    <script src="/widget/widget.js" data-auto="false"></script>
+    <script>
+      const log = document.getElementById('log');
+      const mountPoint = document.getElementById('basepay');
+      let widget = null;
+
+      document.getElementById('checkout').addEventListener('click', () => {
+        widget?.destroy();
+        mountPoint.replaceChildren();
+        log.textContent = 'Opening a payment session…';
+
+        widget = window.BasePay.mount({
+          merchantId: document.getElementById('merchant').value.trim(),
+          amountUsd: document.getElementById('amount').value.trim(),
+          orderRef: document.getElementById('order').value.trim() || null,
+          target: mountPoint,
+          // The demo runs against a local anvil chain, so point at its explorer-less chain.
+          explorerBaseUrl: window.DEMO_EXPLORER || 'https://basescan.org',
+        });
+      });
+
+      // The widget announces terminal states on its host element.
+      mountPoint.addEventListener('basepay:settled', (event) => {
+        log.textContent = `Session ${event.detail.sessionId} finished as "${event.detail.status}".`;
+      });
+    </script>
+  </body>
+</html>
