@@ -20,6 +20,7 @@ compromised, an attacker can lie about payment status, but they cannot take mone
 - [The attribution problem, and how amounts solve it](#the-attribution-problem-and-how-amounts-solve-it)
 - [Payment lifecycle](#payment-lifecycle)
 - [Local setup](#local-setup)
+- [Deploying to production](#deploying-to-production)
 - [End-to-end demo](#end-to-end-demo)
 - [Embedding in Webflow](#embedding-in-webflow)
 - [API](#api)
@@ -293,6 +294,19 @@ with the real widget embedded.
 The same flow runs unattended in `server/test/integration/watcher.anvil.test.ts`.
 
 ---
+
+## Deploying to production
+
+[`docs/DEPLOY.md`](./docs/DEPLOY.md) is the runbook: the two values you must
+supply yourself (a Base mainnet wallet address you control, and an RPC
+endpoint), the Railway setup, the variables that matter, and a go-live
+checklist that ends with sending one real $1 payment before you point customers
+at it.
+
+The webhook receiver — the piece on your side that turns *"a payment arrived"*
+into *"this order is fulfilled"* — has working implementations in
+[`examples/`](./examples/), in Node and Python, both verified against BasePay's
+own signer.
 
 ## Embedding in Webflow
 
