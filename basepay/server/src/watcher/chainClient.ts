@@ -25,6 +25,14 @@ function resolveChain(config: Config) {
 }
 
 /**
+ * `cacheTime: 0` is load-bearing, not a tuning knob. viem defaults it to the
+ * polling interval, which caches `getBlockNumber` for seconds at a time — so a
+ * tick triggered right after a payment lands reads a stale head, scans up to a
+ * block that predates the transfer, and reports nothing. The next tick recovers,
+ * but settlement is delayed for no reason and the behaviour is invisible until a
+ * test sends a transfer and immediately ticks. The watcher must always see the
+ * real head.
+ *
  * Prefers the WebSocket RPC and falls back to HTTP automatically when it is
  * unavailable or drops. The watcher's correctness never depends on which one is
  * live: both paths feed the same `getLogs` range scan, and the bookmark in
@@ -41,6 +49,7 @@ export function createChainClient(config: Config): ChainClient {
         chain,
         transport: fallback([webSocket(config.chain.wsRpcUrl, { retryCount: 3 }), httpTransport]),
         pollingInterval: config.watcher.pollIntervalMs,
+        cacheTime: 0,
       }) as PublicClient,
       transport: 'websocket+http',
     };
@@ -52,6 +61,7 @@ export function createChainClient(config: Config): ChainClient {
       chain,
       transport: httpTransport,
       pollingInterval: config.watcher.pollIntervalMs,
+      cacheTime: 0,
     }) as PublicClient,
     transport: 'http',
   };

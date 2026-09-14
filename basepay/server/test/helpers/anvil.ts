@@ -128,7 +128,13 @@ export function walletFor(privateKey: Hex, rpcUrl: string) {
 }
 
 export function publicFor(rpcUrl: string): PublicClient {
-  return createPublicClient({ chain: anvilChain(rpcUrl), transport: http(rpcUrl) }) as PublicClient;
+  // cacheTime: 0 for the same reason the production client sets it — a cached
+  // head would make a tick miss a transfer that just landed.
+  return createPublicClient({
+    chain: anvilChain(rpcUrl),
+    transport: http(rpcUrl),
+    cacheTime: 0,
+  }) as PublicClient;
 }
 
 export function testClientFor(rpcUrl: string) {

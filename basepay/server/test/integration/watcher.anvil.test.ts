@@ -42,6 +42,8 @@ import { fixedPriceService, seedMerchant } from '../helpers/fixtures.js';
 const FORK_URL = process.env['BASE_FORK_RPC_URL'];
 const USDC_ON_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as Address;
 const SECRET = 'whsec_anvil_secret_value_0123456';
+/** Passed to the watcher config in `build()`, and used to size the gap between cases. */
+const REORG_DEPTH_BLOCKS = 12;
 
 const enabled = hasDatabase && anvilAvailable();
 
@@ -94,6 +96,13 @@ describe.skipIf(!enabled)(`watcher against anvil${FORK_URL ? ' (forked Base)' : 
     await resetDatabase(pool);
     await seedMerchant(pool, { walletAddress: MERCHANT, webhookUrl: receiverUrl, webhookSecret: SECRET });
     delivered.length = 0;
+
+    // The database is reset between cases but the chain is not: anvil keeps every
+    // transfer a previous case sent. Each watcher cold-starts at the head and then
+    // rescans REORG_DEPTH_BLOCKS back, so without this a stale transfer of the
+    // same amount would be attributed to this case's session. Push the old ones
+    // out of that window before the watcher takes its bookmark.
+    await testClientFor(anvil.rpcUrl).mine({ blocks: REORG_DEPTH_BLOCKS * 2 });
   });
 
   /** Config pointed at this anvil instance and the token deployed above. */
@@ -107,6 +116,7 @@ describe.skipIf(!enabled)(`watcher against anvil${FORK_URL ? ' (forked Base)' : 
       USDC_ADDRESS: token,
       BASE_RPC_HTTP_URL: anvil.rpcUrl,
       CONFIRMATIONS_REQUIRED: '3',
+      REORG_DEPTH_BLOCKS: String(REORG_DEPTH_BLOCKS),
       WEBHOOK_BACKOFF_BASE_SECONDS: '1',
       ...overrides,
     });
