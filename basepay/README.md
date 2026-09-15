@@ -642,11 +642,14 @@ Stated plainly, because this handles money.
   payment is orphaned, BasePay logs at `error` and flags the payment row, but does
   not un-pay the session or retract the webhook — the merchant may already have
   shipped. Raise `CONFIRMATIONS_REQUIRED` if your risk tolerance is lower.
-- **The on-ramp path is best-effort.** Transak and MoonPay cannot deliver an exact
-  amount, so those payments settle through the bounded tolerance path, or land as
-  `unmatched` if they fall outside it or another session is equally plausible. The
-  on-ramp's own delivery time (minutes to hours) can also exceed the session TTL.
-  MoonPay URL signing is not implemented.
+- **The card path is best-effort.** Transak charges the card the session's USD
+  amount and takes its fee out of it, so the USDC that arrives is short of the
+  quote. It settles through the bounded tolerance path, usually as `underpaid`,
+  or lands as `unmatched` if another session is equally plausible. Opening the
+  card path holds the session for `ONRAMP_SESSION_TTL_SECONDS` to cover delivery
+  time, and cards are not offered below `ONRAMP_MIN_USD`. For production Transak
+  requires KYB of the partner and allowlists the server's outbound IPs; on
+  Railway that means static outbound IPs. MoonPay URL signing is not implemented.
 - **The amount window is a real ceiling.** A merchant cannot have more than
   `AMOUNT_OFFSET_MAX` open sessions at one price; past that, checkout is refused
   until sessions settle or expire. Raise it, or shorten `SESSION_TTL_SECONDS`.

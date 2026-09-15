@@ -8,19 +8,20 @@ export interface OnrampLink {
 }
 
 export interface OnrampQuote {
+  sessionId: string;
   payToAddress: string;
   amountUsd: string;
+  amountUsdCents: bigint;
   amountUsdc: string;
 }
 
 /**
- * Builds a prefilled buy-and-send link: USD in, USDC on Base out, delivered to
- * the merchant address. We never take custody — the on-ramp sends straight to
- * the merchant.
+ * The card-payment link shown under the wallet options. We never take custody:
+ * the on-ramp sends USDC straight to the merchant.
  *
- * Caveat carried through to the README: on-ramps do not deliver an exact amount
- * (fees, their own rounding), so a session paid this way settles through the
- * tolerance path in `sessions/matching.ts` rather than an exact match.
+ * On-ramps do not deliver an exact amount (fees, their own rounding), so a
+ * session paid this way settles through the tolerance path in
+ * `sessions/matching.ts` rather than an exact match.
  */
 export function buildOnrampLink(config: Config, quote: OnrampQuote): OnrampLink | null {
   switch (config.onramp.provider) {
@@ -28,21 +29,14 @@ export function buildOnrampLink(config: Config, quote: OnrampQuote): OnrampLink 
       return null;
 
     case 'transak': {
-      const base =
-        config.onramp.environment === 'STAGING'
-          ? 'https://global-stg.transak.com/'
-          : 'https://global.transak.com/';
-      const url = new URL(base);
-      url.searchParams.set('apiKey', config.onramp.apiKey);
-      url.searchParams.set('productsAvailed', 'BUY');
-      url.searchParams.set('fiatCurrency', 'USD');
-      url.searchParams.set('fiatAmount', quote.amountUsd);
-      url.searchParams.set('cryptoCurrencyCode', 'USDC');
-      url.searchParams.set('network', 'base');
-      url.searchParams.set('walletAddress', quote.payToAddress);
-      url.searchParams.set('disableWalletAddressForm', 'true');
-      url.searchParams.set('isFeeCalculationHidden', 'false');
-      return { provider: 'transak', label: 'Pay with card via Transak', url: url.toString() };
+      if (quote.amountUsdCents < BigInt(config.onramp.minAmountUsdCents)) return null;
+      // BasePay's own hand-off page, which asks the server for a single-use
+      // Transak URL when the buyer clicks. See api/routes/onrampPage.ts.
+      return {
+        provider: 'transak',
+        label: 'Pay with card via Transak',
+        url: `${config.onramp.publicBaseUrl}/onramp/${quote.sessionId}`,
+      };
     }
 
     case 'moonpay': {

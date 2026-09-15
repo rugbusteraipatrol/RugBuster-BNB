@@ -10,6 +10,7 @@ import type { Watcher } from '../watcher/watcher.js';
 import { errorHandler, notFoundHandler } from './middleware.js';
 import { adminRoutes } from './routes/admin.js';
 import { healthRoutes } from './routes/health.js';
+import { onrampPageRoutes } from './routes/onrampPage.js';
 import { sessionRoutes } from './routes/sessions.js';
 
 /** server/ — the same whether we are running from src/ (tsx) or dist/ (node). */
@@ -47,6 +48,7 @@ export function createApp(deps: AppDependencies): Express {
   app.use(healthRoutes(config, pool, priceService, watcher));
   app.use('/api', sessionRoutes(config, sessionService));
   app.use('/admin', adminRoutes(config, pool));
+  app.use(onrampPageRoutes());
 
   if (config.http.serveWidget) {
     const distDir = config.http.widgetDistDir ?? path.resolve(SERVER_ROOT, '..', 'widget', 'dist');

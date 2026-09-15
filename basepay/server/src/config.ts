@@ -88,7 +88,10 @@ const envSchema = z.object({
 
   ONRAMP_PROVIDER: str('none').pipe(z.enum(['none', 'transak', 'moonpay'])),
   TRANSAK_API_KEY: optionalStr,
+  TRANSAK_API_SECRET: optionalStr,
   TRANSAK_ENVIRONMENT: str('PRODUCTION').pipe(z.enum(['STAGING', 'PRODUCTION'])),
+  ONRAMP_SESSION_TTL_SECONDS: int(7200, 900, 86_400),
+  ONRAMP_MIN_USD: num(5, 0, 1_000_000),
   MOONPAY_API_KEY: optionalStr,
 });
 
@@ -169,17 +172,48 @@ export interface Config {
   };
   onramp:
     | { provider: 'none' }
-    | { provider: 'transak'; apiKey: string; environment: 'STAGING' | 'PRODUCTION' }
+    | {
+        provider: 'transak';
+        apiKey: string;
+        apiSecret: string;
+        environment: 'STAGING' | 'PRODUCTION';
+        /** Origin of this service, which serves the page that opens the Transak widget. */
+        publicBaseUrl: string;
+        /** How long a session is held once its buyer opens the card path. */
+        sessionTtlSeconds: number;
+        /** Below this, the card path is not offered: Transak's own card minimum. */
+        minAmountUsdCents: number;
+      }
     | { provider: 'moonpay'; apiKey: string };
 }
 
 function buildOnramp(env: Env): Config['onramp'] {
   switch (env.ONRAMP_PROVIDER) {
-    case 'transak':
-      if (!env.TRANSAK_API_KEY) {
-        throw new Error('ONRAMP_PROVIDER=transak requires TRANSAK_API_KEY');
+    case 'transak': {
+      if (!env.TRANSAK_API_KEY || !env.TRANSAK_API_SECRET) {
+        throw new Error('ONRAMP_PROVIDER=transak requires TRANSAK_API_KEY and TRANSAK_API_SECRET');
       }
-      return { provider: 'transak', apiKey: env.TRANSAK_API_KEY, environment: env.TRANSAK_ENVIRONMENT };
+      // The card link opens a page on this origin, and Transak checks that origin
+      // against referrerDomain, so the public URL is not optional here.
+      if (!env.PUBLIC_BASE_URL) {
+        throw new Error('ONRAMP_PROVIDER=transak requires PUBLIC_BASE_URL');
+      }
+      let origin: string;
+      try {
+        origin = new URL(env.PUBLIC_BASE_URL).origin;
+      } catch {
+        throw new Error('PUBLIC_BASE_URL must be an absolute URL');
+      }
+      return {
+        provider: 'transak',
+        apiKey: env.TRANSAK_API_KEY,
+        apiSecret: env.TRANSAK_API_SECRET,
+        environment: env.TRANSAK_ENVIRONMENT,
+        publicBaseUrl: origin,
+        sessionTtlSeconds: env.ONRAMP_SESSION_TTL_SECONDS,
+        minAmountUsdCents: Math.round(env.ONRAMP_MIN_USD * 100),
+      };
+    }
     case 'moonpay':
       if (!env.MOONPAY_API_KEY) {
         throw new Error('ONRAMP_PROVIDER=moonpay requires MOONPAY_API_KEY');

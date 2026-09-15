@@ -6,6 +6,7 @@ import { migrate } from './db/migrate.js';
 import { createPool } from './db/pool.js';
 import { logger } from './logger.js';
 import { seedMerchantsFromFile } from './merchants/seed.js';
+import { TransakClient } from './onramp/transak.js';
 import { fetchUsdcPriceUsd } from './price/coingecko.js';
 import { PriceService } from './price/priceService.js';
 import { SessionService } from './sessions/sessionService.js';
@@ -39,7 +40,16 @@ try {
   logger.warn({ err: (err as Error).message }, 'could not fetch an initial USDC price');
 }
 
-const sessionService = new SessionService(pool, config, priceService);
+const transak =
+  config.onramp.provider === 'transak'
+    ? new TransakClient({
+        apiKey: config.onramp.apiKey,
+        apiSecret: config.onramp.apiSecret,
+        environment: config.onramp.environment,
+      })
+    : null;
+
+const sessionService = new SessionService(pool, config, priceService, transak);
 
 const watcher = config.watcher.enabled ? new Watcher(pool, config) : null;
 if (watcher) await watcher.start();
