@@ -1,4 +1,4 @@
-# REPLACE pay.example.com with your real domain.
+# Replace the Railway address with the custom domain once one exists.
 User-agent: *
 Allow: /
 
@@ -8,4 +8,4 @@ Disallow: /admin/
 Disallow: /healthz
 Disallow: /readyz
 
-Sitemap: https://pay.example.com/sitemap.xml
+Sitemap: https://basepay-production.up.railway.app/sitemap.xml

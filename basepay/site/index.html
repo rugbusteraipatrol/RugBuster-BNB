@@ -4,17 +4,19 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <!-- REPLACE pay.example.com everywhere in this file with your real domain. -->
+    <!-- Served from the Railway address until a custom domain exists. When one does,
+         replace basepay-production.up.railway.app everywhere in this file, in
+         robots.txt and in sitemap.xml. -->
     <title>Accept USDC payments without a merchant account — BasePay</title>
     <meta
       name="description"
       content="Accept payments on your website with only a wallet address. No merchant account, no KYB, no bank. Funds go straight from buyer to you, never held in between."
     />
-    <link rel="canonical" href="https://pay.example.com/" />
+    <link rel="canonical" href="https://basepay-production.up.railway.app/" />
     <meta name="robots" content="index, follow" />
 
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://pay.example.com/" />
+    <meta property="og:url" content="https://basepay-production.up.railway.app/" />
     <meta property="og:title" content="Accept USDC payments without a merchant account" />
     <meta
       property="og:description"
@@ -380,7 +382,7 @@
           <p>Give us a wallet address. Put this where the checkout should appear:</p>
           <pre><code>&lt;div id="checkout"&gt;&lt;/div&gt;
 &lt;script
-  src="https://pay.example.com/widget/widget.js"
+  src="https://basepay-production.up.railway.app/widget/widget.js"
   data-merchant="your-store"
   data-amount-usd="45.00"
   data-order-ref="ORDER-1001"
@@ -492,8 +494,8 @@
             <summary>What does it cost?</summary>
             <div class="answer">
               <p>
-                <!-- REPLACE: your pricing. Keep it honest and specific. -->
-                <strong>[Your pricing here.]</strong>
+                <strong>Free while BasePay is in beta.</strong> No setup fee, no monthly
+                fee, and no cut of your sales.
               </p>
               <p>
                 Separately from anything we charge: your buyer pays the Base network fee
@@ -621,8 +623,7 @@
             Bring a wallet address. Everything else takes about ten minutes.
           </p>
           <div class="cta-row">
-            <!-- REPLACE: your real contact route. -->
-            <a class="btn primary" href="mailto:hello@example.com?subject=BasePay%20setup">Get set up</a>
+            <a class="btn primary" href="mailto:fedja@rugbuster.io?subject=BasePay%20setup">Get set up</a>
             <a class="btn" href="/demo/">Try the demo checkout</a>
           </div>
         </div>
@@ -649,7 +650,7 @@
         "name": "BasePay",
         "applicationCategory": "BusinessApplication",
         "operatingSystem": "Web",
-        "url": "https://pay.example.com/",
+        "url": "https://basepay-production.up.railway.app/",
         "description": "Non-custodial USDC checkout on the Base network. Accept payments on any website with only a wallet address — no merchant account, no KYB, no bank."
       }
     </script>
@@ -681,6 +682,14 @@
             "acceptedAnswer": {
               "@type": "Answer",
               "text": "No. Funds go from the buyer's wallet to your wallet in a single blockchain transaction. BasePay holds no private key and cannot move, freeze, or withhold your money."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What does BasePay cost?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Free while BasePay is in beta: no setup fee, no monthly fee and no cut of sales. The buyer pays the Base network fee to send the payment, typically a fraction of a cent."
             }
           },
           {
