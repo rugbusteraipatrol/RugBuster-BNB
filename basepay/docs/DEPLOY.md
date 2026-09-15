@@ -114,6 +114,7 @@ Minimum for a working production deployment:
 | `BASE_RPC_WS_URL` | your provider's WSS URL (recommended) |
 | `WATCHER_MIN_TICK_INTERVAL_MS` | `15000` on a free RPC tier (see above) |
 | `WATCHER_MAX_BLOCK_RANGE` | `10` on Alchemy's free tier (see above) |
+| `COINGECKO_API_KEY` | a free CoinGecko demo key. Without one, CoinGecko rate-limits Railway's shared IPs and new checkouts are refused for want of a price |
 | `CORS_ALLOWED_ORIGINS` | your storefront's origin, e.g. `https://shop.example.com` |
 | `PUBLIC_BASE_URL` | the URL Railway gives this service |
 

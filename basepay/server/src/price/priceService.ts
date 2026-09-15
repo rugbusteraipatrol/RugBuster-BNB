@@ -16,6 +16,8 @@ export interface PriceServiceOptions {
   cacheTtlSeconds: number;
   /** Above this age we refuse to quote at all rather than quote a wrong price. */
   maxStaleSeconds: number;
+  /** After a failed refresh the upstream is not asked again for this long. Default: 30 */
+  retryAfterFailureSeconds?: number;
   now?: () => number;
 }
 
@@ -29,14 +31,22 @@ export interface PriceServiceOptions {
  *
  * Refusing is the correct failure mode: a wrong quote either shortchanges the
  * merchant or overcharges the buyer, and neither is recoverable once paid.
+ *
+ * A failed refresh starts a cool-down in which the upstream counts as down
+ * without being asked. Every checkout and every hit on the public /readyz asks
+ * for a quote. Without the cool-down, an upstream answering HTTP 429 would be
+ * asked again on each of those requests, and a brief rate limit would never lift.
  */
 export class PriceService {
   private cached: { priceUsd: string; fetchedAtMs: number } | null = null;
   private inFlight: Promise<void> | null = null;
+  private lastFailureAtMs: number | null = null;
   private readonly now: () => number;
+  private readonly retryAfterFailureSeconds: number;
 
   constructor(private readonly options: PriceServiceOptions) {
     this.now = options.now ?? Date.now;
+    this.retryAfterFailureSeconds = options.retryAfterFailureSeconds ?? 30;
   }
 
   /** Seeds the cache. Used by tests and by warm-start paths. */
@@ -50,10 +60,16 @@ export class PriceService {
       return this.toQuote(cached, false);
     }
 
-    try {
-      await this.refresh();
-    } catch (err) {
-      logger.warn({ err: (err as Error).message }, 'USDC price refresh failed');
+    const coolingDown =
+      this.lastFailureAtMs !== null && this.ageSeconds(this.lastFailureAtMs) < this.retryAfterFailureSeconds;
+    if (!coolingDown) {
+      try {
+        await this.refresh();
+        this.lastFailureAtMs = null;
+      } catch (err) {
+        this.lastFailureAtMs = this.now();
+        logger.warn({ err: (err as Error).message }, 'USDC price refresh failed');
+      }
     }
 
     const current = this.cached;

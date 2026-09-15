@@ -103,9 +103,31 @@ describe('PriceService', () => {
     await expect(service.getQuote()).rejects.toThrow(AppError);
 
     fail = false;
+    time.advanceSeconds(30); // past the cool-down that failure started
     const recovered = await service.getQuote();
     expect(recovered.stale).toBe(false);
     expect(recovered.ageSeconds).toBe(0);
+  });
+
+  it('does not ask a failing upstream again until the cool-down has passed', async () => {
+    let fail = true;
+    const fetchPrice = vi.fn(async () => {
+      if (fail) throw new Error('CoinGecko returned HTTP 429');
+      return '1.00000000';
+    });
+    const { service, time } = build(fetchPrice);
+
+    // A burst of requests right after a 429, as /readyz polling produces.
+    for (let i = 0; i < 5; i += 1) {
+      await expect(service.getQuote()).rejects.toMatchObject({ code: 'PRICE_UNAVAILABLE' });
+      time.advanceSeconds(5);
+    }
+    expect(fetchPrice).toHaveBeenCalledTimes(1);
+
+    fail = false;
+    time.advanceSeconds(5); // 30s since the failure
+    await expect(service.getQuote()).resolves.toMatchObject({ priceUsd: '1.00000000', stale: false });
+    expect(fetchPrice).toHaveBeenCalledTimes(2);
   });
 
   it('refuses with no price at all rather than inventing one', async () => {
