@@ -325,8 +325,8 @@
               <h3>A customer clicks pay</h3>
               <p class="muted">
                 The checkout shows the price in dollars, the exact amount in USDC, your
-                wallet address and a QR code. It works with any crypto wallet, and it
-                has a card option for buyers who hold no crypto.
+                wallet address and a QR code. It works with any crypto wallet: scan the
+                code with a phone, or pay from a browser wallet on a computer.
               </p>
             </li>
             <li>
@@ -416,8 +416,8 @@
               <p>Blockchain payments are final. Nobody can reverse one against you weeks later.</p>
             </div>
             <div class="card">
-              <h3>Card payments too</h3>
-              <p>Buyers without crypto can pay by card through an on-ramp that delivers USDC to you.</p>
+              <h3>Any wallet, any device</h3>
+              <p>Buyers scan a QR code with a wallet app on their phone, or pay from a browser wallet on a computer.</p>
             </div>
             <div class="card">
               <h3>Order notifications</h3>
@@ -457,13 +457,7 @@
                 Not to take a payment. Money moves from your customer's wallet to yours
                 without an intermediary, so there is no underwriter deciding whether
                 your business qualifies.
-              </p>
-              <p>
-                If you enable the card option, the on-ramp provider verifies the
-                <em>buyer</em> on their side, as any card processor would. That is their
-                requirement, not ours, and it does not involve you.
-              </p>
-            </div>
+              </p>            </div>
           </details>
 
           <details>
@@ -522,10 +516,9 @@
             <summary>Can customers who have no crypto still pay?</summary>
             <div class="answer">
               <p>
-                Yes. The checkout offers a card option that buys USDC and delivers it to
-                your wallet. Be aware that on-ramps take minutes to hours and cannot
-                deliver an exact amount after their fees, so these payments are matched
-                with a tolerance and occasionally need manual reconciliation.
+                Not at the moment. A buyer needs USDC on Base in a wallet such as
+                MetaMask or Coinbase Wallet. Someone else can pay on their behalf: what
+                counts is the exact amount arriving, not who sends it.
               </p>
             </div>
           </details>
@@ -599,8 +592,8 @@
               own wallet. That is the cost of nobody being able to freeze your funds.
             </li>
             <li>
-              <strong>Your customers will not touch crypto.</strong> The card option
-              helps, but it adds friction and delay compared to entering a card number.
+              <strong>Your customers will not touch crypto.</strong> Every buyer needs a
+              wallet holding USDC. There is no way to pay by card.
             </li>
             <li>
               <strong>You want one checkout for cards and crypto.</strong> This does
@@ -673,7 +666,7 @@
             "name": "Do I need to pass KYB or business verification?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Not to take a payment. Money moves from the customer's wallet to yours without an intermediary, so no underwriter decides whether your business qualifies. If you enable the card option, the on-ramp provider verifies the buyer on their side."
+              "text": "Not to take a payment. Money moves from the customer's wallet to yours without an intermediary, so no underwriter decides whether your business qualifies."
             }
           },
           {
@@ -705,7 +698,7 @@
             "name": "Can customers who have no cryptocurrency still pay?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Yes. The checkout offers a card option that buys USDC and delivers it to the merchant wallet. On-ramps take minutes to hours and cannot deliver an exact amount after fees, so those payments are matched with a tolerance."
+              "text": "Not at the moment. A buyer needs USDC on the Base network in a wallet such as MetaMask or Coinbase Wallet. Someone else can pay on their behalf, since what counts is the exact amount arriving."
             }
           },
           {
