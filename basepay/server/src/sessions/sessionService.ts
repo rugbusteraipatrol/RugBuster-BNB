@@ -11,11 +11,13 @@ import {
   getSession,
   insertSession,
   takenAmountsInRange,
+  extendPendingSession,
 } from '../db/sessions.js';
 import type { Session } from '../db/types.js';
-import { conflict, notFound } from '../errors.js';
+import { conflict, notFound, unavailable } from '../errors.js';
 import { logger } from '../logger.js';
 import { buildOnrampLink, type OnrampLink } from '../onramp/index.js';
+import type { TransakClient } from '../onramp/transak.js';
 import type { PriceService } from '../price/priceService.js';
 import { allocateOffset, formatUsd, formatUsdc, OffsetExhaustedError, parseUsdToCents, usdCentsToUsdcMicro } from './amounts.js';
 
@@ -65,6 +67,7 @@ export class SessionService {
     private readonly pool: pg.Pool,
     private readonly config: Config,
     private readonly priceService: PriceService,
+    private readonly transak: TransakClient | null = null,
   ) {}
 
   /**
@@ -159,6 +162,49 @@ export class SessionService {
     );
   }
 
+  /**
+   * Opens the card path for a pending session: a single-use Transak widget URL
+   * that pays the merchant's address, created when the buyer asks for it.
+   *
+   * The session is held for the on-ramp's delivery time first. A card purchase
+   * takes minutes, sometimes hours, and a session that expired in the meantime
+   * would release its amount and leave the payment unattributed.
+   */
+  async createCardCheckoutUrl(sessionId: string, userIp: string): Promise<string> {
+    const onramp = this.config.onramp;
+    if (onramp.provider !== 'transak' || !this.transak) {
+      throw notFound('ONRAMP_DISABLED', 'Card payments are not enabled for this checkout');
+    }
+
+    const session = await getSession(this.pool, sessionId);
+    if (!session) throw notFound('SESSION_NOT_FOUND', 'No such payment session');
+    if (session.amountUsdCents < BigInt(onramp.minAmountUsdCents)) {
+      throw conflict(
+        'ONRAMP_AMOUNT_TOO_SMALL',
+        `Card payments start at $${formatUsd(BigInt(onramp.minAmountUsdCents))}`,
+      );
+    }
+
+    const held = await extendPendingSession(this.pool, sessionId, onramp.sessionTtlSeconds);
+    if (!held) throw conflict('SESSION_NOT_OPEN', 'This payment session is no longer waiting for payment');
+
+    try {
+      return await this.transak.createWidgetUrl({
+        walletAddress: held.payToAddress,
+        fiatAmountUsd: formatUsd(held.amountUsdCents),
+        partnerOrderId: held.id,
+        referrerDomain: new URL(onramp.publicBaseUrl).host,
+        userIp,
+      });
+    } catch (err) {
+      logger.error({ err, sessionId }, 'could not create a Transak widget URL');
+      throw unavailable(
+        'ONRAMP_UNAVAILABLE',
+        'Card payment is unavailable right now. Pay from a wallet, or try again shortly.',
+      );
+    }
+  }
+
   async getSessionView(id: string): Promise<SessionView | null> {
     const session = await getSession(this.pool, id);
     if (!session) return null;
@@ -213,8 +259,10 @@ export class SessionService {
         from: p.fromAddress,
       })),
       onramp: buildOnrampLink(this.config, {
+        sessionId: session.id,
         payToAddress: session.payToAddress,
         amountUsd,
+        amountUsdCents: session.amountUsdCents,
         amountUsdc,
       }),
     };

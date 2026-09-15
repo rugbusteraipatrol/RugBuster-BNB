@@ -50,5 +50,23 @@ export function sessionRoutes(config: Config, sessions: SessionService): Router 
     }),
   );
 
+  router.post(
+    '/sessions/:id/onramp',
+    // Every call extends a session's hold and asks Transak for a URL, so it is
+    // throttled like session creation.
+    rateLimitSessions(config),
+    asyncRoute(async (req, res) => {
+      const id = String(req.params['id'] ?? '');
+      if (!isUuid(id)) throw notFound('SESSION_NOT_FOUND', 'No such payment session');
+
+      const url = await sessions.createCardCheckoutUrl(id, clientIp(req.ip));
+      res.setHeader('cache-control', 'no-store');
+      res.json({ url });
+    }),
+  );
+
   return router;
 }
+
+/** A dual-stack socket reports IPv4 clients as ::ffff:a.b.c.d; Transak wants the address. */
+const clientIp = (ip: string | undefined): string => (ip ?? '').replace(/^::ffff:/, '');

@@ -120,6 +120,22 @@ export async function takenAmountsInRange(
   return new Set(rows.map((r) => BigInt(r.amount_usdc)));
 }
 
+/**
+ * Moves a pending session's deadline out to at least `seconds` from now, and
+ * never pulls it in. Returns the session, or null once it is no longer pending.
+ */
+export async function extendPendingSession(db: Queryable, id: string, seconds: number): Promise<Session | null> {
+  const { rows } = await db.query<SessionRow>(
+    `UPDATE sessions
+        SET expires_at = GREATEST(expires_at, now() + make_interval(secs => $2::double precision)),
+            updated_at = now()
+      WHERE id = $1 AND status = 'pending'
+      RETURNING ${COLUMNS}`,
+    [id, seconds],
+  );
+  return rows[0] ? toSession(rows[0]) : null;
+}
+
 /** The open session for this address holding exactly `amount`, if any. */
 export async function findOpenSessionByAmount(
   db: Queryable,
