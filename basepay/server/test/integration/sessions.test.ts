@@ -115,13 +115,34 @@ describe.skipIf(!hasDatabase)('session creation and amount reservation', () => {
     expect(a.payToAddress).not.toBe(b.payToAddress);
   });
 
+  it('never gives two merchants that share a wallet the same open amount', async () => {
+    // A transfer is attributed by address and amount. If both merchants held
+    // 45.000000 at this address, one payment would settle whichever session
+    // happened to be older.
+    await seedMerchant(pool, { id: 'second-store', walletAddress: MERCHANT_ADDRESS.toLowerCase() });
+    const sessions = service();
+
+    const a = await sessions.createSession({ merchantId: 'demo', amountUsd: '45.00' });
+    const b = await sessions.createSession({ merchantId: 'second-store', amountUsd: '45.00' });
+    const concurrent = await Promise.all(
+      Array.from({ length: 20 }, (_, i) =>
+        sessions.createSession({ merchantId: i % 2 === 0 ? 'demo' : 'second-store', amountUsd: '45.00' }),
+      ),
+    );
+
+    expect(a.amountUsdcMicro).toBe('45000000');
+    expect(b.amountUsdcMicro).toBe('45000001');
+    const amounts = [a, b, ...concurrent].map((v) => v.amountUsdcMicro);
+    expect(new Set(amounts).size).toBe(amounts.length);
+  });
+
   it('survives a race on the same slot by retrying rather than violating the reservation', async () => {
     const sessions = service();
     const views = await Promise.all(
       Array.from({ length: 40 }, () => sessions.createSession({ merchantId: 'demo', amountUsd: '19.99' })),
     );
 
-    const taken = await takenAmountsInRange(pool, 'demo', 19_990_000n, 19_991_000n);
+    const taken = await takenAmountsInRange(pool, MERCHANT_ADDRESS, 19_990_000n, 19_991_000n);
     expect(taken.size).toBe(40);
     expect(new Set(views.map((v) => v.amountUsdcMicro)).size).toBe(40);
   });

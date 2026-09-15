@@ -266,11 +266,13 @@ npm run dev --workspace server
 
 ## End-to-end demo
 
-With the stack up, open **<http://localhost:8080/demo/>**. It is a mock storefront
-with the real widget embedded.
+With the stack up, open **<http://localhost:8080/demo/?amount=45.00>**. It is the
+page a visitor to a live deployment sees, with the real widget embedded. Without
+`?amount=` it opens a $0.01 checkout, the default for visitors; `?merchant=`
+overrides the merchant ID `demo` the same way.
 
-1. Click **Checkout**. The widget shows `Pay $45.00`, the exact USDC amount, the
-   merchant address, a QR code and a countdown.
+1. Click **Open a $45.00 checkout**. The widget shows `Pay $45.00`, the exact USDC
+   amount, the merchant address, a QR code and a countdown.
 2. Copy the exact amount from the widget and send it from the dev chain:
 
    ```bash

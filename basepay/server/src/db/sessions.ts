@@ -97,22 +97,25 @@ export async function getSession(db: Queryable, id: string): Promise<Session | n
 }
 
 /**
- * Amounts already reserved by open sessions of this merchant inside
+ * Amounts already reserved by open sessions paying into this address inside
  * [lowInclusive, highExclusive). Used to pick the next free offset.
+ *
+ * Keyed by address rather than merchant, because a transfer is attributed by
+ * address: merchants sharing a wallet share one set of amounts.
  */
 export async function takenAmountsInRange(
   db: Queryable,
-  merchantId: string,
+  payToAddress: string,
   lowInclusive: bigint,
   highExclusive: bigint,
 ): Promise<Set<bigint>> {
   const { rows } = await db.query<{ amount_usdc: string }>(
     `SELECT amount_usdc FROM sessions
-      WHERE merchant_id = $1
+      WHERE lower(pay_to_address) = lower($1)
         AND status IN ('pending', 'confirming')
         AND amount_usdc >= $2
         AND amount_usdc < $3`,
-    [merchantId, lowInclusive.toString(), highExclusive.toString()],
+    [payToAddress, lowInclusive.toString(), highExclusive.toString()],
   );
   return new Set(rows.map((r) => BigInt(r.amount_usdc)));
 }

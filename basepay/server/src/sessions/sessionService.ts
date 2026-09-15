@@ -71,9 +71,13 @@ export class SessionService {
    * Quotes a payment and reserves a unique amount for it.
    *
    * The reservation is the insert itself: a partial unique index on
-   * (merchant_id, amount_usdc) over open sessions means Postgres — not this
+   * (pay-to address, amount_usdc) over open sessions means Postgres — not this
    * process — decides who wins a race. On a lost race we recompute the free
    * offset and try again.
+   *
+   * The key is the address, not the merchant, because the watcher attributes a
+   * transfer by address and amount. Two merchants sharing a wallet must never
+   * hold the same open amount.
    */
   async createSession(input: CreateSessionInput): Promise<SessionView> {
     const merchant = await getMerchant(this.pool, input.merchantId);
@@ -104,7 +108,7 @@ export class SessionService {
       if (attempt === 1 || (attempt - 1) % REFRESH_TAKEN_EVERY === 0) {
         taken = await takenAmountsInRange(
           this.pool,
-          merchant.id,
+          merchant.walletAddress,
           baseAmountUsdc,
           baseAmountUsdc + BigInt(offsetMax),
         );
