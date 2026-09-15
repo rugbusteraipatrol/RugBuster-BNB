@@ -12,6 +12,7 @@ RUN npm ci
 
 COPY server ./server
 COPY widget ./widget
+COPY site ./site
 RUN npm run build --workspace server \
  && npm run build --workspace widget
 
@@ -33,6 +34,7 @@ COPY --from=build --chown=basepay:basepay /app/server/dist ./server/dist
 COPY --from=build --chown=basepay:basepay /app/server/migrations ./server/migrations
 COPY --from=build --chown=basepay:basepay /app/widget/dist ./widget/dist
 COPY --from=build --chown=basepay:basepay /app/widget/demo ./widget/demo
+COPY --from=build --chown=basepay:basepay /app/site ./site
 
 USER basepay
 EXPOSE 8080

@@ -1,0 +1,11 @@
+# REPLACE pay.example.com with your real domain.
+User-agent: *
+Allow: /
+
+# Nothing here is useful to a crawler and the admin surface should never be indexed.
+Disallow: /api/
+Disallow: /admin/
+Disallow: /healthz
+Disallow: /readyz
+
+Sitemap: https://pay.example.com/sitemap.xml

@@ -55,6 +55,14 @@ export function createApp(deps: AppDependencies): Express {
     app.use('/demo', express.static(demoDir, { maxAge: 0, fallthrough: true }));
   }
 
+  if (config.http.serveSite) {
+    // Mounted last of the static handlers so it cannot shadow /api, /admin,
+    // /widget or /demo. Serves the landing page at `/`, plus robots.txt and
+    // sitemap.xml, which have to live at the domain root to be honoured.
+    const siteDir = config.http.siteDir ?? path.resolve(SERVER_ROOT, '..', 'site');
+    app.use(express.static(siteDir, { maxAge: '10m', fallthrough: true, index: 'index.html' }));
+  }
+
   app.use(notFoundHandler());
   app.use(errorHandler());
 

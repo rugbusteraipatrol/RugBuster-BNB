@@ -207,6 +207,69 @@ describe.skipIf(!hasDatabase)('HTTP API', () => {
     });
   });
 
+  describe('static site', () => {
+    // The landing page is served from `/`, which means its static handler sits
+    // in front of the 404. If it were ever mounted before the routers it would
+    // swallow the API — hence this test rather than a comment.
+    let siteServer: Server;
+    let siteUrl: string;
+
+    beforeAll(async () => {
+      const siteConfig = testConfig({ SERVE_WIDGET: 'false', SERVE_SITE: 'true' });
+      const app = createApp({
+        config: siteConfig,
+        pool,
+        priceService: fixedPriceService(),
+        sessionService: new SessionService(pool, siteConfig, fixedPriceService()),
+        watcher: null,
+      });
+      siteServer = app.listen(0, '127.0.0.1');
+      await new Promise<void>((resolve) => siteServer.once('listening', resolve));
+      siteUrl = `http://127.0.0.1:${(siteServer.address() as AddressInfo).port}`;
+    });
+
+    afterAll(async () => {
+      await new Promise<void>((resolve) => siteServer.close(() => resolve()));
+    });
+
+    it('serves the landing page at the root', async () => {
+      const response = await fetch(`${siteUrl}/`);
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toMatch(/text\/html/);
+      const html = await response.text();
+      expect(html).toContain('<title>');
+      expect(html).toContain('application/ld+json');
+    });
+
+    it('serves robots.txt and sitemap.xml from the domain root, where crawlers look', async () => {
+      const robots = await fetch(`${siteUrl}/robots.txt`);
+      expect(robots.status).toBe(200);
+      expect(await robots.text()).toContain('Sitemap:');
+
+      const sitemap = await fetch(`${siteUrl}/sitemap.xml`);
+      expect(sitemap.status).toBe(200);
+      expect(await sitemap.text()).toContain('<urlset');
+    });
+
+    it('does not shadow the API, admin or health routes', async () => {
+      expect((await fetch(`${siteUrl}/healthz`)).headers.get('content-type')).toMatch(/json/);
+
+      // An unknown session id must still be the API's JSON 404, not the site's.
+      const session = await fetch(`${siteUrl}/api/sessions/11111111-1111-4111-8111-111111111111`);
+      expect(session.status).toBe(404);
+      expect(await json(session)).toMatchObject({ error: { code: 'SESSION_NOT_FOUND' } });
+
+      // And admin still requires its token rather than falling through to the page.
+      expect((await fetch(`${siteUrl}/admin/merchants`)).status).toBe(401);
+    });
+
+    it('still 404s an unknown path as JSON rather than serving the page', async () => {
+      const response = await fetch(`${siteUrl}/no/such/path`);
+      expect(response.status).toBe(404);
+      expect(await json(response)).toMatchObject({ error: { code: 'NOT_FOUND' } });
+    });
+  });
+
   it('404s an unknown endpoint as JSON', async () => {
     const response = await fetch(`${baseUrl}/nope`);
     expect(response.status).toBe(404);

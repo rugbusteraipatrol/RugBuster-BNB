@@ -21,6 +21,7 @@ compromised, an attacker can lie about payment status, but they cannot take mone
 - [Payment lifecycle](#payment-lifecycle)
 - [Local setup](#local-setup)
 - [Deploying to production](#deploying-to-production)
+- [Landing page](#landing-page)
 - [End-to-end demo](#end-to-end-demo)
 - [Embedding in Webflow](#embedding-in-webflow)
 - [API](#api)
@@ -307,6 +308,19 @@ The webhook receiver — the piece on your side that turns *"a payment arrived"*
 into *"this order is fulfilled"* — has working implementations in
 [`examples/`](./examples/), in Node and Python, both verified against BasePay's
 own signer.
+
+## Landing page
+
+[`site/`](./site/) is a static marketing page aimed at the searches this
+product's customers actually type — *"accept crypto payments without a merchant
+account"*, *"payment processor rejected my business"*. It is served at `/` (with
+`robots.txt` and `sitemap.xml` at the domain root, where crawlers look), so one
+deploy covers the page, the widget and the API. Set `SERVE_SITE=false` if the
+marketing site lives elsewhere.
+
+It ships with placeholders — the domain, the pricing and the contact address —
+that must be replaced before it goes live. [`site/README.md`](./site/README.md)
+lists them.
 
 ## Embedding in Webflow
 

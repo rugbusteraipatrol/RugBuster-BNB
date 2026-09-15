@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- REPLACE pay.example.com everywhere in this file with your real domain. -->
+    <title>Accept USDC payments without a merchant account — BasePay</title>
+    <meta
+      name="description"
+      content="Accept payments on your website with only a wallet address. No merchant account, no KYB, no bank. Funds go straight from buyer to you, never held in between."
+    />
+    <link rel="canonical" href="https://pay.example.com/" />
+    <meta name="robots" content="index, follow" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://pay.example.com/" />
+    <meta property="og:title" content="Accept USDC payments without a merchant account" />
+    <meta
+      property="og:description"
+      content="One script tag. One wallet address. Non-custodial USDC checkout on Base for merchants who cannot get a payment processor."
+    />
+    <meta property="og:site_name" content="BasePay" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Accept USDC payments without a merchant account" />
+    <meta
+      name="twitter:description"
+      content="One script tag. One wallet address. Non-custodial USDC checkout on Base."
+    />
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>◆</text></svg>" />
+
+    <style>
+      :root {
+        --bg: #ffffff;
+        --fg: #0b0d12;
+        --muted: #5b6472;
+        --border: #e3e7ee;
+        --surface: #f7f9fc;
+        --accent: #0052ff;
+        --accent-fg: #ffffff;
+        --ok: #0f7b43;
+        --ok-bg: #e6f6ed;
+        --radius: 14px;
+        --maxw: 760px;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0e1014;
+          --fg: #f2f4f8;
+          --muted: #9aa4b5;
+          --border: #262c38;
+          --surface: #161920;
+          --ok: #5fd39a;
+          --ok-bg: #13291d;
+        }
+      }
+
+      *, *::before, *::after { box-sizing: border-box; }
+
+      html { scroll-behavior: smooth; }
+      @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
+        * { animation: none !important; transition: none !important; }
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font: 17px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 20px; }
+
+      a { color: var(--accent); }
+      a:focus-visible, button:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 3px;
+        border-radius: 4px;
+      }
+
+      header.site {
+        border-bottom: 1px solid var(--border);
+        padding: 16px 0;
+      }
+      header.site .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+      .brand { font-weight: 680; letter-spacing: -0.02em; font-size: 18px; text-decoration: none; color: var(--fg); }
+      .brand span { color: var(--accent); }
+      header.site nav { display: flex; gap: 20px; font-size: 15px; }
+      header.site nav a { color: var(--muted); text-decoration: none; }
+      header.site nav a:hover { color: var(--fg); }
+
+      section { padding: 56px 0; border-bottom: 1px solid var(--border); }
+      section:last-of-type { border-bottom: 0; }
+
+      h1 {
+        font-size: clamp(32px, 6vw, 46px);
+        line-height: 1.12;
+        letter-spacing: -0.03em;
+        margin: 0 0 18px;
+        font-weight: 700;
+      }
+      h2 {
+        font-size: clamp(23px, 4vw, 28px);
+        line-height: 1.25;
+        letter-spacing: -0.02em;
+        margin: 0 0 16px;
+        font-weight: 660;
+      }
+      h3 { font-size: 18px; margin: 0 0 6px; font-weight: 640; }
+      p { margin: 0 0 16px; }
+      .lede { font-size: clamp(18px, 2.6vw, 20px); color: var(--muted); }
+      .muted { color: var(--muted); }
+
+      .hero { padding-top: 64px; }
+      .eyebrow {
+        display: inline-block;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--ok);
+        background: var(--ok-bg);
+        padding: 5px 11px;
+        border-radius: 99px;
+        margin-bottom: 18px;
+      }
+
+      .cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin: 26px 0 18px; }
+      .btn {
+        display: inline-block;
+        font: inherit;
+        font-weight: 600;
+        text-decoration: none;
+        padding: 13px 22px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        color: var(--fg);
+        background: var(--bg);
+      }
+      .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+      .btn:hover { filter: brightness(1.06); }
+
+      ol.steps { counter-reset: s; list-style: none; padding: 0; margin: 0; }
+      ol.steps li {
+        counter-increment: s;
+        position: relative;
+        padding-left: 46px;
+        margin-bottom: 26px;
+      }
+      ol.steps li::before {
+        content: counter(s);
+        position: absolute;
+        left: 0; top: 1px;
+        width: 30px; height: 30px;
+        display: grid; place-items: center;
+        border-radius: 99px;
+        background: var(--accent);
+        color: var(--accent-fg);
+        font-size: 14px; font-weight: 700;
+      }
+
+      .flow {
+        display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 22px;
+        margin: 8px 0 20px;
+      }
+      .node {
+        flex: 1 1 150px;
+        min-width: 0;
+        text-align: center;
+        padding: 14px 10px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: var(--bg);
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .node.money { border-color: var(--ok); color: var(--ok); }
+      .node small { display: block; font-weight: 400; color: var(--muted); margin-top: 3px; font-size: 12px; }
+      .arrow { color: var(--ok); font-size: 22px; font-weight: 700; flex: 0 0 auto; }
+      .aside-node {
+        margin-top: 14px;
+        text-align: center;
+        font-size: 14px;
+        color: var(--muted);
+      }
+
+      pre {
+        background: #0b0d12;
+        color: #e6ebf5;
+        border-radius: 12px;
+        padding: 18px;
+        overflow-x: auto;
+        font-size: 13.5px;
+        line-height: 1.6;
+        margin: 0 0 16px;
+      }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      p code, li code {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        padding: 1px 5px;
+        font-size: 0.88em;
+      }
+
+      .grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+      .card {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 20px;
+        background: var(--surface);
+      }
+      .card p { margin: 0; color: var(--muted); font-size: 15px; }
+
+      details {
+        border-bottom: 1px solid var(--border);
+        padding: 16px 0;
+      }
+      details summary {
+        cursor: pointer;
+        font-weight: 620;
+        font-size: 17px;
+        list-style: none;
+        display: flex; justify-content: space-between; align-items: center; gap: 14px;
+      }
+      details summary::-webkit-details-marker { display: none; }
+      details summary::after { content: "+"; color: var(--muted); font-size: 22px; font-weight: 400; flex: 0 0 auto; }
+      details[open] summary::after { content: "−"; }
+      details .answer { padding-top: 12px; color: var(--muted); }
+      details .answer p:last-child { margin-bottom: 0; }
+
+      ul.plain { padding-left: 20px; margin: 0 0 16px; }
+      ul.plain li { margin-bottom: 9px; }
+
+      .callout {
+        border-left: 3px solid var(--accent);
+        background: var(--surface);
+        border-radius: 0 10px 10px 0;
+        padding: 16px 20px;
+        margin: 0 0 16px;
+      }
+      .callout p:last-child { margin-bottom: 0; }
+
+      footer.site {
+        border-top: 1px solid var(--border);
+        padding: 32px 0 48px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      footer.site a { color: var(--muted); }
+
+      .visually-hidden {
+        position: absolute; width: 1px; height: 1px; margin: -1px;
+        padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <a class="visually-hidden" href="#main">Skip to content</a>
+
+    <header class="site">
+      <div class="wrap">
+        <a class="brand" href="/">Base<span>Pay</span></a>
+        <nav>
+          <a href="#how">How it works</a>
+          <a href="#faq">FAQ</a>
+          <a href="/demo/">Demo</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero">
+        <div class="wrap">
+          <span class="eyebrow">Non-custodial</span>
+          <h1>Accept payments without a merchant account.</h1>
+          <p class="lede">
+            Your customers pay in USDC. The money lands in your wallet directly —
+            no processor, no bank, no application to be rejected from. Setup is a
+            wallet address and one line of HTML.
+          </p>
+          <div class="cta-row">
+            <a class="btn primary" href="#start">Get started</a>
+            <a class="btn" href="/demo/">See a live checkout</a>
+          </div>
+          <p class="muted" style="font-size: 15px">
+            Works on Webflow, WordPress, Shopify, or a plain HTML page.
+          </p>
+        </div>
+      </section>
+
+      <section id="problem">
+        <div class="wrap">
+          <h2>If you have been turned down by a payment processor</h2>
+          <p>
+            Processors decline businesses for reasons that often have nothing to do
+            with whether the business is legitimate: you are too new, in the wrong
+            country, in a category someone flagged as high-risk, or your volume is
+            too small to be worth the underwriting.
+          </p>
+          <p>
+            The usual advice is to apply somewhere else and wait. BasePay skips the
+            gatekeeper entirely. There is no application, because there is nothing
+            to approve — your customer's wallet pays your wallet, and this service
+            only watches the blockchain and tells you when the money arrived.
+          </p>
+        </div>
+      </section>
+
+      <section id="how">
+        <div class="wrap">
+          <h2>How it works</h2>
+          <ol class="steps">
+            <li>
+              <h3>A customer clicks pay</h3>
+              <p class="muted">
+                The checkout shows the price in dollars, the exact amount in USDC, your
+                wallet address and a QR code. It works with any crypto wallet, and it
+                has a card option for buyers who hold no crypto.
+              </p>
+            </li>
+            <li>
+              <h3>They send USDC straight to you</h3>
+              <p class="muted">
+                Directly from their wallet to yours, on the Base network. The payment
+                does not pass through BasePay, an escrow, or anyone else.
+              </p>
+            </li>
+            <li>
+              <h3>You get told it arrived</h3>
+              <p class="muted">
+                BasePay watches the chain, confirms the payment, and notifies your site
+                so the order completes. Typically under a minute.
+              </p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section id="custody">
+        <div class="wrap">
+          <h2>Your money never touches us</h2>
+          <p>
+            This is the part worth understanding before you trust any payment tool.
+            Most processors take custody: the money goes to them, sits there, and
+            they send it on later — which is why they can freeze it, hold it for 30
+            days, or claw it back.
+          </p>
+
+          <div class="flow" role="img" aria-label="Money moves directly from the buyer's wallet to your wallet. BasePay only reads the blockchain.">
+            <div class="node">Buyer's wallet</div>
+            <div class="arrow" aria-hidden="true">→</div>
+            <div class="node money">
+              Your wallet
+              <small>funds arrive here</small>
+            </div>
+          </div>
+          <p class="aside-node">↑ BasePay sits outside this line — it only reads the blockchain and reports status.</p>
+
+          <p>
+            BasePay holds no private key. Not yours, not one of its own. It cannot
+            move your funds, freeze them, or lose them, because it never has them.
+            The flip side is stated plainly in the FAQ: it also cannot issue refunds
+            for you.
+          </p>
+        </div>
+      </section>
+
+      <section id="start">
+        <div class="wrap">
+          <h2>The entire setup</h2>
+          <p>Give us a wallet address. Put this where the checkout should appear:</p>
+          <pre><code>&lt;div id="checkout"&gt;&lt;/div&gt;
+&lt;script
+  src="https://pay.example.com/widget/widget.js"
+  data-merchant="your-store"
+  data-amount-usd="45.00"
+  data-order-ref="ORDER-1001"
+  data-target="#checkout"&gt;&lt;/script&gt;</code></pre>
+          <p class="muted">
+            That is the whole integration. In Webflow it goes in an Embed element; in
+            WordPress, a custom HTML block.
+          </p>
+
+          <div class="callout">
+            <p>
+              <strong>One thing to get right:</strong> the wallet address you give us
+              is where every payment lands, and nobody — including us — can move funds
+              out of a wrong address. Use a hardware wallet or a multisig, and send
+              yourself a test transaction first.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="what">
+        <div class="wrap">
+          <h2>What you get</h2>
+          <div class="grid">
+            <div class="card">
+              <h3>No account, no KYB</h3>
+              <p>No application, no underwriting, no business verification, no bank details.</p>
+            </div>
+            <div class="card">
+              <h3>No chargebacks</h3>
+              <p>Blockchain payments are final. Nobody can reverse one against you weeks later.</p>
+            </div>
+            <div class="card">
+              <h3>Card payments too</h3>
+              <p>Buyers without crypto can pay by card through an on-ramp that delivers USDC to you.</p>
+            </div>
+            <div class="card">
+              <h3>Order notifications</h3>
+              <p>A signed webhook tells your site when a payment confirmed, so orders complete on their own.</p>
+            </div>
+            <div class="card">
+              <h3>Fits any site</h3>
+              <p>One script tag. No plugin to install, no platform to migrate to.</p>
+            </div>
+            <div class="card">
+              <h3>Dollar pricing</h3>
+              <p>You price in USD. The checkout converts to USDC, a stablecoin that tracks the dollar.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="faq">
+        <div class="wrap">
+          <h2>Questions</h2>
+
+          <details>
+            <summary>Do I need a merchant account?</summary>
+            <div class="answer">
+              <p>
+                No. There is no account to open and no application to be approved. You
+                need a wallet address on the Base network and a website. That is the
+                complete list.
+              </p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Do I need to pass KYB or business verification?</summary>
+            <div class="answer">
+              <p>
+                Not to take a payment. Money moves from your customer's wallet to yours
+                without an intermediary, so there is no underwriter deciding whether
+                your business qualifies.
+              </p>
+              <p>
+                If you enable the card option, the on-ramp provider verifies the
+                <em>buyer</em> on their side, as any card processor would. That is their
+                requirement, not ours, and it does not involve you.
+              </p>
+            </div>
+          </details>
+
+          <details>
+            <summary>My business was rejected by Stripe. Will this work?</summary>
+            <div class="answer">
+              <p>
+                Most likely, because nobody is reviewing you. Do check that what you
+                sell is legal where you and your customers are — being outside the card
+                networks does not put you outside the law, and this is your
+                responsibility, not something BasePay can check for you.
+              </p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Do you hold my money at any point?</summary>
+            <div class="answer">
+              <p>
+                No. Funds go from the buyer's wallet to your wallet in a single
+                blockchain transaction. BasePay holds no private key and has no ability
+                to move, freeze, or withhold your money. It reads public blockchain data
+                and reports payment status.
+              </p>
+            </div>
+          </details>
+
+          <details>
+            <summary>What does it cost?</summary>
+            <div class="answer">
+              <p>
+                <!-- REPLACE: your pricing. Keep it honest and specific. -->
+                <strong>[Your pricing here.]</strong>
+              </p>
+              <p>
+                Separately from anything we charge: your buyer pays the Base network fee
+                to send the transaction, typically a fraction of a cent. BasePay takes no
+                cut of the payment itself — it cannot, since the money never passes
+                through it.
+              </p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Which cryptocurrencies and networks are supported?</summary>
+            <div class="answer">
+              <p>
+                USDC on Base, and nothing else. That is deliberate. USDC is a stablecoin
+                pegged to the dollar, so a $45 order is worth $45 when it settles rather
+                than whatever a volatile coin does overnight. Base keeps transaction fees
+                low enough that small payments make sense.
+              </p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Can customers who have no crypto still pay?</summary>
+            <div class="answer">
+              <p>
+                Yes. The checkout offers a card option that buys USDC and delivers it to
+                your wallet. Be aware that on-ramps take minutes to hours and cannot
+                deliver an exact amount after their fees, so these payments are matched
+                with a tolerance and occasionally need manual reconciliation.
+              </p>
+            </div>
+          </details>
+
+          <details>
+            <summary>How long does a payment take to confirm?</summary>
+            <div class="answer">
+              <p>
+                A wallet payment is usually confirmed in under a minute. The checkout
+                shows the buyer live status — waiting, confirming, then received — and
+                your site is notified when it is final.
+              </p>
+            </div>
+          </details>
+
+          <details>
+            <summary>What about refunds?</summary>
+            <div class="answer">
+              <p>
+                You issue them yourself, from your own wallet. BasePay cannot send money
+                on your behalf because it holds no keys — the same property that stops
+                anyone from freezing your funds also stops automated refunds. If a
+                customer underpays, you are told what arrived and you decide what to do.
+              </p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Can a customer reverse a payment, like a chargeback?</summary>
+            <div class="answer">
+              <p>
+                No. Blockchain payments are final once confirmed. This removes chargeback
+                fraud and chargeback fees, and it equally means an honest mistake cannot
+                be undone automatically — see refunds above.
+              </p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Does it work with Webflow, WordPress, or Shopify?</summary>
+            <div class="answer">
+              <p>
+                Yes. It is a single <code>&lt;script&gt;</code> tag, so it works anywhere
+                you can paste HTML — a Webflow Embed element, a WordPress custom HTML
+                block, a Shopify page, or a hand-written page. There is no plugin to
+                install and nothing to migrate.
+              </p>
+            </div>
+          </details>
+
+          <details>
+            <summary>How do I know a payment is real and not faked?</summary>
+            <div class="answer">
+              <p>
+                Every confirmed payment includes its blockchain transaction hash, which
+                you can check yourself on a public block explorer. You never have to take
+                our word for it — the chain is the record, and it is public.
+              </p>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <section id="limits">
+        <div class="wrap">
+          <h2>Where this is not the right fit</h2>
+          <p>Better you know now than after your first order.</p>
+          <ul class="plain">
+            <li>
+              <strong>You need automatic refunds.</strong> Refunds are manual, from your
+              own wallet. That is the cost of nobody being able to freeze your funds.
+            </li>
+            <li>
+              <strong>Your customers will not touch crypto.</strong> The card option
+              helps, but it adds friction and delay compared to entering a card number.
+            </li>
+            <li>
+              <strong>You want one checkout for cards and crypto.</strong> This does
+              crypto. If you can get a normal processor, use one — and consider this
+              alongside it, not instead of it.
+            </li>
+            <li>
+              <strong>You need it to be somebody else's problem.</strong> Self-custody
+              means if you lose your wallet keys, the money is gone, and no support line
+              can restore it.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="contact">
+        <div class="wrap">
+          <h2>Start taking payments</h2>
+          <p class="lede">
+            Bring a wallet address. Everything else takes about ten minutes.
+          </p>
+          <div class="cta-row">
+            <!-- REPLACE: your real contact route. -->
+            <a class="btn primary" href="mailto:hello@example.com?subject=BasePay%20setup">Get set up</a>
+            <a class="btn" href="/demo/">Try the demo checkout</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site">
+      <div class="wrap">
+        <p>
+          BasePay — non-custodial USDC checkout on Base. Funds move directly from buyer
+          to merchant; BasePay never takes custody.
+        </p>
+        <p>
+          Cryptocurrency payments are final and are not covered by card-network
+          protections. You are responsible for the legality of what you sell.
+        </p>
+      </div>
+    </footer>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "BasePay",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web",
+        "url": "https://pay.example.com/",
+        "description": "Non-custodial USDC checkout on the Base network. Accept payments on any website with only a wallet address — no merchant account, no KYB, no bank."
+      }
+    </script>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Do I need a merchant account to accept crypto payments?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. There is no account to open and no application to be approved. You need a wallet address on the Base network and a website."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need to pass KYB or business verification?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Not to take a payment. Money moves from the customer's wallet to yours without an intermediary, so no underwriter decides whether your business qualifies. If you enable the card option, the on-ramp provider verifies the buyer on their side."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does BasePay hold my money?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Funds go from the buyer's wallet to your wallet in a single blockchain transaction. BasePay holds no private key and cannot move, freeze, or withhold your money."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Which cryptocurrencies and networks are supported?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "USDC on the Base network only. USDC is a stablecoin pegged to the dollar, so a $45 order settles as $45. Base keeps transaction fees low enough that small payments make sense."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can customers who have no cryptocurrency still pay?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. The checkout offers a card option that buys USDC and delivers it to the merchant wallet. On-ramps take minutes to hours and cannot deliver an exact amount after fees, so those payments are matched with a tolerance."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What about refunds and chargebacks?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Blockchain payments are final, so there are no chargebacks. Refunds are issued by the merchant from their own wallet; BasePay cannot send money on their behalf because it holds no keys."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does it work with Webflow, WordPress or Shopify?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. It is a single script tag, so it works anywhere you can paste HTML — a Webflow Embed element, a WordPress custom HTML block, a Shopify page, or a hand-written page."
+            }
+          }
+        ]
+      }
+    </script>
+  </body>
+</html>

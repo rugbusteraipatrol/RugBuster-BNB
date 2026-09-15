@@ -81,6 +81,8 @@ const envSchema = z.object({
   SERVE_WIDGET: bool(true),
   WIDGET_DIST_DIR: optionalStr,
   WIDGET_DEMO_DIR: optionalStr,
+  SERVE_SITE: bool(true),
+  SITE_DIR: optionalStr,
   PUBLIC_BASE_URL: optionalStr,
 
   ONRAMP_PROVIDER: str('none').pipe(z.enum(['none', 'transak', 'moonpay'])),
@@ -149,6 +151,9 @@ export interface Config {
     serveWidget: boolean;
     widgetDistDir: string | undefined;
     widgetDemoDir: string | undefined;
+    /** Serve the marketing page at `/`, so one deploy covers site, widget and API. */
+    serveSite: boolean;
+    siteDir: string | undefined;
     publicBaseUrl: string | undefined;
   };
   onramp:
@@ -241,6 +246,8 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
       serveWidget: env.SERVE_WIDGET,
       widgetDistDir: env.WIDGET_DIST_DIR,
       widgetDemoDir: env.WIDGET_DEMO_DIR,
+      serveSite: env.SERVE_SITE,
+      siteDir: env.SITE_DIR,
       publicBaseUrl: env.PUBLIC_BASE_URL,
     },
     onramp: buildOnramp(env),
