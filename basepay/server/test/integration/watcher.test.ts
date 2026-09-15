@@ -229,6 +229,17 @@ describe.skipIf(!hasDatabase)('watcher loop', () => {
     expect(status.headBlock).toBe(chain.head.toString());
     expect(status.lastError).toBeNull();
     expect(status.lastTickAt).not.toBeNull();
+    expect(status.ok).toBe(true);
+  });
+
+  it('stops reporting ok once passes stop succeeding', async () => {
+    const chain = new FakeChain(USDC, 3);
+    const { watcher } = build(chain);
+    await watcher.tick();
+
+    // Default intervals: a pass is due at least every 20s, so ten minutes of
+    // silence is a stalled watcher, not one between passes.
+    expect(watcher.getStatus(Date.now() + 10 * 60_000).ok).toBe(false);
   });
 
   it('records the failure and keeps its bookmark when the RPC is down', async () => {
@@ -245,6 +256,7 @@ describe.skipIf(!hasDatabase)('watcher loop', () => {
     await failing.tick();
 
     expect(failing.getStatus().lastError).toBe('RPC unavailable');
+    expect(failing.getStatus().ok).toBe(false);
     expect((await getWatcherState(pool, stateId))?.lastProcessedBlock).toBe(before?.lastProcessedBlock);
   });
 });

@@ -6,6 +6,7 @@ import { createApp } from '../../src/api/app.js';
 import type { Config } from '../../src/config.js';
 import { SessionService } from '../../src/sessions/sessionService.js';
 import { Settlement } from '../../src/watcher/settlement.js';
+import type { Watcher, WatcherStatus } from '../../src/watcher/watcher.js';
 import { createTestPool, hasDatabase, resetDatabase } from '../helpers/db.js';
 import { json } from '../helpers/http.js';
 import { fixedPriceService, MERCHANT_ADDRESS, seedMerchant, testConfig, transfer } from '../helpers/fixtures.js';
@@ -204,6 +205,38 @@ describe.skipIf(!hasDatabase)('HTTP API', () => {
       expect(body.status).toBe('ready');
       expect(body.checks.database).toEqual({ ok: true });
       expect(body.checks.price.ok).toBe(true);
+    });
+
+    it('reports degraded when the watcher has stopped completing passes', async () => {
+      const stalled: WatcherStatus = {
+        enabled: true,
+        transport: 'websocket+http',
+        lastProcessedBlock: '100',
+        headBlock: '3400',
+        lastTickAt: null,
+        lastError: 'RPC Request failed.\n\nURL: https://base-mainnet.g.alchemy.com/[redacted]',
+        ok: false,
+      };
+      const app = createApp({
+        config,
+        pool,
+        priceService: fixedPriceService(),
+        sessionService: new SessionService(pool, config, fixedPriceService()),
+        watcher: { getStatus: () => stalled } as unknown as Watcher,
+      });
+      const stalledServer = app.listen(0, '127.0.0.1');
+      await new Promise<void>((resolve) => stalledServer.once('listening', resolve));
+
+      try {
+        const port = (stalledServer.address() as AddressInfo).port;
+        const ready = await fetch(`http://127.0.0.1:${port}/readyz`);
+        expect(ready.status).toBe(503);
+        const body = await json(ready);
+        expect(body.status).toBe('degraded');
+        expect(body.checks.watcher.ok).toBe(false);
+      } finally {
+        await new Promise<void>((resolve) => stalledServer.close(() => resolve()));
+      }
     });
   });
 

@@ -33,7 +33,8 @@ The watcher reads the chain constantly. The public `https://mainnet.base.org`
 works for a demo and will rate-limit you in production.
 
 Get an HTTP URL — and a WebSocket URL if the provider offers one — from a node
-provider such as Alchemy or QuickNode. Their free tiers are enough to start.
+provider such as Alchemy or QuickNode. Their free tiers are enough to start,
+with the settings in the next section.
 
 BasePay prefers the WebSocket endpoint and falls back to HTTP automatically, so
 setting both is strictly better than setting one.
@@ -70,6 +71,20 @@ Ticking less often never loses a payment. Each pass scans the entire range from
 the stored bookmark to the current head, so a longer interval batches the work
 rather than skipping any of it.
 
+### Free tiers also cap the `getLogs` range
+
+Alchemy's free plan answers `eth_getLogs` over **at most 10 blocks** and rejects
+every wider request. The watcher asks for 500 by default, so on that plan set
+`WATCHER_MAX_BLOCK_RANGE=10`, or it will not settle a single payment.
+
+The failure is easy to miss. The watcher only calls `getLogs` once a merchant
+exists, so a fresh deployment passes every check until the merchant is
+registered, and then every pass fails.
+
+Ten blocks costs nothing extra in normal running: at a 15s interval a pass covers
+about eight blocks, so it is still one `getLogs` per pass. Only a backfill after
+downtime takes more calls.
+
 ## 1. Create the Railway services
 
 In a Railway project:
@@ -93,10 +108,12 @@ Minimum for a working production deployment:
 
 | Variable | Value |
 | --- | --- |
-| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` — reference the Postgres service |
+| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` — reference the Postgres service. On Neon, use the direct (unpooled) connection string |
 | `ADMIN_TOKEN` | `openssl rand -hex 32` |
 | `BASE_RPC_HTTP_URL` | your provider's HTTPS URL |
 | `BASE_RPC_WS_URL` | your provider's WSS URL (recommended) |
+| `WATCHER_MIN_TICK_INTERVAL_MS` | `15000` on a free RPC tier (see above) |
+| `WATCHER_MAX_BLOCK_RANGE` | `10` on Alchemy's free tier (see above) |
 | `CORS_ALLOWED_ORIGINS` | your storefront's origin, e.g. `https://shop.example.com` |
 | `PUBLIC_BASE_URL` | the URL Railway gives this service |
 
@@ -131,14 +148,22 @@ when something is wrong:
     "database": { "ok": true },
     "price":    { "ok": true, "priceUsd": "0.99980000", "ageSeconds": 12 },
     "watcher":  { "enabled": true, "transport": "websocket+http",
-                  "lastProcessedBlock": "24310022", "lastError": null }
+                  "lastProcessedBlock": "24310022", "headBlock": "24310022",
+                  "lastTickAt": "2026-09-15T11:54:39.332Z", "lastError": null,
+                  "ok": true }
   }
 }
 ```
 
-If `watcher.lastError` is set or `lastProcessedBlock` stops advancing, your RPC
-is the problem. If `price.ok` is false, new sessions will be refused rather than
-quoted wrongly — that is deliberate.
+`watcher.ok` turns false, and `/readyz` returns `503`, when no pass has
+completed for three safety intervals: a minute at the default poll interval.
+`lastError` says why. Your RPC is almost always the cause. A long backfill after
+downtime can also hold it at `503` until the watcher catches up. Any URL in
+`lastError` is cut to its host, because this endpoint is public and RPC URLs
+carry the API key.
+
+If `price.ok` is false, new sessions will be refused rather than quoted wrongly.
+That is deliberate.
 
 ## 4. Register the merchant
 

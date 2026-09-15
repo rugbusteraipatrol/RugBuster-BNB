@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type pg from 'pg';
 import type { Config } from '../../config.js';
 import type { PriceService } from '../../price/priceService.js';
+import { redactUrls } from '../../redact.js';
 import type { Watcher } from '../../watcher/watcher.js';
 import { asyncRoute } from '../middleware.js';
 
@@ -28,7 +29,7 @@ export function healthRoutes(config: Config, pool: pg.Pool, price: PriceService,
         checks['database'] = { ok: true };
       } catch (err) {
         ready = false;
-        checks['database'] = { ok: false, error: (err as Error).message };
+        checks['database'] = { ok: false, error: redactUrls((err as Error).message) };
       }
 
       const snapshot = price.snapshot();
@@ -38,7 +39,13 @@ export function healthRoutes(config: Config, pool: pg.Pool, price: PriceService,
         ? { ok: priceOk, priceUsd: snapshot.priceUsd, ageSeconds: Math.round(snapshot.ageSeconds) }
         : { ok: false, error: 'no price fetched yet' };
 
-      checks['watcher'] = watcher ? watcher.getStatus() : { enabled: false };
+      if (watcher) {
+        const status = watcher.getStatus();
+        if (!status.ok) ready = false;
+        checks['watcher'] = status;
+      } else {
+        checks['watcher'] = { enabled: false };
+      }
 
       res.status(ready ? 200 : 503).json({ status: ready ? 'ready' : 'degraded', checks });
     }),

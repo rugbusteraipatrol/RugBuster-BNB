@@ -604,8 +604,11 @@ the order manually.
 **`readyz` reports degraded.**
 It names the failing check. A stale `price` means CoinGecko is unreachable —
 existing sessions still settle, new ones are refused once past
-`PRICE_MAX_STALE_SECONDS`. A `watcher` with a stale `lastTickAt` or a `lastError`
-means the RPC is failing; settlement resumes from the bookmark once it recovers.
+`PRICE_MAX_STALE_SECONDS`. A `watcher` with `ok: false` has not completed a pass
+for about a minute, almost always because the RPC is failing; `lastError` says
+why. A `getLogs` range error on Alchemy's free tier means
+`WATCHER_MAX_BLOCK_RANGE` must be `10`. Settlement resumes from the bookmark once
+it recovers.
 
 **A merchant says they never got a webhook.**
 `GET /admin/sessions/:id/webhooks` shows every attempt with its status code and

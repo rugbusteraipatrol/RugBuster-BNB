@@ -4,6 +4,7 @@ import type { Config } from '../config.js';
 import { listMerchantAddresses } from '../db/merchants.js';
 import { getWatcherState, setWatcherState } from '../db/watcherState.js';
 import { logger } from '../logger.js';
+import { redactUrls } from '../redact.js';
 import { createChainClient } from './chainClient.js';
 import { TRANSFER_EVENT, watcherStateId } from './constants.js';
 import { Settlement, type ObservedTransfer } from './settlement.js';
@@ -14,8 +15,17 @@ export interface WatcherStatus {
   lastProcessedBlock: string | null;
   headBlock: string | null;
   lastTickAt: string | null;
+  /** RPC URLs are cut to their host: this string is served on the public `/readyz`. */
   lastError: string | null;
+  /** A pass has succeeded recently. `/readyz` fails when this is false. */
+  ok: boolean;
 }
+
+/**
+ * Passes run at least once per safety interval, so this many missed intervals
+ * means the watcher is failing rather than between passes.
+ */
+const STALL_AFTER_SAFETY_INTERVALS = 3;
 
 /**
  * Watches USDC Transfer events into merchant addresses on Base.
@@ -34,15 +44,17 @@ export class Watcher {
   private readonly settlement: Settlement;
   private readonly stateId: string;
   private readonly transport: string;
+  private readonly safetyIntervalMs: number;
 
   private unwatchBlocks: (() => void) | null = null;
   private safetyTimer: NodeJS.Timeout | null = null;
   private lastTickStartedAt = 0;
+  private lastSuccessAt: number | null = null;
   private ticking = false;
   // Only stop() sets this. A Watcher that was never started can still be
   // ticked directly, which is how tests and one-shot backfills drive it.
   private stopped = false;
-  private status: WatcherStatus;
+  private status: Omit<WatcherStatus, 'ok'>;
 
   constructor(
     private readonly pool: pg.Pool,
@@ -54,6 +66,7 @@ export class Watcher {
     this.transport = chain?.transport ?? 'injected';
     this.settlement = new Settlement(pool, config);
     this.stateId = watcherStateId(config.chain.chainId, config.chain.usdcAddress);
+    this.safetyIntervalMs = Math.max(config.watcher.pollIntervalMs * 5, 15_000);
     this.status = {
       enabled: config.watcher.enabled,
       transport: this.transport,
@@ -64,8 +77,16 @@ export class Watcher {
     };
   }
 
-  getStatus(): WatcherStatus {
-    return { ...this.status };
+  /**
+   * `ok` is false until a pass succeeds, and again once none has for three
+   * safety intervals. One failed pass does not clear it, since the next one
+   * usually recovers; a watcher that keeps failing does. Without this a
+   * deployment whose every pass fails still reports itself ready.
+   */
+  getStatus(now: number = Date.now()): WatcherStatus {
+    const stallAfterMs = this.safetyIntervalMs * STALL_AFTER_SAFETY_INTERVALS;
+    const ok = this.lastSuccessAt !== null && now - this.lastSuccessAt <= stallAfterMs;
+    return { ...this.status, ok };
   }
 
   /**
@@ -94,12 +115,9 @@ export class Watcher {
       },
     });
 
-    this.safetyTimer = setInterval(
-      () => {
-        void this.tick();
-      },
-      Math.max(this.config.watcher.pollIntervalMs * 5, 15_000),
-    );
+    this.safetyTimer = setInterval(() => {
+      void this.tick();
+    }, this.safetyIntervalMs);
     this.safetyTimer.unref?.();
   }
 
@@ -149,11 +167,12 @@ export class Watcher {
 
       await this.settlement.advanceConfirmations(head);
 
+      this.lastSuccessAt = Date.now();
       this.status.lastProcessedBlock = head.toString();
-      this.status.lastTickAt = new Date().toISOString();
+      this.status.lastTickAt = new Date(this.lastSuccessAt).toISOString();
       this.status.lastError = null;
     } catch (err) {
-      this.status.lastError = (err as Error).message;
+      this.status.lastError = redactUrls((err as Error).message);
       logger.error({ err }, 'watcher tick failed');
     } finally {
       this.ticking = false;
