@@ -32,6 +32,12 @@ export function healthRoutes(config: Config, pool: pg.Pool, price: PriceService,
         checks['database'] = { ok: false, error: redactUrls((err as Error).message) };
       }
 
+      // The cache refreshes only when a checkout asks for a quote, so an idle
+      // service ages past PRICE_MAX_STALE_SECONDS with nothing wrong upstream.
+      // Asking for a quote first (at most one upstream call per cache TTL)
+      // reports whether a checkout opened now would get a price. A failed
+      // refresh is not thrown here; it shows up as the stale snapshot below.
+      await price.getQuote().catch(() => undefined);
       const snapshot = price.snapshot();
       const priceOk = snapshot !== null && snapshot.ageSeconds <= config.price.maxStaleSeconds;
       if (!priceOk) ready = false;

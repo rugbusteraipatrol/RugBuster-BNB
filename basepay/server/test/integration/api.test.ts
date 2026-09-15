@@ -4,6 +4,7 @@ import type pg from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../../src/api/app.js';
 import type { Config } from '../../src/config.js';
+import { PriceService } from '../../src/price/priceService.js';
 import { SessionService } from '../../src/sessions/sessionService.js';
 import { Settlement } from '../../src/watcher/settlement.js';
 import type { Watcher, WatcherStatus } from '../../src/watcher/watcher.js';
@@ -207,6 +208,33 @@ describe.skipIf(!hasDatabase)('HTTP API', () => {
       expect(body.checks.price.ok).toBe(true);
     });
 
+    /** Serves /readyz once from an app built around the given dependencies. */
+    async function readyzWith(deps: { priceService?: PriceService; watcher?: Watcher | null }) {
+      const priceService = deps.priceService ?? fixedPriceService();
+      const app = createApp({
+        config,
+        pool,
+        priceService,
+        sessionService: new SessionService(pool, config, priceService),
+        watcher: deps.watcher ?? null,
+      });
+      const probe = app.listen(0, '127.0.0.1');
+      await new Promise<void>((resolve) => probe.once('listening', resolve));
+      try {
+        const response = await fetch(`http://127.0.0.1:${(probe.address() as AddressInfo).port}/readyz`);
+        return { status: response.status, body: await json(response) };
+      } finally {
+        await new Promise<void>((resolve) => probe.close(() => resolve()));
+      }
+    }
+
+    /** A price service whose only price was fetched an hour ago. */
+    function hourOldPrice(fetchPrice: () => Promise<string>) {
+      const service = new PriceService({ fetchPrice, cacheTtlSeconds: 60, maxStaleSeconds: 600 });
+      service.seed('1.00000000', Date.now() - 3_600_000);
+      return service;
+    }
+
     it('reports degraded when the watcher has stopped completing passes', async () => {
       const stalled: WatcherStatus = {
         enabled: true,
@@ -217,26 +245,29 @@ describe.skipIf(!hasDatabase)('HTTP API', () => {
         lastError: 'RPC Request failed.\n\nURL: https://base-mainnet.g.alchemy.com/[redacted]',
         ok: false,
       };
-      const app = createApp({
-        config,
-        pool,
-        priceService: fixedPriceService(),
-        sessionService: new SessionService(pool, config, fixedPriceService()),
-        watcher: { getStatus: () => stalled } as unknown as Watcher,
-      });
-      const stalledServer = app.listen(0, '127.0.0.1');
-      await new Promise<void>((resolve) => stalledServer.once('listening', resolve));
+      const { status, body } = await readyzWith({ watcher: { getStatus: () => stalled } as unknown as Watcher });
 
-      try {
-        const port = (stalledServer.address() as AddressInfo).port;
-        const ready = await fetch(`http://127.0.0.1:${port}/readyz`);
-        expect(ready.status).toBe(503);
-        const body = await json(ready);
-        expect(body.status).toBe('degraded');
-        expect(body.checks.watcher.ok).toBe(false);
-      } finally {
-        await new Promise<void>((resolve) => stalledServer.close(() => resolve()));
-      }
+      expect(status).toBe(503);
+      expect(body.status).toBe('degraded');
+      expect(body.checks.watcher.ok).toBe(false);
+    });
+
+    it('refreshes a price that aged out while no one was checking out', async () => {
+      const { status, body } = await readyzWith({ priceService: hourOldPrice(async () => '0.99990000') });
+
+      expect(status).toBe(200);
+      expect(body.checks.price).toMatchObject({ ok: true, priceUsd: '0.99990000' });
+    });
+
+    it('reports degraded when the price is old and the feed is down', async () => {
+      const { status, body } = await readyzWith({
+        priceService: hourOldPrice(async () => {
+          throw new Error('CoinGecko unreachable');
+        }),
+      });
+
+      expect(status).toBe(503);
+      expect(body.checks.price.ok).toBe(false);
     });
   });
 

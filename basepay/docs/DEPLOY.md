@@ -163,7 +163,9 @@ downtime can also hold it at `503` until the watcher catches up. Any URL in
 carry the API key.
 
 If `price.ok` is false, new sessions will be refused rather than quoted wrongly.
-That is deliberate.
+That is deliberate. `/readyz` asks for a fresh price whenever the cached one is
+past `PRICE_CACHE_TTL_SECONDS`. An idle service therefore does not read as stale;
+`price.ok` is false only when CoinGecko is actually unreachable.
 
 ## 4. Register the merchant
 
