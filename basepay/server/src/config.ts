@@ -64,6 +64,7 @@ const envSchema = z.object({
 
   WATCHER_ENABLED: bool(true),
   WATCHER_POLL_INTERVAL_MS: int(4000, 250, 600_000),
+  WATCHER_MIN_TICK_INTERVAL_MS: int(5000, 0, 600_000),
   WATCHER_MAX_BLOCK_RANGE: int(500, 1, 10_000),
   WATCHER_START_BLOCK: optionalStr,
   CONFIRMATIONS_REQUIRED: int(3, 1, 200),
@@ -134,6 +135,16 @@ export interface Config {
   watcher: {
     enabled: boolean;
     pollIntervalMs: number;
+    /**
+     * Floor on how often a new block may trigger a pass.
+     *
+     * Over WebSocket the block subscription fires every block — every ~2s on
+     * Base — and `pollIntervalMs` does not apply to it at all. Left unthrottled
+     * that is ~1.3M passes a month, which overruns every free RPC tier. Ticking
+     * less often loses nothing, because each pass scans the whole range from the
+     * bookmark to the head; it only batches the work.
+     */
+    minTickIntervalMs: number;
     maxBlockRange: number;
     startBlock: bigint | undefined;
     confirmationsRequired: number;
@@ -224,6 +235,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     watcher: {
       enabled: env.WATCHER_ENABLED,
       pollIntervalMs: env.WATCHER_POLL_INTERVAL_MS,
+      minTickIntervalMs: env.WATCHER_MIN_TICK_INTERVAL_MS,
       maxBlockRange: env.WATCHER_MAX_BLOCK_RANGE,
       startBlock: env.WATCHER_START_BLOCK === undefined ? undefined : BigInt(env.WATCHER_START_BLOCK),
       confirmationsRequired: env.CONFIRMATIONS_REQUIRED,

@@ -37,6 +37,7 @@ export class Watcher {
 
   private unwatchBlocks: (() => void) | null = null;
   private safetyTimer: NodeJS.Timeout | null = null;
+  private lastTickStartedAt = 0;
   private ticking = false;
   // Only stop() sets this. A Watcher that was never started can still be
   // ticked directly, which is how tests and one-shot backfills drive it.
@@ -86,16 +87,19 @@ export class Watcher {
       emitOnBegin: false,
       pollingInterval: this.config.watcher.pollIntervalMs,
       onBlockNumber: () => {
-        void this.tick();
+        this.tickIfDue();
       },
       onError: (err) => {
         logger.warn({ err: err.message }, 'block subscription error');
       },
     });
 
-    this.safetyTimer = setInterval(() => {
-      void this.tick();
-    }, Math.max(this.config.watcher.pollIntervalMs * 5, 15_000));
+    this.safetyTimer = setInterval(
+      () => {
+        void this.tick();
+      },
+      Math.max(this.config.watcher.pollIntervalMs * 5, 15_000),
+    );
     this.safetyTimer.unref?.();
   }
 
@@ -110,10 +114,22 @@ export class Watcher {
     while (this.ticking) await new Promise((resolve) => setTimeout(resolve, 25));
   }
 
+  /**
+   * Runs a pass only if one is due, per `minTickIntervalMs`.
+   *
+   * This is what the block subscription calls. `tick()` itself stays unthrottled
+   * so the safety timer, startup and tests can always force a pass.
+   */
+  private tickIfDue(): void {
+    if (Date.now() - this.lastTickStartedAt < this.config.watcher.minTickIntervalMs) return;
+    void this.tick();
+  }
+
   /** One full pass. Exposed so integration tests can drive the watcher deterministically. */
   async tick(): Promise<void> {
     if (this.ticking || this.stopped) return;
     this.ticking = true;
+    this.lastTickStartedAt = Date.now();
     try {
       const head = await this.client.getBlockNumber();
       this.status.headBlock = head.toString();
@@ -189,9 +205,17 @@ export class Watcher {
     }
   }
 
+  /**
+   * Advances the bookmark.
+   *
+   * Deliberately does NOT fetch the block hash. `watcher_state` has a column for
+   * it, but nothing reads it: `resolveScanStart` rewinds by REORG_DEPTH_BLOCKS on
+   * every pass, which covers a reorged bookmark far more thoroughly than a stored
+   * hash would. Fetching it cost an extra `getBlock` on every pass — a third of
+   * this watcher's entire RPC spend, for a value nobody looked at.
+   */
   private async saveBookmark(block: bigint): Promise<void> {
-    const hash = await this.blockHashAt(block);
-    await setWatcherState(this.pool, this.stateId, block, hash);
+    await setWatcherState(this.pool, this.stateId, block, null);
   }
 
   private async blockHashAt(blockNumber: bigint): Promise<string | null> {

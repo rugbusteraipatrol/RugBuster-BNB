@@ -40,6 +40,36 @@ setting both is strictly better than setting one.
 
 ---
 
+### What the RPC will actually cost you
+
+Worth doing before you pick a plan, because the default is not free on every
+provider.
+
+The watcher spends **two RPC calls per pass** — one for the chain head, one
+`getLogs` — plus one `getBlock` per payment currently inside the re-validation
+window. It wakes on every Base block, and Base produces one about every two
+seconds, so what decides the bill is `WATCHER_MIN_TICK_INTERVAL_MS`:
+
+| Min tick interval | Passes / month | Calls / month | Payment noticed within |
+| --- | --- | --- | --- |
+| unthrottled (~2s) | ~1.3M | ~2.6M | ~2s |
+| 5s (default) | ~520k | ~1.0M | ~5s |
+| 15s | ~173k | ~350k | ~15s |
+| 30s | ~87k | ~175k | ~30s |
+
+Add roughly six seconds to that last column for the three confirmations before a
+session reaches `paid`. The buyer sees "Waiting for payment" throughout, so a
+slower interval costs very little in practice.
+
+Treat the call counts as estimates: providers meter by weighted units, not raw
+calls, and `getLogs` weighs more than a head lookup. Check them against your
+provider's free allowance — 15s fits comfortably inside the usual ones; the
+default does not fit the smallest.
+
+Ticking less often never loses a payment. Each pass scans the entire range from
+the stored bookmark to the current head, so a longer interval batches the work
+rather than skipping any of it.
+
 ## 1. Create the Railway services
 
 In a Railway project:

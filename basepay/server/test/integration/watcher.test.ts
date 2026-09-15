@@ -186,6 +186,39 @@ describe.skipIf(!hasDatabase)('watcher loop', () => {
     expect(chain.calls.getLogs).toBeLessThanOrEqual(12);
   });
 
+  it('spends a bounded number of RPC calls per pass', async () => {
+    // The watcher wakes on every Base block — every ~2s — so the per-pass call
+    // count is what decides whether it fits inside a free RPC tier or costs
+    // real money. It is asserted rather than assumed.
+    const chain = new FakeChain(USDC, 5);
+    const { watcher } = build(chain);
+    await watcher.tick();
+
+    chain.calls = { getLogs: 0, getBlock: 0, getBlockNumber: 0 };
+    await watcher.tick();
+
+    expect(chain.calls.getBlockNumber).toBe(1);
+    expect(chain.calls.getLogs).toBe(1);
+    // Zero: advancing the bookmark must not fetch a block hash nothing reads.
+    expect(chain.calls.getBlock).toBe(0);
+  });
+
+  it('only fetches block hashes for the payments it has to re-validate', async () => {
+    const chain = new FakeChain(USDC, 5);
+    const { watcher, sessions } = build(chain);
+    await watcher.tick();
+
+    const session = await sessions.createSession({ merchantId: 'demo', amountUsd: '45.00' });
+    chain.mine([{ to: MERCHANT_ADDRESS, value: BigInt(session.amountUsdcMicro) }]);
+    await watcher.tick();
+
+    // One active payment in the re-validation window: one block hash lookup,
+    // and no more.
+    chain.calls = { getLogs: 0, getBlock: 0, getBlockNumber: 0 };
+    await watcher.tick();
+    expect(chain.calls.getBlock).toBe(1);
+  });
+
   it('reports its progress for the readiness endpoint', async () => {
     const chain = new FakeChain(USDC, 3);
     const { watcher } = build(chain);
