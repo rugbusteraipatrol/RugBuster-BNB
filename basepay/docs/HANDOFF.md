@@ -49,6 +49,18 @@ reaches production, push it to another branch first (for example
 - **Merchants sharing a wallet could be issued the same amount**, so a payment
   could settle the wrong session. Migration 002 reserves amounts per address.
 
+## Demo storefront (Webflow)
+
+A one-product Webflow store exists for showing BasePay on a real Webflow site:
+https://basepay-demo-store.webflow.io (site id `6aaa6b8a53b07de8aafbd777`,
+pages `/`, `/product`, `/thank-you`). Built through the Webflow MCP connector;
+terminal/brutalist look, monospace, black and off-white. The product page has a
+native Webflow form (email, full name, shipping address) and an Embed element
+holding `<div id="checkout" data-amount="25.00" data-currency="USD"
+data-product="tee-001"></div>`. The BasePay widget `<script>` tag is not pasted
+in yet; that is the next step. The site is on Webflow's free plan, so custom
+code (head/footer) is unavailable and the font is a system monospace stack.
+
 ## Decisions already made
 
 | | |
