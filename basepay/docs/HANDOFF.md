@@ -22,7 +22,7 @@ with MetaMask on a phone, session `paid`, funds in the merchant wallet.
 | Database | Neon project `Base`, AWS eu-central-1, branch `production`, direct (unpooled) connection |
 | RPC | Alchemy free tier, Base mainnet, WebSocket + HTTP |
 | Price feed | CoinGecko with a free demo key |
-| Merchants | `rugbuster` and `demo`, both → `0x3208F5DfE9B2010bBe711033f39fF7Ee83039AAf`, no webhooks. `demo` backs the $0.01 checkout at `/demo/` |
+| Merchants | `rugbuster`, `demo` and `kaseta`, all → `0x3208F5DfE9B2010bBe711033f39fF7Ee83039AAf`, no webhooks. `demo` backs the $0.01 checkout at `/demo/`; `kaseta` backs the Webflow demo store |
 | Landing page | `/` — Railway address as the domain, free during beta, contact `fedja@rugbuster.io`, no card-payment claims |
 
 Railway variables set (values live only in Railway): `DATABASE_URL`,
@@ -64,9 +64,11 @@ WHTML builder (classes prefixed `k-`); product pages 2-6 are duplicates of
 `/sunset-86` with text, image and checkout data swapped.
 
 Each product page has a native Webflow form (email, full name, shipping address)
-and an Embed holding `<div id="checkout" data-amount data-currency="USD"
-data-product>` with that tee's price. The BasePay widget `<script>` is not pasted
-in yet. The site is on Webflow's free plan: no custom code, system fonts only.
+and an Embed with the live BasePay checkout: a "PAY $X WITH USDC" button that
+mounts the widget on click (so a session is only opened when a buyer asks), for
+merchant `kaseta` (same wallet as `rugbuster`), order ref `KASETA-<slug>`, and a
+redirect to `/thank-you` two and a half seconds after the session reaches `paid`.
+The site is on Webflow's free plan: no site-wide custom code, system fonts only.
 
 ## Decisions already made
 
