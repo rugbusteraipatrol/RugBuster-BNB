@@ -1,3 +1,4 @@
+import { resolveLocale } from './i18n.js';
 import type { WidgetOptions } from './types.js';
 import { PaymentWidget } from './ui.js';
 
@@ -8,7 +9,7 @@ import { PaymentWidget } from './ui.js';
  *   1. Drop the script tag on the page with data- attributes. It mounts itself.
  *      <script src="https://pay.example.com/widget/widget.js"
  *              data-merchant="acme" data-amount-usd="45.00"
- *              data-target="#checkout"></script>
+ *              data-target="#checkout" data-locale="sr"></script>
  *   2. Load it with data-auto="false" and call window.BasePay.mount({...}).
  */
 
@@ -23,6 +24,8 @@ export interface MountOptions {
   orderRef?: string | null;
   pollIntervalMs?: number;
   explorerBaseUrl?: string;
+  /** "en" (default) or "sr". */
+  locale?: string;
 }
 
 function resolveTarget(target: HTMLElement | string): HTMLElement {
@@ -42,6 +45,7 @@ export function mount(options: MountOptions): PaymentWidget {
     target: resolveTarget(options.target),
     pollIntervalMs: options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS,
     explorerBaseUrl: options.explorerBaseUrl ?? DEFAULT_EXPLORER,
+    locale: resolveLocale(options.locale),
   };
   const widget = new PaymentWidget(widgetOptions);
   void widget.mount();
@@ -105,6 +109,7 @@ function autoMount(script: HTMLScriptElement): void {
     amountUsd,
     target,
     orderRef: script.dataset['orderRef'] ?? null,
+    ...(script.dataset['locale'] ? { locale: script.dataset['locale'] } : {}),
     apiBaseUrl: defaultApiBaseUrl(script),
     ...(explorer ? { explorerBaseUrl: explorer } : {}),
     ...(Number.isFinite(poll) && poll >= 1000 ? { pollIntervalMs: poll } : {}),

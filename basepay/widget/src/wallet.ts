@@ -1,3 +1,4 @@
+import type { WalletReason } from './i18n.js';
 import type { SessionView } from './types.js';
 
 export interface Eip1193Provider {
@@ -12,9 +13,11 @@ declare global {
   }
 }
 
+/** `reason` picks the buyer-facing sentence in the widget's language; `message` stays English for logs. */
 export class WalletError extends Error {
   constructor(
     readonly kind: 'no-wallet' | 'rejected' | 'wrong-network' | 'failed',
+    readonly reason: WalletReason,
     message: string,
   ) {
     super(message);
@@ -77,7 +80,7 @@ async function ensureNetwork(provider: Eip1193Provider, chainId: number): Promis
   } catch (err) {
     const code = providerErrorCode(err);
     if (code === USER_REJECTED) {
-      throw new WalletError('rejected', 'You declined the network switch. Payment needs the Base network.');
+      throw new WalletError('rejected', 'network-declined', 'You declined the network switch. Payment needs the Base network.');
     }
     if (code === CHAIN_NOT_ADDED && chainId === 8453) {
       try {
@@ -86,11 +89,11 @@ async function ensureNetwork(provider: Eip1193Provider, chainId: number): Promis
       } catch (addErr) {
         const addCode = providerErrorCode(addErr);
         if (addCode === USER_REJECTED) {
-          throw new WalletError('rejected', 'You declined adding the Base network.');
+          throw new WalletError('rejected', 'add-network-declined', 'You declined adding the Base network.');
         }
       }
     }
-    throw new WalletError('wrong-network', 'Could not switch your wallet to Base. Switch networks manually and try again.');
+    throw new WalletError('wrong-network', 'network-switch-failed', 'Could not switch your wallet to Base. Switch networks manually and try again.');
   }
 }
 
@@ -102,7 +105,7 @@ async function ensureNetwork(provider: Eip1193Provider, chainId: number): Promis
 export async function payWithWallet(session: SessionView): Promise<string> {
   const provider = detectProvider();
   if (!provider) {
-    throw new WalletError('no-wallet', 'No crypto wallet was found in this browser.');
+    throw new WalletError('no-wallet', 'no-wallet', 'No crypto wallet was found in this browser.');
   }
 
   let accounts: string[];
@@ -110,13 +113,13 @@ export async function payWithWallet(session: SessionView): Promise<string> {
     accounts = (await provider.request({ method: 'eth_requestAccounts' })) as string[];
   } catch (err) {
     if (providerErrorCode(err) === USER_REJECTED) {
-      throw new WalletError('rejected', 'You declined the connection request.');
+      throw new WalletError('rejected', 'connect-declined', 'You declined the connection request.');
     }
-    throw new WalletError('failed', 'Could not connect to your wallet.');
+    throw new WalletError('failed', 'connect-failed', 'Could not connect to your wallet.');
   }
 
   const from = accounts[0];
-  if (!from) throw new WalletError('failed', 'Your wallet did not return an account.');
+  if (!from) throw new WalletError('failed', 'no-account', 'Your wallet did not return an account.');
 
   await ensureNetwork(provider, session.chainId);
 
@@ -135,12 +138,12 @@ export async function payWithWallet(session: SessionView): Promise<string> {
     return txHash;
   } catch (err) {
     if (providerErrorCode(err) === USER_REJECTED) {
-      throw new WalletError('rejected', 'You cancelled the payment in your wallet.');
+      throw new WalletError('rejected', 'payment-cancelled', 'You cancelled the payment in your wallet.');
     }
     const message = typeof err === 'object' && err !== null ? String((err as { message?: unknown }).message ?? '') : '';
     if (/insufficient/i.test(message)) {
-      throw new WalletError('failed', 'Your wallet does not have enough USDC or ETH for gas on Base.');
+      throw new WalletError('failed', 'insufficient-funds', 'Your wallet does not have enough USDC or ETH for gas on Base.');
     }
-    throw new WalletError('failed', 'The payment could not be sent. Check your wallet and try again.');
+    throw new WalletError('failed', 'send-failed', 'The payment could not be sent. Check your wallet and try again.');
   }
 }

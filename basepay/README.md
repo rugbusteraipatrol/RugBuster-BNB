@@ -350,6 +350,7 @@ checkout should appear:
 | `data-auto` | no | `false` to mount manually via `window.BasePay.mount({...})` |
 | `data-explorer` | no | Block explorer root for transaction links |
 | `data-poll-ms` | no | Status poll interval; default 4000, minimum 1000 |
+| `data-locale` | no | Buyer-facing language: `en` (default) or `sr` (Serbian, Latin script). `mount()` takes it as `locale` |
 
 For a dynamic price (a CMS field, a cart total), skip auto-mount:
 

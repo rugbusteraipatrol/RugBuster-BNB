@@ -1,5 +1,6 @@
 import { BasePayApiError, createSession, getSession } from './api.js';
 import { formatCountdown, truncateAddress, truncateHash, trimUsdc } from './format.js';
+import { messagesFor, type Messages } from './i18n.js';
 import { renderQrSvg } from './qr.js';
 import { WIDGET_CSS } from './styles.js';
 import type { SessionStatus, SessionView, WidgetOptions } from './types.js';
@@ -15,68 +16,46 @@ interface StatusCopy {
  * Copy rules: plain and active, say what happened, and when something went wrong
  * say what to do next. No jargon the buyer did not sign up for.
  */
-function statusCopy(session: SessionView): StatusCopy {
+function statusCopy(session: SessionView, t: Messages): StatusCopy {
   switch (session.status) {
     case 'pending':
-      return {
-        title: 'Waiting for payment',
-        detail: `Send exactly ${trimUsdc(session.amountUsdc)} USDC on Base to the address below.`,
-        tone: 'idle',
-      };
+      return { title: t.pendingTitle, detail: t.pendingDetail(trimUsdc(session.amountUsdc)), tone: 'idle' };
     case 'confirming':
       return {
-        title: 'Payment received, confirming',
-        detail: `${session.confirmations} of ${session.confirmationsRequired} confirmations. Keep this page open.`,
+        title: t.confirmingTitle,
+        detail: t.confirmingDetail(session.confirmations, session.confirmationsRequired),
         tone: 'idle',
       };
     case 'paid':
-      return { title: 'Payment received', detail: 'Thank you. Your payment is confirmed.', tone: 'ok' };
+      return { title: t.paidTitle, detail: t.paidDetail, tone: 'ok' };
     case 'underpaid':
       return {
-        title: 'Not enough was received',
-        detail:
-          `We received ${trimUsdc(session.receivedUsdc)} USDC of the ${trimUsdc(session.amountUsdc)} USDC due. ` +
-          'Contact the store to sort this out — nothing was sent back automatically.',
+        title: t.underpaidTitle,
+        detail: t.underpaidDetail(trimUsdc(session.receivedUsdc), trimUsdc(session.amountUsdc)),
         tone: 'err',
       };
     case 'expired':
-      return {
-        title: 'This payment window closed',
-        detail: 'Prices move, so quotes expire. Start again to get a fresh amount.',
-        tone: 'warn',
-      };
+      return { title: t.expiredTitle, detail: t.expiredDetail, tone: 'warn' };
   }
 }
 
 /** Maps a server error code to copy a buyer can act on. */
-function errorCopy(err: unknown): StatusCopy {
+function errorCopy(err: unknown, t: Messages): StatusCopy {
   const code = err instanceof BasePayApiError ? err.code : '';
   switch (code) {
     case 'PRICE_UNAVAILABLE':
-      return {
-        title: 'Payments are paused',
-        detail: 'We cannot confirm the USDC price right now, so we will not quote you a wrong amount. Try again in a few minutes.',
-        tone: 'warn',
-      };
+      return { title: t.priceUnavailableTitle, detail: t.priceUnavailableDetail, tone: 'warn' };
     case 'AMOUNT_SLOTS_EXHAUSTED':
     case 'AMOUNT_SLOTS_CONTENDED':
-      return {
-        title: 'Too many checkouts are open',
-        detail: 'This store has more payments in flight than it can tell apart. Try again in a minute.',
-        tone: 'warn',
-      };
+      return { title: t.slotsTitle, detail: t.slotsDetail, tone: 'warn' };
     case 'RATE_LIMITED':
-      return { title: 'Too many attempts', detail: 'Wait a minute, then try again.', tone: 'warn' };
+      return { title: t.rateLimitedTitle, detail: t.rateLimitedDetail, tone: 'warn' };
     case 'MERCHANT_NOT_FOUND':
-      return { title: 'This store is not set up for payments', detail: 'Contact the store owner.', tone: 'err' };
+      return { title: t.merchantMissingTitle, detail: t.contactOwner, tone: 'err' };
     case 'INVALID_AMOUNT':
-      return { title: 'That amount cannot be charged', detail: 'Contact the store owner.', tone: 'err' };
+      return { title: t.invalidAmountTitle, detail: t.contactOwner, tone: 'err' };
     default:
-      return {
-        title: 'We could not start the payment',
-        detail: 'The payment service did not respond. Check your connection and try again.',
-        tone: 'err',
-      };
+      return { title: t.startFailedTitle, detail: t.startFailedDetail, tone: 'err' };
   }
 }
 
@@ -89,6 +68,7 @@ export class PaymentWidget {
   private pollTimer: number | null = null;
   private countdownTimer: number | null = null;
   private destroyed = false;
+  private readonly t: Messages;
 
   private els: {
     status: HTMLElement;
@@ -107,6 +87,7 @@ export class PaymentWidget {
   } | null = null;
 
   constructor(private readonly options: WidgetOptions) {
+    this.t = messagesFor(options.locale);
     this.host = document.createElement('div');
     this.host.setAttribute('data-basepay', 'widget');
     // Shadow DOM is the whole isolation strategy: a Webflow page can style
@@ -117,7 +98,7 @@ export class PaymentWidget {
 
   async mount(): Promise<void> {
     this.renderShell();
-    this.setStatus({ title: 'Preparing your payment…', detail: '', tone: 'idle' });
+    this.setStatus({ title: this.t.preparing, detail: '', tone: 'idle' });
 
     try {
       const session = await createSession(this.options.apiBaseUrl, {
@@ -129,7 +110,7 @@ export class PaymentWidget {
       this.startPolling();
       this.startCountdown();
     } catch (err) {
-      this.renderFatal(errorCopy(err));
+      this.renderFatal(errorCopy(err, this.t));
     }
   }
 
@@ -147,7 +128,7 @@ export class PaymentWidget {
 
     const card = document.createElement('section');
     card.className = 'card';
-    card.setAttribute('aria-label', 'Pay with USDC');
+    card.setAttribute('aria-label', this.t.cardLabel);
     card.innerHTML = `
       <div class="head">
         <div>
@@ -169,18 +150,18 @@ export class PaymentWidget {
       <div class="qr-wrap" data-el="qrWrap" hidden><div class="qr" data-el="qr"></div></div>
 
       <div class="field" data-el="addressField" hidden>
-        <span class="label" id="bp-address-label">Send USDC on Base to</span>
+        <span class="label" id="bp-address-label">${this.t.sendTo}</span>
         <div class="value-row">
           <span class="value" data-el="address" aria-labelledby="bp-address-label"></span>
-          <button type="button" data-action="copy-address">Copy</button>
+          <button type="button" data-action="copy-address">${this.t.copy}</button>
         </div>
       </div>
 
       <div class="field" data-el="amountField" hidden>
-        <span class="label" id="bp-amount-label">Exact amount</span>
+        <span class="label" id="bp-amount-label">${this.t.exactAmount}</span>
         <div class="value-row">
           <span class="value" data-el="amountValue" aria-labelledby="bp-amount-label"></span>
-          <button type="button" data-action="copy-amount">Copy</button>
+          <button type="button" data-action="copy-amount">${this.t.copy}</button>
         </div>
       </div>
 
@@ -225,11 +206,11 @@ export class PaymentWidget {
     const els = this.els;
     if (!els) return;
 
-    els.amount.textContent = `Pay $${session.amountUsd}`;
-    els.usdc.textContent = `${trimUsdc(session.amountUsdc)} USDC on Base`;
+    els.amount.textContent = this.t.payUsd(session.amountUsd);
+    els.usdc.textContent = this.t.usdcOnBase(trimUsdc(session.amountUsdc));
 
     if (session.orderRef) {
-      els.order.textContent = `Order ${session.orderRef}`;
+      els.order.textContent = this.t.order(session.orderRef);
       els.order.hidden = false;
     }
 
@@ -241,7 +222,7 @@ export class PaymentWidget {
 
     if (open && els.qr.childElementCount === 0) {
       const svg = renderQrSvg(session.paymentUri, { size: 216 });
-      svg.setAttribute('aria-label', `QR code to pay ${trimUsdc(session.amountUsdc)} USDC to ${session.payToAddress}`);
+      svg.setAttribute('aria-label', this.t.qrLabel(trimUsdc(session.amountUsdc), session.payToAddress));
       els.qr.appendChild(svg);
     }
 
@@ -249,7 +230,7 @@ export class PaymentWidget {
     els.address.title = session.payToAddress;
     els.amountValue.textContent = `${session.amountUsdc} USDC`;
 
-    this.setStatus(statusCopy(session));
+    this.setStatus(statusCopy(session, this.t));
     this.renderActions(session);
     this.renderTransactions(session);
     this.renderFootnote(session);
@@ -264,19 +245,19 @@ export class PaymentWidget {
     if (session.status === 'paid' || session.status === 'underpaid') return;
 
     if (session.status === 'expired') {
-      els.actions.appendChild(this.button('Start a new payment', 'restart', true));
+      els.actions.appendChild(this.button(this.t.startNew, 'restart', true));
       return;
     }
 
     const hasWallet = detectProvider() !== null;
     const payButton = this.button(
-      hasWallet ? `Pay ${trimUsdc(session.amountUsdc)} USDC` : 'Open your wallet app',
+      hasWallet ? this.t.payWithWallet(trimUsdc(session.amountUsdc)) : this.t.openWalletApp,
       'pay',
       true,
     );
     if (!hasWallet) {
       payButton.disabled = true;
-      payButton.title = 'No browser wallet detected. Scan the QR code with your wallet app instead.';
+      payButton.title = this.t.noBrowserWallet;
     }
     els.actions.appendChild(payButton);
 
@@ -288,7 +269,7 @@ export class PaymentWidget {
       link.href = session.onramp.url;
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
-      link.textContent = `No crypto? ${session.onramp.label}`;
+      link.textContent = this.t.noCrypto(session.onramp.label);
       els.actions.appendChild(link);
     }
   }
@@ -302,7 +283,7 @@ export class PaymentWidget {
       return;
     }
     els.tx.replaceChildren();
-    const label = document.createTextNode('Transaction: ');
+    const label = document.createTextNode(this.t.transaction);
     const link = document.createElement('a');
     link.href = `${this.options.explorerBaseUrl.replace(/\/$/, '')}/tx/${tx.txHash}`;
     link.target = '_blank';
@@ -320,9 +301,7 @@ export class PaymentWidget {
       return;
     }
     els.footnote.textContent =
-      `Send the exact amount — it is how this payment is identified. ` +
-      `Funds go straight to ${truncateAddress(session.payToAddress)}; nothing is held in between.` +
-      (session.priceStale ? ' Note: this quote used a delayed price.' : '');
+      this.t.footnote(truncateAddress(session.payToAddress)) + (session.priceStale ? this.t.staleQuote : '');
     els.footnote.hidden = false;
   }
 
@@ -344,7 +323,7 @@ export class PaymentWidget {
     els.countdown.hidden = true;
     els.footnote.hidden = true;
     this.setStatus(copy);
-    els.actions.replaceChildren(this.button('Try again', 'restart', true));
+    els.actions.replaceChildren(this.button(this.t.tryAgain, 'restart', true));
   }
 
   private button(label: string, action: string, primary = false): HTMLButtonElement {
@@ -386,12 +365,12 @@ export class PaymentWidget {
   }
 
   private async copy(text: string, trigger: HTMLElement): Promise<void> {
-    const original = trigger.textContent ?? 'Copy';
+    const original = trigger.textContent ?? this.t.copy;
     try {
       await navigator.clipboard.writeText(text);
-      trigger.textContent = 'Copied';
+      trigger.textContent = this.t.copied;
     } catch {
-      trigger.textContent = 'Press ⌘C';
+      trigger.textContent = this.t.pressCopy;
     }
     window.setTimeout(() => {
       if (!this.destroyed) trigger.textContent = original;
@@ -401,23 +380,20 @@ export class PaymentWidget {
   private async pay(session: SessionView, button: HTMLButtonElement): Promise<void> {
     const original = button.textContent ?? '';
     button.disabled = true;
-    button.textContent = 'Confirm in your wallet…';
+    button.textContent = this.t.confirmInWallet;
     try {
       await payWithWallet(session);
       // The transaction is signed, but it is only paid when the backend sees it
       // confirmed on-chain. Polling continues to decide that.
       this.setStatus({
-        title: 'Payment sent',
-        detail: 'Waiting for the network to confirm it. Keep this page open.',
+        title: this.t.sentTitle,
+        detail: this.t.sentDetail,
         tone: 'idle',
       });
       void this.poll();
     } catch (err) {
-      const message =
-        err instanceof WalletError
-          ? err.message
-          : 'Something went wrong talking to your wallet. Try again, or scan the QR code instead.';
-      this.setStatus({ title: 'Payment not sent', detail: message, tone: 'err' });
+      const message = err instanceof WalletError ? this.t.wallet[err.reason] : this.t.walletUnknownError;
+      this.setStatus({ title: this.t.notSentTitle, detail: message, tone: 'err' });
     } finally {
       button.disabled = false;
       button.textContent = original;
@@ -477,7 +453,7 @@ export class PaymentWidget {
 
     const remaining = new Date(session.expiresAt).getTime() - Date.now();
     els.countdown.hidden = false;
-    els.countdown.textContent = `Expires in ${formatCountdown(remaining)}`;
+    els.countdown.textContent = this.t.expiresIn(formatCountdown(remaining));
     els.countdown.dataset['urgent'] = String(remaining <= 60_000);
 
     if (remaining <= 0) {

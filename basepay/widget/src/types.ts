@@ -1,3 +1,5 @@
+import type { Locale } from './i18n.js';
+
 export type SessionStatus = 'pending' | 'confirming' | 'paid' | 'underpaid' | 'expired';
 
 export interface OnrampLink {
@@ -46,4 +48,6 @@ export interface WidgetOptions {
   pollIntervalMs: number;
   /** Block explorer root used for transaction links. */
   explorerBaseUrl: string;
+  /** Language of the buyer-facing copy. */
+  locale: Locale;
 }
