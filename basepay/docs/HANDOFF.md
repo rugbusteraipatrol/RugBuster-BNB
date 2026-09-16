@@ -51,15 +51,22 @@ reaches production, push it to another branch first (for example
 
 ## Demo storefront (Webflow)
 
-A one-product Webflow store exists for showing BasePay on a real Webflow site:
-https://basepay-demo-store.webflow.io (site id `6aaa6b8a53b07de8aafbd777`,
-pages `/`, `/product`, `/thank-you`). Built through the Webflow MCP connector;
-terminal/brutalist look, monospace, black and off-white. The product page has a
-native Webflow form (email, full name, shipping address) and an Embed element
-holding `<div id="checkout" data-amount="25.00" data-currency="USD"
-data-product="tee-001"></div>`. The BasePay widget `<script>` tag is not pasted
-in yet; that is the next step. The site is on Webflow's free plan, so custom
-code (head/footer) is unavailable and the font is a system monospace stack.
+https://basepay-demo-store.webflow.io is a full demo shop for showing BasePay on
+a real Webflow site: a fictional retro brand, KASETA, with six white tees (site id
+`6aaa6b8a53b07de8aafbd777`). White background, 80s palette (pink, blue, yellow),
+Impact headlines, 2px black borders. Pages: `/`, `/shop`, `/about`,
+`/thank-you`, and one page per tee (`/sunset-86`, `/neon-nights`, `/kaseta-c60`,
+`/rewind-86`, `/player-2`, `/beograd-nocu`).
+
+The tee renders, logo and banners are generated SVG rendered to PNG by headless
+Chrome, then uploaded as Webflow assets. Pages were inserted with the Webflow MCP
+WHTML builder (classes prefixed `k-`); product pages 2-6 are duplicates of
+`/sunset-86` with text, image and checkout data swapped.
+
+Each product page has a native Webflow form (email, full name, shipping address)
+and an Embed holding `<div id="checkout" data-amount data-currency="USD"
+data-product>` with that tee's price. The BasePay widget `<script>` is not pasted
+in yet. The site is on Webflow's free plan: no custom code, system fonts only.
 
 ## Decisions already made
 
