@@ -186,13 +186,42 @@ describe.skipIf(!hasDatabase)('watcher loop', () => {
     expect(chain.calls.getLogs).toBeLessThanOrEqual(12);
   });
 
+  it('does not scan logs while no session is open, and resumes when one opens', async () => {
+    // A merchant with no open sessions is the normal state of a new deployment.
+    // Every getLogs spent then is spent on blocks nothing could match, and on
+    // Base that is most of a free RPC tier. Idle must cost only the head lookup.
+    const chain = new FakeChain(USDC, 5);
+    const { watcher, sessions, stateId } = build(chain);
+    await watcher.tick();
+
+    for (let i = 0; i < 20; i += 1) chain.mine();
+    chain.calls = { getLogs: 0, getBlock: 0, getBlockNumber: 0 };
+    await watcher.tick();
+
+    expect(chain.calls.getLogs).toBe(0);
+    expect(chain.calls.getBlockNumber).toBe(1);
+    // The bookmark still advances, so resuming later does not mean a long backfill.
+    expect((await getWatcherState(pool, stateId))?.lastProcessedBlock).toBe(chain.head);
+
+    // A session opens; the very next pass scans again and settles its payment.
+    const session = await sessions.createSession({ merchantId: 'demo', amountUsd: '45.00' });
+    chain.mine([{ to: MERCHANT_ADDRESS, value: BigInt(session.amountUsdcMicro) }]);
+    chain.calls = { getLogs: 0, getBlock: 0, getBlockNumber: 0 };
+    await watcher.tick();
+
+    expect(chain.calls.getLogs).toBeGreaterThan(0);
+    expect(await status(session.sessionId)).toBe('confirming');
+  });
+
   it('spends a bounded number of RPC calls per pass', async () => {
     // The watcher wakes on every Base block — every ~2s — so the per-pass call
     // count is what decides whether it fits inside a free RPC tier or costs
     // real money. It is asserted rather than assumed.
     const chain = new FakeChain(USDC, 5);
-    const { watcher } = build(chain);
+    const { watcher, sessions } = build(chain);
     await watcher.tick();
+    // An open session, so this measures an active pass rather than an idle one.
+    await sessions.createSession({ merchantId: 'demo', amountUsd: '45.00' });
 
     chain.calls = { getLogs: 0, getBlock: 0, getBlockNumber: 0 };
     await watcher.tick();

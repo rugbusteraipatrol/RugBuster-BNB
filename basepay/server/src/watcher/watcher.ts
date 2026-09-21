@@ -1,7 +1,7 @@
 import type pg from 'pg';
 import type { Address, PublicClient } from 'viem';
 import type { Config } from '../config.js';
-import { listMerchantAddresses } from '../db/merchants.js';
+import { listAddressesWithOpenSessions, listMerchantAddresses } from '../db/merchants.js';
 import { getWatcherState, setWatcherState } from '../db/watcherState.js';
 import { logger } from '../logger.js';
 import { redactUrls } from '../redact.js';
@@ -153,16 +153,26 @@ export class Watcher {
       this.status.headBlock = head.toString();
 
       const from = await this.resolveScanStart(head);
-      const addresses = await listMerchantAddresses(this.pool);
 
       // Re-validate first: drop transfers that left the canonical chain before
       // re-scanning, so a re-included transfer is re-recorded in the same tick.
+      // Costs RPC only while there are active payments inside the window.
       await this.settlement.revalidateFromBlock(from, (blockNumber) => this.blockHashAt(blockNumber));
 
-      if (addresses.length > 0) {
-        await this.scanRange(from, head, addresses as Address[]);
-      } else {
+      // Only scan for transfers while a session is open. With nothing open there
+      // is nothing a transfer could be attributed to, and every getLogs would be
+      // spent on empty blocks — which, on a chain that produces a block every two
+      // seconds, is most of a free RPC tier for a merchant with no traffic. A
+      // payment cannot precede the session it pays for, so the blocks skipped here
+      // are ones no open session could ever need. What is given up: stray
+      // transfers to a merchant wallet during idle periods are not recorded as
+      // unmatched. They are still visible on any block explorer.
+      const openAddresses = await listAddressesWithOpenSessions(this.pool);
+      if (openAddresses.length === 0) {
         await this.saveBookmark(head);
+      } else {
+        const addresses = await listMerchantAddresses(this.pool);
+        await this.scanRange(from, head, addresses as Address[]);
       }
 
       await this.settlement.advanceConfirmations(head);

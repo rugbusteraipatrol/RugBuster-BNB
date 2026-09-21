@@ -85,6 +85,21 @@ Ten blocks costs nothing extra in normal running: at a 15s interval a pass cover
 about eight blocks, so it is still one `getLogs` per pass. Only a backfill after
 downtime takes more calls.
 
+**Do not use the WebSocket URL on a free tier.** Alchemy bills WebSocket
+subscriptions by bandwidth, about 40 CU per `newHeads` event, and Base produces
+one every ~2 seconds: roughly **1.7M CU a day before the watcher makes a single
+request**, which is most of the free allowance on its own. HTTP polling at
+`WATCHER_POLL_INTERVAL_MS=15000` costs 10 CU per poll instead — about 60k a day.
+Leave `BASE_RPC_WS_URL` unset until you are on a paid plan, and set
+`REORG_DEPTH_BLOCKS=4`; the default of 12 re-scans three times more history per
+pass than Base needs.
+
+**Idle is nearly free.** While no session is open the watcher does not scan for
+transfers at all — it only reads the head and advances its bookmark. A merchant
+with no traffic costs one head lookup per pass. The trade: a stray transfer to a
+merchant wallet during an idle period is not recorded as `unmatched`; it is still
+on the block explorer.
+
 ## 1. Create the Railway services
 
 In a Railway project:
