@@ -26,9 +26,10 @@ with MetaMask on a phone, session `paid`, funds in the merchant wallet.
 | Landing page | `/` — Railway address as the domain, free during beta, contact `fedja@rugbuster.io`, no card-payment claims |
 
 Railway variables set (values live only in Railway): `DATABASE_URL`,
-`ADMIN_TOKEN`, `BASE_RPC_HTTP_URL`, `BASE_RPC_WS_URL`, `COINGECKO_API_KEY`,
-`PUBLIC_BASE_URL`, `NODE_ENV=production`, `WATCHER_MIN_TICK_INTERVAL_MS=15000`,
-`WATCHER_MAX_BLOCK_RANGE=10`.
+`ADMIN_TOKEN`, `BASE_RPC_HTTP_URL`, `COINGECKO_API_KEY`, `PUBLIC_BASE_URL`,
+`NODE_ENV=production`, `WATCHER_MIN_TICK_INTERVAL_MS=15000`,
+`WATCHER_MAX_BLOCK_RANGE=10`, `WATCHER_POLL_INTERVAL_MS=15000`,
+`REORG_DEPTH_BLOCKS=4`. **`BASE_RPC_WS_URL` must stay unset** — see below.
 
 Railway deploys on push without waiting for CI. To run CI before a risky change
 reaches production, push it to another branch first (for example
@@ -70,6 +71,30 @@ merchant `kaseta` (same wallet as `rugbuster`), order ref `KASETA-<slug>`, and a
 redirect to `/thank-you` two and a half seconds after the session reaches `paid`.
 The site is on Webflow's free plan: no site-wide custom code, system fonts only.
 
+### 2026-09-21 — the Alchemy free tier ran to 90% in six days
+
+Two causes. Alchemy bills WebSocket subscriptions by bandwidth, about 40 CU per
+`newHeads`, and Base produces a block every ~2s: **~1.7M CU a day for the
+subscription alone**, before a single request. And the watcher scanned every
+block for transfers whether or not any session was open, so an idle deployment
+paid as much as a busy one.
+
+Fixed on both sides:
+
+- **Code** (this branch): while no session is open the watcher reads the head,
+  advances its bookmark, and does not call `getLogs`. Idle costs ~10 CU a pass.
+  The scan resumes on the first pass after a session opens. Trade-off: a stray
+  transfer to a merchant wallet during idle is not recorded as `unmatched`.
+- **Config** (operator, in Railway): remove `BASE_RPC_WS_URL`; set
+  `WATCHER_POLL_INTERVAL_MS=15000` and `REORG_DEPTH_BLOCKS=4`. HTTP polling at
+  15s is ~60k CU a day; depth 4 re-scans a third of what 12 did.
+
+With both, expect well under 100k CU a day idle, low hundreds of thousands
+with traffic — against a 30M/month allowance. Do not move to PAYG for this;
+it would pay for waste. If the cap is hit before the config lands: funds still
+arrive in the wallet (non-custodial), but sessions stop settling, expire, and
+their payments surface at `GET /admin/payments/unmatched` for manual matching.
+
 ## Decisions already made
 
 | | |
@@ -88,6 +113,10 @@ pasted into chat or committed.
 
 ## Next steps, in order
 
+0. **Apply the RPC config above in Railway** if not already done: delete
+   `BASE_RPC_WS_URL`, set `WATCHER_POLL_INTERVAL_MS=15000`,
+   `REORG_DEPTH_BLOCKS=4`. Then check the Alchemy dashboard's usage-by-method
+   the next day to confirm `newHeads` bandwidth is gone.
 1. **Rotate the Alchemy API key** and update both `BASE_RPC_*` variables. The
    old key was exposed through `/readyz` before the fix. The user chose to do
    this later, but before the first real customers.
