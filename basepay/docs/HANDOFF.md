@@ -11,6 +11,63 @@ buyer pays it directly, and this service watches the chain and reports status.
 It holds no key and moves no funds. It shares nothing with the Python collectors
 at the repository root.
 
+## State: 2026-09-22 — renamed to StableCart, plugin submitted, domain half-done
+
+Read this section first; the older one below is still true about the service
+itself.
+
+**The product is now called StableCart** (was BasePay). Coinbase ships a product
+called "Base Pay" on the same chain, and WordPress.org rejects names that close
+to someone else's. Renamed before the first submission: plugin, landing page,
+widget global (`window.StableCart`, `BasePay` kept as an alias) and the
+`x-stablecart-*` webhook headers (sent alongside `x-basepay-*`). Internal ids —
+the Railway project/service `basepay`, the billing merchant `basepay-billing`,
+this repository folder — were deliberately left alone.
+
+| | |
+| --- | --- |
+| Domain | `stablecart.org`, bought at Cloudflare 2026-09-22 |
+| WordPress.org | `stablecart-for-woocommerce` submitted 2026-09-22 under account **ffurduj**; automated scan passed; awaiting manual review. Assets for the listing are in `woocommerce/wporg-assets/` |
+| Pricing | Free = 20 paid orders/month, Pro = $12 per 30 days, bought with USDC through StableCart itself (`/pro/?merchant=<id>`, order ref `PRO-<id>` to merchant `basepay-billing`) |
+| Site | New white Apple-style landing page, Inter, `stablecart.` wordmark, `site/icon.svg` |
+| Railway | Spend warning set at $15/month (workspace-wide). StableCart itself costs ~$0.20/month |
+
+### The one thing left: stablecart.org does not serve the app yet
+
+- DNS at Cloudflare is correct: `CNAME @ → y84ujrj6.up.railway.app`, plus the
+  `_railway-verify` TXT. SSL/TLS mode is **Full**. The Cloudflare proxy
+  (orange cloud) is **on**, so https works.
+- **Railway never verified the domain.** Its status sat at
+  `CERTIFICATE_STATUS_TYPE_VALIDATING_OWNERSHIP` for hours, before and after
+  deleting and re-adding the custom domain, so Railway's edge answers
+  `Application not found` for the hostname.
+- Plan: make Cloudflare talk to the origin as the hostname Railway does know.
+  This account's dashboard has no Origin Rules, so use **Rules → Snippets**:
+
+  ```js
+  export default {
+    async fetch(request) {
+      const url = new URL(request.url);
+      url.hostname = 'basepay-production.up.railway.app';
+      return fetch(new Request(url, request));
+    }
+  };
+  ```
+
+  Then set `PUBLIC_BASE_URL=https://stablecart.org` on Railway (the Pro upgrade
+  link the plugin shows is built from it) and re-test `/`, `/demo/`, `/pro/`
+  and `/downloads/stablecart-for-woocommerce.zip`.
+- The user is willing to log into Cloudflare in the in-app browser so Claude can
+  click through it; Claude must not handle the API token itself.
+
+### Also open
+
+- KASETA demo store is on hold (prints not made). Its prices are still $0.10 and
+  it is not linked from the launch copy.
+- Alchemy key rotation, still pending, before real merchants arrive.
+- `docs/LAUNCH_KIT.md` holds the directory and community posts, to publish once
+  the plugin is approved.
+
 ## State: live on Base mainnet (2026-09-15)
 
 A real $1 payment went end to end: widget quote, payment by scanning the QR code
