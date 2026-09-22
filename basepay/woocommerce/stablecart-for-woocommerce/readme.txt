@@ -1,5 +1,5 @@
 === StableCart for WooCommerce ===
-Contributors: fantomstudio
+Contributors: ffurduj
 Tags: crypto, usdc, stablecoin, payment gateway, base
 Requires at least: 6.4
 Tested up to: 7.1
