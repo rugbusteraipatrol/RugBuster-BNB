@@ -4,17 +4,19 @@ import { getAddress } from 'viem';
 import type { Config } from '../config.js';
 import { USDC_DECIMALS } from '../config.js';
 import { getMerchant } from '../db/merchants.js';
+import { effectivePlan, monthStart } from '../merchants/plans.js';
 import { listActivePaymentsForSession } from '../db/payments.js';
 import { isUniqueViolation } from '../db/pool.js';
 import {
+  countBillableSessions,
   expirePendingSessions,
   getSession,
   insertSession,
   takenAmountsInRange,
   extendPendingSession,
 } from '../db/sessions.js';
-import type { Session } from '../db/types.js';
-import { conflict, notFound, unavailable } from '../errors.js';
+import type { Merchant, Session } from '../db/types.js';
+import { AppError, conflict, notFound, unavailable } from '../errors.js';
 import { logger } from '../logger.js';
 import { buildOnrampLink, type OnrampLink } from '../onramp/index.js';
 import type { TransakClient } from '../onramp/transak.js';
@@ -88,6 +90,8 @@ export class SessionService {
       throw notFound('MERCHANT_NOT_FOUND', `Unknown merchant "${input.merchantId}"`);
     }
 
+    await this.assertWithinPlan(merchant);
+
     let amountUsdCents: bigint;
     try {
       amountUsdCents = parseUsdToCents(input.amountUsd);
@@ -160,6 +164,24 @@ export class SessionService {
       'AMOUNT_SLOTS_CONTENDED',
       'Could not reserve a unique payment amount after several attempts. Please retry.',
     );
+  }
+
+  /**
+   * Free-plan cap: once a merchant has taken its monthly quota of sales, new
+   * checkouts are refused with a code the widget turns into a message for the
+   * buyer. Sessions already open are untouched, so a buyer mid-payment is never
+   * cut off.
+   */
+  private async assertWithinPlan(merchant: Merchant): Promise<void> {
+    const cap = this.config.merchants.freePlanMonthlyOrders;
+    if (cap === 0 || effectivePlan(merchant) === 'pro') return;
+    const used = await countBillableSessions(this.pool, merchant.id, monthStart());
+    if (used >= cap) {
+      throw new AppError('PLAN_LIMIT_REACHED', 402, 'This store has reached its monthly limit of payments on the free plan.', {
+        plan: 'free',
+        monthlyOrders: cap,
+      });
+    }
   }
 
   /**

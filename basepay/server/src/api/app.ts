@@ -10,6 +10,7 @@ import type { Watcher } from '../watcher/watcher.js';
 import { errorHandler, notFoundHandler } from './middleware.js';
 import { adminRoutes } from './routes/admin.js';
 import { healthRoutes } from './routes/health.js';
+import { merchantRoutes, type MerchantRoutesOptions } from './routes/merchants.js';
 import { onrampPageRoutes } from './routes/onrampPage.js';
 import { sessionRoutes } from './routes/sessions.js';
 
@@ -22,6 +23,7 @@ export interface AppDependencies {
   priceService: PriceService;
   sessionService: SessionService;
   watcher: Watcher | null;
+  merchantRoutes?: MerchantRoutesOptions;
 }
 
 export function createApp(deps: AppDependencies): Express {
@@ -35,7 +37,7 @@ export function createApp(deps: AppDependencies): Express {
     cors({
       origin: config.http.corsAllowedOrigins === '*' ? true : config.http.corsAllowedOrigins,
       credentials: false,
-      methods: ['GET', 'POST', 'OPTIONS'],
+      methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
       maxAge: 600,
     }),
   );
@@ -47,6 +49,7 @@ export function createApp(deps: AppDependencies): Express {
 
   app.use(healthRoutes(config, pool, priceService, watcher));
   app.use('/api', sessionRoutes(config, sessionService));
+  app.use('/api', merchantRoutes(config, pool, deps.merchantRoutes ?? {}));
   app.use('/admin', adminRoutes(config, pool));
   app.use(onrampPageRoutes());
 

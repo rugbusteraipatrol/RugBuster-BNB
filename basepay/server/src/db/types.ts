@@ -8,11 +8,21 @@ export type PaymentStatus = 'active' | 'orphaned';
 export type WebhookStatus = 'pending' | 'delivered' | 'dead';
 export type WebhookEventType = 'payment.paid' | 'payment.underpaid';
 
+export type MerchantPlan = 'free' | 'pro';
+
 export interface Merchant {
   id: string;
   walletAddress: string;
   webhookUrl: string | null;
   webhookSecret: string | null;
+  plan: MerchantPlan;
+  /** When a `pro` plan lapses; null means it does not. */
+  planExpiresAt: Date | null;
+  /** SHA-256 of the merchant key issued at self-registration; null for operator-seeded merchants. */
+  merchantKeyHash: string | null;
+  siteUrl: string | null;
+  /** Where the merchant integrated from, e.g. `woocommerce`; free text. */
+  platform: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

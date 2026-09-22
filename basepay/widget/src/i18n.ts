@@ -53,6 +53,8 @@ export interface Messages {
   merchantMissingTitle: string;
   contactOwner: string;
   invalidAmountTitle: string;
+  planLimitTitle: string;
+  planLimitDetail: string;
   startFailedTitle: string;
   startFailedDetail: string;
 
@@ -110,6 +112,8 @@ const en: Messages = {
   merchantMissingTitle: 'This store is not set up for payments',
   contactOwner: 'Contact the store owner.',
   invalidAmountTitle: 'That amount cannot be charged',
+  planLimitTitle: 'This store cannot take more crypto payments this month',
+  planLimitDetail: 'It has used up its free plan. Choose another payment method, or let the store know.',
   startFailedTitle: 'We could not start the payment',
   startFailedDetail: 'The payment service did not respond. Check your connection and try again.',
 
@@ -180,6 +184,8 @@ const sr: Messages = {
   merchantMissingTitle: 'Ova prodavnica nije podešena za plaćanje',
   contactOwner: 'Javi se vlasniku prodavnice.',
   invalidAmountTitle: 'Ovaj iznos ne može da se naplati',
+  planLimitTitle: 'Ova prodavnica ovog meseca ne može da primi više kripto uplata',
+  planLimitDetail: 'Iskoristila je besplatni paket. Izaberi drugi način plaćanja ili javi prodavnici.',
   startFailedTitle: 'Nismo uspeli da pokrenemo plaćanje',
   startFailedDetail: 'Servis za plaćanje ne odgovara. Proveri internet vezu i pokušaj ponovo.',
 

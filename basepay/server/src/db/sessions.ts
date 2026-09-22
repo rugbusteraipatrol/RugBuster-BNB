@@ -245,6 +245,20 @@ export async function updateConfirmations(db: Queryable, id: string, confirmatio
 }
 
 /**
+ * Sales counted against a plan: sessions that have received money since
+ * `since`. `confirming` counts too, so a burst of checkouts cannot overshoot
+ * the cap while confirmations are still pending.
+ */
+export async function countBillableSessions(db: Queryable, merchantId: string, since: Date): Promise<number> {
+  const { rows } = await db.query<{ count: string }>(
+    `SELECT count(*)::text AS count FROM sessions
+      WHERE merchant_id = $1 AND status IN ('confirming', 'paid') AND first_seen_at >= $2`,
+    [merchantId, since],
+  );
+  return Number(rows[0]?.count ?? '0');
+}
+
+/**
  * Expires pending sessions past their deadline, releasing their reserved amounts.
  * `confirming` sessions are deliberately excluded: money is already on the way.
  */

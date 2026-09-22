@@ -101,10 +101,10 @@ their payments surface at `GET /admin/payments/unmatched` for manual matching.
 | --- | --- |
 | Product shape | Embeddable `<script>` widget, not a Webflow Marketplace app. A Marketplace app is wanted later as a second channel, and would *install* this widget — the widget is its prerequisite, not its alternative. |
 | Who it is for | Merchants a card processor will not take. BasePay is the product; each merchant runs their own webhook receiver from [`../examples/`](../examples/). |
-| Pricing | Free during beta |
+| Pricing | Subscription, decided 2026-09-22: **Free = 20 paid orders per calendar month, Pro = $12/month unlimited.** Enforced server-side (`FREE_PLAN_MONTHLY_ORDERS`); an operator flips a merchant to `pro` via `POST /admin/merchants/:id/plan`. There is no self-service way to pay for Pro yet — that is the next server piece. The landing page still says "free while in beta" until launch copy is written. |
 | Database | **Neon** free tier, to avoid Railway's Postgres cost until there is traffic |
 | App hosting | **Railway** (the user already runs other services there) |
-| RPC | **Alchemy**, free tier, Base mainnet |
+| RPC | **Alchemy**, free tier, Base mainnet, **HTTP only**. The WebSocket URL was removed on 2026-09-22 because block subscriptions burned ~90% of the monthly quota; `WATCHER_POLL_INTERVAL_MS=15000`. |
 | CORS | `CORS_ALLOWED_ORIGINS=*` stays. Merchants embed the widget on their own domains, so a single allowed origin would break every other merchant. |
 
 Secrets — the RPC URLs, `DATABASE_URL`, `ADMIN_TOKEN`, API keys, webhook
@@ -124,7 +124,9 @@ pasted into chat or committed.
    (`ONRAMP_PROVIDER=none`). If it is turned on, restore the card copy on the
    landing page.
 3. **A custom domain**, then replace the Railway address in `site/`.
-4. **Webflow Marketplace app**, as the second channel.
+4. **WooCommerce plugin** (`woocommerce/basepay-for-woocommerce/`): built 2026-09-22, not yet tested on a real WordPress site and not yet submitted to WordPress.org. Its differentiator is one-minute onboarding: paste a wallet, save, the plugin self-registers (`POST /api/merchants`, webhook challenge). Test on a public https WordPress site, then submit.
+5. **Pro billing**: a way for a merchant to pay $12/month (USDC through BasePay itself, or Stripe) that flips the plan automatically.
+6. **Webflow Marketplace app**, as a later channel.
 
 ## How the user wants to be worked with
 

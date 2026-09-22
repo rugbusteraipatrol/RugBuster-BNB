@@ -54,6 +54,8 @@ function errorCopy(err: unknown, t: Messages): StatusCopy {
       return { title: t.merchantMissingTitle, detail: t.contactOwner, tone: 'err' };
     case 'INVALID_AMOUNT':
       return { title: t.invalidAmountTitle, detail: t.contactOwner, tone: 'err' };
+    case 'PLAN_LIMIT_REACHED':
+      return { title: t.planLimitTitle, detail: t.planLimitDetail, tone: 'warn' };
     default:
       return { title: t.startFailedTitle, detail: t.startFailedDetail, tone: 'err' };
   }

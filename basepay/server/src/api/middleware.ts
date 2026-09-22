@@ -2,6 +2,7 @@ import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import type { Config } from '../config.js';
 import { AppError, unauthorized } from '../errors.js';
 import { logger } from '../logger.js';
+import { safeEqual } from '../secrets.js';
 
 /** Express 5 forwards rejected promises to the error handler, but be explicit. */
 export const asyncRoute =
@@ -24,13 +25,6 @@ export function requireAdmin(config: Config): RequestHandler {
     }
     next();
   };
-}
-
-function safeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i += 1) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
 }
 
 /**
@@ -62,6 +56,31 @@ export function rateLimitSessions(config: Config): RequestHandler {
     if (bucket.count > config.sessions.rateLimitPerMinute) {
       res.setHeader('retry-after', Math.ceil((bucket.resetAt - now) / 1000));
       next(new AppError('RATE_LIMITED', 429, 'Too many payment sessions requested. Slow down and retry.'));
+      return;
+    }
+    next();
+  };
+}
+
+/**
+ * Generic fixed-window limiter keyed by client IP, for endpoints that create
+ * rows on behalf of strangers (merchant self-registration).
+ */
+export function rateLimitByIp(limit: number, windowMs: number, code: string, message: string): RequestHandler {
+  const hits = new Map<string, { count: number; resetAt: number }>();
+  return (req, res, next) => {
+    const now = Date.now();
+    const key = req.ip ?? 'noip';
+    const existing = hits.get(key);
+    const bucket = existing && existing.resetAt > now ? existing : { count: 0, resetAt: now + windowMs };
+    bucket.count += 1;
+    hits.set(key, bucket);
+    if (hits.size > 10_000) {
+      for (const [k, v] of hits) if (v.resetAt <= now) hits.delete(k);
+    }
+    if (bucket.count > limit) {
+      res.setHeader('retry-after', Math.ceil((bucket.resetAt - now) / 1000));
+      next(new AppError(code, 429, message));
       return;
     }
     next();

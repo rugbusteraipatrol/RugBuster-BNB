@@ -3,10 +3,11 @@ import type pg from 'pg';
 import { z } from 'zod';
 import { normalizeAddress } from '../../address.js';
 import type { Config } from '../../config.js';
-import { listMerchants, upsertMerchant } from '../../db/merchants.js';
+import { listMerchants, setMerchantPlan, upsertMerchant } from '../../db/merchants.js';
 import { listUnmatchedPayments } from '../../db/payments.js';
 import { listDeadLetters, listDeliveriesForSession } from '../../db/webhookDeliveries.js';
-import { badRequest } from '../../errors.js';
+import { badRequest, notFound } from '../../errors.js';
+import { effectivePlan } from '../../merchants/plans.js';
 import { formatUsdc } from '../../sessions/amounts.js';
 import { isUuid } from '../../uuid.js';
 import { asyncRoute, requireAdmin } from '../middleware.js';
@@ -16,6 +17,11 @@ const merchantSchema = z.object({
   walletAddress: z.string(),
   webhookUrl: z.string().url().max(2048).optional(),
   webhookSecret: z.string().min(16).max(256).optional(),
+});
+
+const planSchema = z.object({
+  plan: z.enum(['free', 'pro']),
+  expiresAt: z.string().datetime().nullable().optional(),
 });
 
 /**
@@ -39,6 +45,11 @@ export function adminRoutes(config: Config, pool: pg.Pool): Router {
           webhookUrl: m.webhookUrl,
           // Never echo the secret back, not even to an authenticated operator.
           webhookConfigured: m.webhookSecret !== null,
+          plan: effectivePlan(m),
+          planExpiresAt: m.planExpiresAt ? m.planExpiresAt.toISOString() : null,
+          siteUrl: m.siteUrl,
+          platform: m.platform,
+          selfRegistered: m.merchantKeyHash !== null,
           createdAt: m.createdAt.toISOString(),
         })),
       });
@@ -69,6 +80,27 @@ export function adminRoutes(config: Config, pool: pg.Pool): Router {
         walletAddress: merchant.walletAddress,
         webhookUrl: merchant.webhookUrl,
         webhookConfigured: merchant.webhookSecret !== null,
+      });
+    }),
+  );
+
+  // Billing is manual for now: an operator flips the plan after the merchant
+  // has paid. `expiresAt` omitted or null means the plan does not lapse.
+  router.post(
+    '/merchants/:id/plan',
+    asyncRoute(async (req, res) => {
+      const parsed = planSchema.safeParse(req.body);
+      if (!parsed.success) {
+        throw badRequest('INVALID_REQUEST', parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '));
+      }
+      const id = String(req.params['id'] ?? '');
+      const expiresAt = parsed.data.expiresAt ? new Date(parsed.data.expiresAt) : null;
+      const merchant = await setMerchantPlan(pool, id, parsed.data.plan, expiresAt);
+      if (!merchant) throw notFound('MERCHANT_NOT_FOUND', 'No such merchant');
+      res.json({
+        merchantId: merchant.id,
+        plan: effectivePlan(merchant),
+        planExpiresAt: merchant.planExpiresAt ? merchant.planExpiresAt.toISOString() : null,
       });
     }),
   );

@@ -51,6 +51,10 @@ const envSchema = z.object({
   OVERPAY_MAX_RATIO: num(1.1, 1, 10),
   SESSION_RATE_LIMIT_PER_MINUTE: int(30, 1, 100_000),
 
+  MERCHANT_REGISTRATION_ENABLED: bool(true),
+  MERCHANT_REGISTRATION_RATE_LIMIT_PER_HOUR: int(5, 1, 100_000),
+  FREE_PLAN_MONTHLY_ORDERS: int(20, 0, 1_000_000),
+
   PRICE_CACHE_TTL_SECONDS: int(60, 1, 3600),
   PRICE_MAX_STALE_SECONDS: int(600, 60, 86_400),
   COINGECKO_BASE_URL: str('https://api.coingecko.com/api/v3'),
@@ -121,6 +125,11 @@ export interface Config {
     overpayMaxRatio: number;
     rateLimitPerMinute: number;
     expirySweepIntervalMs: number;
+  };
+  merchants: {
+    registrationEnabled: boolean;
+    registrationRateLimitPerHour: number;
+    freePlanMonthlyOrders: number;
   };
   price: {
     cacheTtlSeconds: number;
@@ -252,6 +261,12 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
       overpayMaxRatio: env.OVERPAY_MAX_RATIO,
       rateLimitPerMinute: env.SESSION_RATE_LIMIT_PER_MINUTE,
       expirySweepIntervalMs: env.EXPIRY_SWEEP_INTERVAL_MS,
+    },
+    merchants: {
+      registrationEnabled: env.MERCHANT_REGISTRATION_ENABLED,
+      registrationRateLimitPerHour: env.MERCHANT_REGISTRATION_RATE_LIMIT_PER_HOUR,
+      /** Paid orders per calendar month on the free plan; 0 lifts the cap. */
+      freePlanMonthlyOrders: env.FREE_PLAN_MONTHLY_ORDERS,
     },
     price: {
       cacheTtlSeconds: env.PRICE_CACHE_TTL_SECONDS,
