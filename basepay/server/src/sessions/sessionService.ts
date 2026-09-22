@@ -174,7 +174,7 @@ export class SessionService {
    */
   private async assertWithinPlan(merchant: Merchant): Promise<void> {
     const cap = this.config.merchants.freePlanMonthlyOrders;
-    if (cap === 0 || effectivePlan(merchant) === 'pro') return;
+    if (cap === 0 || effectivePlan(merchant) === 'pro' || merchant.id === this.config.billing.merchantId) return;
     const used = await countBillableSessions(this.pool, merchant.id, monthStart());
     if (used >= cap) {
       throw new AppError('PLAN_LIMIT_REACHED', 402, 'This store has reached its monthly limit of payments on the free plan.', {

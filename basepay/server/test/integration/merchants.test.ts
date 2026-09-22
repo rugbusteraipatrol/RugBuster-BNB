@@ -5,7 +5,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../../src/api/app.js';
 import type { Config } from '../../src/config.js';
 import { SessionService } from '../../src/sessions/sessionService.js';
+import { Watcher } from '../../src/watcher/watcher.js';
 import { verifySignature } from '../../src/webhooks/signature.js';
+import { FakeChain } from '../helpers/fakeChain.js';
 import { createTestPool, hasDatabase, resetDatabase } from '../helpers/db.js';
 import { json } from '../helpers/http.js';
 import { BUYER_ADDRESS, fixedPriceService, MERCHANT_ADDRESS, seedMerchant, testConfig } from '../helpers/fixtures.js';
@@ -165,5 +167,56 @@ describe.skipIf(!hasDatabase)('merchant self-registration and plans', () => {
     const lapsed = await call('POST', '/admin/merchants/demo/plan', { plan: 'pro', expiresAt: '2020-01-01T00:00:00Z' }, admin);
     expect((await json(lapsed)).plan).toBe('free');
     expect((await call('POST', '/api/sessions', { merchantId: 'demo', amountUsd: 5 })).status).toBe(402);
+  });
+});
+
+describe.skipIf(!hasDatabase)('Pro billing', () => {
+  let pool: pg.Pool;
+
+  beforeAll(async () => {
+    pool = await createTestPool();
+  });
+  afterAll(async () => {
+    await pool.end();
+  });
+  beforeEach(async () => {
+    await resetDatabase(pool);
+    await seedMerchant(pool); // "demo", the shop that buys Pro
+    await seedMerchant(pool, { id: 'basepay-billing', walletAddress: BUYER_ADDRESS });
+  });
+
+  async function payPro(amountUsd: string, orderRef = 'PRO-demo') {
+    const config = testConfig({ WATCHER_ENABLED: 'true', CONFIRMATIONS_REQUIRED: '1' });
+    const sessions = new SessionService(pool, config, fixedPriceService());
+    const chain = new FakeChain('0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', 5);
+    const watcher = new Watcher(pool, config, chain.asClient());
+    await watcher.tick();
+    const view = await sessions.createSession({ merchantId: 'basepay-billing', amountUsd, orderRef });
+    chain.mine([{ to: BUYER_ADDRESS, value: BigInt(view.amountUsdcMicro) }]);
+    await watcher.tick();
+    await watcher.tick();
+    return (await pool.query(`SELECT plan, plan_expires_at FROM merchants WHERE id = 'demo'`)).rows[0] as {
+      plan: string;
+      plan_expires_at: Date | null;
+    };
+  }
+
+  it('switches a shop to Pro for 30 days when its $12 payment settles, and stacks renewals', async () => {
+    const first = await payPro('12.00');
+    expect(first.plan).toBe('pro');
+    const days = (first.plan_expires_at!.getTime() - Date.now()) / 86_400_000;
+    expect(days).toBeGreaterThan(29.9);
+    expect(days).toBeLessThan(30.1);
+
+    const second = await payPro('12.00');
+    expect((second.plan_expires_at!.getTime() - Date.now()) / 86_400_000).toBeGreaterThan(59.9);
+  });
+
+  it('ignores a PRO- order below the price, and PRO- orders to any other merchant', async () => {
+    expect((await payPro('0.50')).plan).toBe('free');
+    const config = testConfig();
+    const sessions = new SessionService(pool, config, fixedPriceService());
+    await sessions.createSession({ merchantId: 'demo', amountUsd: '12.00', orderRef: 'PRO-demo' });
+    expect((await pool.query(`SELECT plan FROM merchants WHERE id = 'demo'`)).rows[0].plan).toBe('free');
   });
 });

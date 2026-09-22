@@ -10,6 +10,7 @@ import { countBillableSessions } from '../../db/sessions.js';
 import type { Merchant } from '../../db/types.js';
 import { badRequest, notFound, unauthorized } from '../../errors.js';
 import { logger } from '../../logger.js';
+import { proOrderRef } from '../../merchants/billing.js';
 import { effectivePlan, merchantIdFor, monthStart } from '../../merchants/plans.js';
 import { assertPublicWebhookUrl, verifyWebhookEndpoint, type FetchLike } from '../../merchants/verifyWebhook.js';
 import { randomToken, safeEqual, sha256Hex } from '../../secrets.js';
@@ -171,6 +172,13 @@ export function merchantRoutes(config: Config, pool: pg.Pool, options: MerchantR
     return {
       plan,
       planExpiresAt: merchant.planExpiresAt ? merchant.planExpiresAt.toISOString() : null,
+      upgrade: {
+        priceUsd: (config.billing.proPriceUsdCents / 100).toFixed(2),
+        periodDays: config.billing.proPeriodDays,
+        url: `${(config.http.publicBaseUrl ?? '').replace(/\/$/, '')}/pro/?merchant=${encodeURIComponent(merchant.id)}`,
+        billingMerchantId: config.billing.merchantId,
+        orderRef: proOrderRef(merchant.id),
+      },
       usage: {
         periodStart: monthStart().toISOString(),
         paidOrders: used,

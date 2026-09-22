@@ -112,8 +112,27 @@ class BasePay_Gateway extends WC_Payment_Gateway {
 			$view['walletAddress']
 		) );
 		echo '<br>';
+		$upgrade_url = isset( $view['upgrade']['url'] ) ? (string) $view['upgrade']['url'] : '';
+		$price       = isset( $view['upgrade']['priceUsd'] ) ? (string) $view['upgrade']['priceUsd'] : '12.00';
+		$expires     = ! empty( $view['planExpiresAt'] ) ? strtotime( (string) $view['planExpiresAt'] ) : 0;
+
 		if ( 'pro' === $plan ) {
-			echo esc_html__( 'Plan: Pro — unlimited orders.', 'basepay-for-woocommerce' );
+			if ( $expires ) {
+				echo esc_html( sprintf(
+					/* translators: %s: date the Pro plan ends */
+					__( 'Plan: Pro — unlimited orders until %s.', 'basepay-for-woocommerce' ),
+					wp_date( get_option( 'date_format' ), $expires )
+				) );
+				if ( $upgrade_url ) {
+					echo ' <a href="' . esc_url( $upgrade_url ) . '" target="_blank" rel="noopener">' . esc_html( sprintf(
+						/* translators: %s: price in USD */
+						__( 'Add 30 days ($%s)', 'basepay-for-woocommerce' ),
+						$price
+					) ) . '</a>';
+				}
+			} else {
+				echo esc_html__( 'Plan: Pro — unlimited orders.', 'basepay-for-woocommerce' );
+			}
 		} elseif ( null === $limit ) {
 			echo esc_html( sprintf(
 				/* translators: %d: number of paid orders this month */
@@ -128,7 +147,13 @@ class BasePay_Gateway extends WC_Payment_Gateway {
 				$limit
 			) );
 			echo ' ' . esc_html__( 'Once the limit is reached, buyers see USDC as unavailable until next month.', 'basepay-for-woocommerce' );
-			echo ' <a href="mailto:fedja@rugbuster.io?subject=BasePay%20Pro">' . esc_html__( 'Upgrade to Pro', 'basepay-for-woocommerce' ) . '</a>';
+			if ( $upgrade_url ) {
+				echo '</p><p><a class="button button-primary" href="' . esc_url( $upgrade_url ) . '" target="_blank" rel="noopener">' . esc_html( sprintf(
+					/* translators: %s: price in USD */
+					__( 'Upgrade to Pro — $%s for 30 days', 'basepay-for-woocommerce' ),
+					$price
+				) ) . '</a> ' . esc_html__( 'Paid in USDC; Pro switches on by itself.', 'basepay-for-woocommerce' );
+			}
 		}
 		echo '</p></div>';
 	}

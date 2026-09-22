@@ -22,6 +22,7 @@ import {
 } from '../db/sessions.js';
 import type { PaymentMatchKind, Session, WebhookEventType } from '../db/types.js';
 import { logger } from '../logger.js';
+import { applyProPayment } from '../merchants/billing.js';
 import { formatUsdc } from '../sessions/amounts.js';
 import { matchTransfer, quoteWindow, ratioToScaled, type MatchOptions } from '../sessions/matching.js';
 import { sourcesFor } from '../sessions/stateMachine.js';
@@ -374,6 +375,7 @@ export class Settlement {
         settledAt: new Date(),
       });
       if (!paid) return null;
+      await applyProPayment(tx, this.config, paid);
       return { webhookQueued: await this.enqueue(tx, paid, 'payment.paid') };
     });
 

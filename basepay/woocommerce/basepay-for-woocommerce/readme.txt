@@ -4,7 +4,7 @@ Tags: crypto, usdc, stablecoin, payment gateway, base
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.0
+Stable tag: 0.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,7 +22,7 @@ BasePay lets a WooCommerce shop take **USDC** (a dollar stablecoin) on the **Bas
 
 **Prices in any currency.** Your shop can be priced in EUR, GBP, RSD or anything else. The plugin converts the order total to US dollars at a daily market rate (or a rate you pin yourself) and the buyer pays that in USDC.
 
-**Plans.** The free plan covers 20 paid orders per calendar month. Pro is unlimited. The gateway settings show how many you have used.
+**Plans.** The free plan covers 20 paid orders per calendar month. Pro is $12 for 30 days, unlimited, paid in USDC from the gateway settings with one click; it switches on by itself. There is no subscription to cancel. The gateway settings show how many orders you have used.
 
 = How it stays safe =
 
@@ -38,7 +38,7 @@ This plugin connects to the **BasePay service** (https://basepay-production.up.r
 * On save of the settings it sends your **wallet address, your shop URL and a webhook secret** to register the shop, and later to change the wallet.
 * On the pay page the buyer's browser loads the BasePay checkout widget from that service and opens a payment session containing the **order amount in USD and the order reference** (order id plus a fragment of the order key). No customer name, email or address is sent.
 * The service calls your shop's `?wc-api=basepay` endpoint to confirm payments.
-* The settings page reads your plan and usage from the service.
+* The settings page reads your plan and usage from the service. Upgrading to Pro opens a BasePay checkout page on the same service (https://basepay-production.up.railway.app/pro/), which sends your shop id as the order reference.
 
 Terms and privacy: https://basepay-production.up.railway.app
 
@@ -67,7 +67,7 @@ Any wallet that holds USDC on the Base network and can scan a QR code or connect
 
 = What does it cost? =
 
-Nothing per sale. The buyer pays the Base network fee, usually well under a cent. The free plan includes 20 paid orders a month; Pro removes the limit.
+Nothing per sale. The buyer pays the Base network fee, usually well under a cent. The free plan includes 20 paid orders a month; Pro removes the limit for $12 per 30 days, paid in USDC from the settings page.
 
 = Can I refund? =
 
@@ -82,6 +82,9 @@ If too little arrives the order goes on hold with a note of the amount received.
 Yes, both the classic shortcode checkout and the block-based checkout are supported. High-Performance Order Storage is supported as well.
 
 == Changelog ==
+
+= 0.2.0 =
+* Upgrade to Pro from the settings page, paid in USDC. Payments that arrive after the pay page expired are still matched for 24 hours.
 
 = 0.1.0 =
 * First release: USDC on Base gateway, one-minute self-registration, signed webhooks, currency conversion, block checkout support.
