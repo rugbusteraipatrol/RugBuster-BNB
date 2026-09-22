@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Payment links — get paid in USDC without a website — StableCart</title>
+    <meta name="description" content="Make a payment link in 30 seconds: paste your wallet address, set an amount, send the link. The buyer pays USDC on Base straight to you. No account, no fee on payments." />
+    <link rel="canonical" href="https://stablecart.org/links/" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://stablecart.org/links/" />
+    <meta property="og:title" content="Payment links — get paid in USDC without a website" />
+    <meta property="og:description" content="Paste a wallet address, set an amount, send the link. No website, no account, no fee on payments." />
+    <meta property="og:image" content="https://stablecart.org/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #ffffff; --bg-alt: #f5f5f7; --ink: #1d1d1f; --ink-2: #6e6e73;
+        --line: #d2d2d7; --card: #fff; --accent: #4f6ef7;
+        --grad: linear-gradient(135deg, #6d5dfc 0%, #3b82f6 55%, #22d3ee 100%);
+        --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.47 var(--sans); letter-spacing: -0.012em; -webkit-font-smoothing: antialiased; }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 8px; }
+      .wrap { max-width: 860px; margin: 0 auto; padding: 0 22px; }
+      header.nav { position: sticky; top: 0; z-index: 20; background: rgba(250,250,252,.8); backdrop-filter: saturate(180%) blur(20px); }
+      header.nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 48px; }
+      .wordmark { font-weight: 700; letter-spacing: -0.045em; color: var(--ink); }
+      .wordmark i { display: inline-block; width: .2em; height: .2em; border-radius: 50%; background: var(--grad); margin-left: .045em; vertical-align: baseline; }
+      .brand { font-size: 19px; }
+      nav a { color: var(--ink); font-size: 12.5px; opacity: .88; }
+      h1 { font-size: clamp(38px, 6vw, 60px); line-height: 1.06; letter-spacing: -0.035em; font-weight: 650; margin: 0 0 16px; }
+      .lede { font-size: 20px; color: var(--ink-2); max-width: 46ch; margin: 0 0 26px; }
+      section { padding: 56px 0; }
+      .hero { padding-top: 64px; }
+      .panel { background: var(--card); border: 1px solid var(--line); border-radius: 26px; padding: 26px; box-shadow: 0 30px 70px -40px rgba(29,29,31,.4); }
+      label { display: block; font-size: 13px; font-weight: 600; margin: 0 0 6px; }
+      .hint { font-size: 13px; color: var(--ink-2); margin: 6px 0 0; }
+      input, textarea { width: 100%; font: 16px var(--sans); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: #fff; color: var(--ink); }
+      input.mono { font-family: var(--mono); font-size: 14px; }
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+      @media (max-width: 620px) { .row { grid-template-columns: 1fr; } }
+      .field { margin-bottom: 16px; }
+      button {
+        font: 600 16px var(--sans); cursor: pointer; border: 0; border-radius: 980px;
+        padding: 13px 22px; background: var(--accent); color: #fff;
+      }
+      button:disabled { opacity: .5; cursor: default; }
+      button.ghost { background: transparent; color: var(--accent); padding: 13px 10px; }
+      .msg { margin-top: 14px; font-size: 14.5px; border-radius: 12px; padding: 10px 12px; display: none; }
+      .msg.show { display: block; }
+      .msg.err { background: #fdecec; color: #8e1b1b; }
+      .msg.ok { background: #e9f7ef; color: #14532d; }
+      .out { display: none; margin-top: 24px; }
+      .out.show { display: block; }
+      .linkbox { display: flex; gap: 10px; align-items: center; background: var(--bg-alt); border-radius: 14px; padding: 12px 14px; }
+      .linkbox code { font: 13px var(--mono); word-break: break-all; flex: 1; }
+      .qr { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 14px; width: 200px; margin: 18px auto 0; }
+      .qr svg { display: block; width: 100%; height: auto; }
+      .steps { counter-reset: s; display: grid; gap: 18px; grid-template-columns: repeat(3, 1fr); margin-top: 34px; }
+      @media (max-width: 760px) { .steps { grid-template-columns: 1fr; } }
+      .step { background: var(--bg-alt); border-radius: 22px; padding: 24px; }
+      .step::before { counter-increment: s; content: counter(s); display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--grad); color: #fff; font-weight: 700; margin-bottom: 14px; }
+      .step h3 { margin: 0 0 6px; font-size: 18px; letter-spacing: -0.02em; }
+      .step p { margin: 0; color: var(--ink-2); font-size: 15.5px; }
+      .who { display: grid; gap: 14px; grid-template-columns: repeat(2, 1fr); margin-top: 26px; }
+      @media (max-width: 620px) { .who { grid-template-columns: 1fr; } }
+      .who div { border: 1px solid var(--line); border-radius: 18px; padding: 18px; font-size: 15.5px; color: var(--ink-2); }
+      .who b { color: var(--ink); display: block; font-size: 16.5px; margin-bottom: 3px; }
+      footer { border-top: 1px solid var(--line); padding: 24px 0 40px; font-size: 12.5px; color: var(--ink-2); }
+      .saved { font-size: 13px; color: var(--ink-2); margin-top: 10px; }
+    </style>
+  </head>
+  <body>
+    <header class="nav">
+      <div class="wrap">
+        <a class="brand wordmark" href="/">stablecart<i></i></a>
+        <nav><a href="/#woocommerce">WooCommerce plugin</a></nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="wrap">
+          <h1>Get paid in USDC without a website.</h1>
+          <p class="lede">Paste your wallet address, set an amount, send the link. Your buyer opens it, pays from any wallet, and the money lands in yours. No account, no fee on payments.</p>
+
+          <div class="panel">
+            <div id="setup">
+              <div class="field">
+                <label for="wallet">Your wallet address on Base</label>
+                <input id="wallet" class="mono" placeholder="0x…" autocomplete="off" spellcheck="false" inputmode="text" />
+                <p class="hint">Where the money goes. Copy it from MetaMask, Coinbase Wallet, Rabby or an exchange withdrawal address on Base.</p>
+              </div>
+              <div class="field">
+                <label for="name">Your name or shop (optional)</label>
+                <input id="name" placeholder="Fedja Photography" maxlength="60" />
+              </div>
+              <button id="create" type="button">Create my payment links</button>
+              <p class="saved" id="saved"></p>
+              <div class="msg err" id="setup-msg"></div>
+            </div>
+
+            <div id="builder" hidden>
+              <div class="row">
+                <div class="field">
+                  <label for="amount">Amount in USD</label>
+                  <input id="amount" inputmode="decimal" placeholder="25.00" />
+                </div>
+                <div class="field">
+                  <label for="ref">Reference (optional)</label>
+                  <input id="ref" placeholder="INVOICE-104" maxlength="64" />
+                </div>
+              </div>
+              <div class="field">
+                <label for="what">What is it for (optional)</label>
+                <input id="what" placeholder="Photo session, 2 hours" maxlength="120" />
+              </div>
+              <button id="make" type="button">Make the link</button>
+              <button class="ghost" id="reset" type="button">Use another wallet</button>
+              <div class="msg err" id="build-msg"></div>
+
+              <div class="out" id="out">
+                <div class="linkbox">
+                  <code id="link"></code>
+                  <button id="copy" type="button">Copy</button>
+                </div>
+                <div class="qr" id="qr"></div>
+                <p class="hint" style="text-align:center">Send the link, or let them scan the code. It never expires — the price is locked in only once they open it.</p>
+                <div class="msg ok" id="copied">Copied.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <h2 style="font-size:32px;letter-spacing:-0.03em;margin:0">How it works</h2>
+          <div class="steps">
+            <div class="step"><h3>You send a link</h3><p>By message, email, or printed as a QR code on an invoice.</p></div>
+            <div class="step"><h3>They pay from any wallet</h3><p>The page shows the exact amount and a QR code. Nothing to install, no account for them either.</p></div>
+            <div class="step"><h3>You see it arrive</h3><p>The page turns green when the payment confirms, usually under a minute, and the money is already in your wallet.</p></div>
+          </div>
+
+          <div class="who">
+            <div><b>Freelancers</b>Invoice a client abroad without waiting on a bank.</div>
+            <div><b>Instagram and Viber sellers</b>One link in the bio or in the chat.</div>
+            <div><b>Anyone a processor declined</b>No application, because there is nothing to approve.</div>
+            <div><b>Shops on any platform</b>Wix, Squarespace, Shopify: paste the link as a button.</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <span class="wordmark" style="font-size:15px;margin-right:10px">stablecart<i></i></span>
+        © 2026 Fantom Studio · Non-custodial: funds move directly from buyer to seller. Free for 20 paid orders a month.
+      </div>
+    </footer>
+
+    <script src="/widget/widget.js" data-auto="false"></script>
+    <script>
+      (function () {
+        var API = window.location.origin;
+        var KEY = 'stablecart.merchant';
+        var el = function (id) { return document.getElementById(id); };
+        var show = function (node, text, cls) { node.textContent = text; node.className = 'msg show ' + (cls || 'err'); };
+        var hide = function (node) { node.className = 'msg'; };
+
+        var stored = null;
+        try { stored = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { stored = null; }
+
+        var toBuilder = function (merchant) {
+          el('setup').hidden = true;
+          el('builder').hidden = false;
+          el('saved').textContent = '';
+          document.title = 'Payment links — StableCart';
+          el('reset').textContent = 'Use another wallet (' + merchant.walletAddress.slice(0, 6) + '…' + merchant.walletAddress.slice(-4) + ')';
+        };
+
+        if (stored && stored.merchantId && stored.walletAddress) toBuilder(stored);
+
+        el('create').addEventListener('click', function () {
+          var wallet = el('wallet').value.trim();
+          var name = el('name').value.trim();
+          var msg = el('setup-msg');
+          hide(msg);
+          if (!/^0x[0-9a-fA-F]{40}$/.test(wallet)) {
+            return show(msg, 'That does not look like a wallet address. It starts with 0x and is 42 characters long.');
+          }
+          var button = el('create');
+          button.disabled = true;
+          button.textContent = 'Setting up…';
+          var body = { walletAddress: wallet };
+          if (name) body.name = name;
+          fetch(API + '/api/merchants', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(body),
+          })
+            .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+            .then(function (res) {
+              button.disabled = false;
+              button.textContent = 'Create my payment links';
+              if (!res.ok) {
+                var code = res.body && res.body.error && res.body.error.code;
+                return show(msg, code === 'RATE_LIMITED'
+                  ? 'Too many set-ups from this connection. Try again in an hour.'
+                  : (res.body && res.body.error && res.body.error.message) || 'Could not set this up. Try again.');
+              }
+              var merchant = { merchantId: res.body.merchantId, merchantKey: res.body.merchantKey, walletAddress: res.body.walletAddress };
+              try { localStorage.setItem(KEY, JSON.stringify(merchant)); } catch (e) {}
+              stored = merchant;
+              toBuilder(merchant);
+            })
+            .catch(function () {
+              button.disabled = false;
+              button.textContent = 'Create my payment links';
+              show(msg, 'Could not reach StableCart. Check your connection and try again.');
+            });
+        });
+
+        el('reset').addEventListener('click', function () {
+          try { localStorage.removeItem(KEY); } catch (e) {}
+          stored = null;
+          el('builder').hidden = true;
+          el('setup').hidden = false;
+          el('out').className = 'out';
+        });
+
+        el('make').addEventListener('click', function () {
+          var msg = el('build-msg');
+          hide(msg);
+          var amount = el('amount').value.trim().replace(',', '.');
+          if (!/^\d{1,9}(\.\d{1,2})?$/.test(amount) || Number(amount) <= 0) {
+            return show(msg, 'Enter an amount in dollars, for example 25 or 25.50.');
+          }
+          var ref = el('ref').value.trim();
+          if (ref && !/^[\w .\/-]{1,64}$/.test(ref)) {
+            return show(msg, 'The reference can contain letters, numbers, spaces, dots and dashes.');
+          }
+          var what = el('what').value.trim();
+          var url = API + '/pay/?m=' + encodeURIComponent(stored.merchantId) + '&a=' + encodeURIComponent(amount);
+          if (ref) url += '&r=' + encodeURIComponent(ref);
+          if (what) url += '&t=' + encodeURIComponent(what);
+
+          el('link').textContent = url;
+          var qr = el('qr');
+          qr.replaceChildren(window.StableCart.qr(url, 200));
+          el('out').className = 'out show';
+          hide(el('copied'));
+        });
+
+        el('copy').addEventListener('click', function () {
+          var text = el('link').textContent;
+          navigator.clipboard.writeText(text).then(
+            function () { el('copied').className = 'msg show ok'; },
+            function () { show(el('copied'), 'Press Ctrl+C to copy the selected link.', 'ok'); }
+          );
+        });
+      })();
+    </script>
+  </body>
+</html>

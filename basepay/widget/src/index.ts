@@ -1,4 +1,5 @@
 import { resolveLocale } from './i18n.js';
+import { renderQrSvg } from './qr.js';
 import type { WidgetOptions } from './types.js';
 import { PaymentWidget } from './ui.js';
 
@@ -116,15 +117,23 @@ function autoMount(script: HTMLScriptElement): void {
   });
 }
 
+/**
+ * The QR renderer, exposed so a page can draw the same code the checkout draws
+ * — the payment-link builder uses it for the link's QR.
+ */
+export function qr(text: string, size = 220): SVGElement {
+  return renderQrSvg(text, { size });
+}
+
 declare global {
   interface Window {
-    BasePay?: { mount: typeof mount };
-    StableCart?: { mount: typeof mount };
+    BasePay?: { mount: typeof mount; qr: typeof qr };
+    StableCart?: { mount: typeof mount; qr: typeof qr };
   }
 }
 
 // StableCart is the product name; BasePay stays as an alias for existing embeds.
-window.BasePay = { mount };
+window.BasePay = { mount, qr };
 window.StableCart = window.BasePay;
 
 // `document.currentScript` is only valid while this script is executing, so

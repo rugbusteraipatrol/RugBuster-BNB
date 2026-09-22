@@ -69,8 +69,9 @@ export async function upsertMerchant(db: Queryable, input: MerchantInput): Promi
 export interface RegisterMerchantInput {
   id: string;
   walletAddress: string;
-  webhookUrl: string;
-  webhookSecret: string;
+  /** Null for merchants that take payment links only: there is no site to notify. */
+  webhookUrl: string | null;
+  webhookSecret: string | null;
   merchantKeyHash: string;
   siteUrl: string | null;
   platform: string | null;

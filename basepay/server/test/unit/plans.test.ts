@@ -21,8 +21,12 @@ describe('effectivePlan', () => {
 describe('merchantIdFor', () => {
   it('derives a readable id from the shop host', () => {
     expect(merchantIdFor('https://www.Kaseta-Shop.rs/wp-admin/', 'a1b2')).toBe('kaseta-shop-rs-a1b2');
-    expect(merchantIdFor('not a url', 'a1b2')).toBe('shop-a1b2');
     expect(merchantIdFor(null, 'a1b2')).toBe('shop-a1b2');
+  });
+
+  it('falls back to the seller name when there is no site', () => {
+    expect(merchantIdFor('Fedja Photography', 'a1b2')).toBe('fedja-photography-a1b2');
+    expect(merchantIdFor('!!!', 'a1b2')).toBe('shop-a1b2');
   });
 });
 

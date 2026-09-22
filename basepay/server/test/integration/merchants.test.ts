@@ -103,6 +103,33 @@ describe.skipIf(!hasDatabase)('merchant self-registration and plans', () => {
     expect((await json(session)).payToAddress).toBe(MERCHANT_ADDRESS);
   });
 
+  it('registers a payment-link seller with no webhook at all', async () => {
+    const response = await call('POST', '/api/merchants', {
+      walletAddress: MERCHANT_ADDRESS,
+      name: 'Fedja Photography',
+    });
+    expect(response.status).toBe(201);
+    const body = await json(response);
+    expect(body.merchantId).toMatch(/^fedja-photography-[0-9a-f]{8}$/);
+    expect(body.merchantKey).toMatch(/^bpk_/);
+    expect(shop.calls).toEqual([]); // nothing to verify, so nothing was called
+
+    // The key still works, and the merchant can take payments immediately.
+    const me = await call('GET', `/api/merchants/${body.merchantId}`, undefined, {
+      authorization: `Bearer ${body.merchantKey}`,
+    });
+    expect(await json(me)).toMatchObject({ webhookUrl: null, plan: 'free' });
+    const session = await call('POST', '/api/sessions', { merchantId: body.merchantId, amountUsd: '25.00', orderRef: 'INVOICE-104' });
+    expect(session.status).toBe(201);
+    expect((await json(session)).payToAddress).toBe(MERCHANT_ADDRESS);
+  });
+
+  it('rejects a webhook url without its secret', async () => {
+    const response = await call('POST', '/api/merchants', { walletAddress: MERCHANT_ADDRESS, webhookUrl: WEBHOOK_URL });
+    expect(response.status).toBe(400);
+    expect((await json(response)).error.code).toBe('INVALID_REQUEST');
+  });
+
   it('refuses to register when the site cannot prove it holds the secret', async () => {
     const response = await call('POST', '/api/merchants', {
       walletAddress: MERCHANT_ADDRESS,

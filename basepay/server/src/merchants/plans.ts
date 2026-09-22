@@ -17,17 +17,17 @@ export function monthStart(now = new Date()): Date {
 }
 
 /**
- * A merchant id derived from the shop's host, so operators can read the
- * merchant list without a lookup table: `kaseta-shop-k3n9x`. The suffix keeps
- * two shops on similar hosts apart.
+ * A merchant id derived from the shop's host, or from the name someone selling
+ * through payment links typed, so operators can read the merchant list without
+ * a lookup table: `kaseta-shop-k3n9x`. The suffix keeps two similar ones apart.
  */
-export function merchantIdFor(siteUrl: string | null, suffix: string): string {
+export function merchantIdFor(siteUrlOrName: string | null, suffix: string): string {
   let host = 'shop';
-  if (siteUrl) {
+  if (siteUrlOrName) {
     try {
-      host = new URL(siteUrl).hostname.replace(/^www\./, '');
+      host = new URL(siteUrlOrName).hostname.replace(/^www\./, '');
     } catch {
-      // Fall through to the generic prefix.
+      host = siteUrlOrName;
     }
   }
   const slug = host
