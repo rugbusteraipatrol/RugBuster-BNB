@@ -22,7 +22,10 @@ class StableCart_Webhook {
 	}
 
 	public static function handle() {
-		$raw       = file_get_contents( 'php://input' );
+		// The signature covers the raw bytes, so the body is read unmodified and
+		// verified before anything in it is looked at. Every value taken out of it
+		// afterwards is validated against the shape it must have, and sanitized.
+		$raw       = (string) file_get_contents( 'php://input' ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- signed webhook, not a form.
 		$timestamp = isset( $_SERVER['HTTP_X_STABLECART_TIMESTAMP'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_STABLECART_TIMESTAMP'] ) ) : '';
 		$signature = isset( $_SERVER['HTTP_X_STABLECART_SIGNATURE'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_STABLECART_SIGNATURE'] ) ) : '';
 
@@ -35,19 +38,69 @@ class StableCart_Webhook {
 			self::respond( 400, array( 'error' => 'malformed event' ) );
 		}
 
-		switch ( $event['type'] ) {
+		// Not sanitize_key(): event names contain a dot ('payment.paid'), which it strips.
+		$type = is_string( $event['type'] ) ? sanitize_text_field( $event['type'] ) : '';
+		$data = self::clean( $event['data'] );
+
+		switch ( $type ) {
 			case 'merchant.verify':
-				self::respond( 200, array( 'challenge' => isset( $event['data']['challenge'] ) ? (string) $event['data']['challenge'] : '' ) );
+				self::respond( 200, array( 'challenge' => self::text( $data, 'challenge' ) ) );
 				break; // Unreachable; respond() exits.
 			case 'payment.paid':
 			case 'payment.underpaid':
-				self::apply_payment( $event['type'], $event['data'] );
+				self::apply_payment( $type, $data );
 				self::respond( 200, array( 'ok' => true ) );
 				break;
 			default:
 				// Unknown events are acknowledged so the service does not retry them.
 				self::respond( 200, array( 'ignored' => true ) );
 		}
+	}
+
+	/**
+	 * Sanitizes the decoded event: json_decode only parses, it does not clean.
+	 * Every scalar becomes a sanitized string, recursively, and keys are keys.
+	 *
+	 * @param mixed $value Decoded JSON value.
+	 * @return mixed Sanitized value.
+	 */
+	private static function clean( $value ) {
+		if ( is_array( $value ) ) {
+			$out = array();
+			foreach ( $value as $key => $item ) {
+				// Keys keep their case (the service sends camelCase) but nothing else.
+				$clean_key         = is_string( $key ) ? preg_replace( '/[^A-Za-z0-9_-]/', '', $key ) : (int) $key;
+				$out[ $clean_key ] = self::clean( $item );
+			}
+			return $out;
+		}
+		if ( is_bool( $value ) || is_null( $value ) ) {
+			return $value;
+		}
+		return sanitize_text_field( (string) $value );
+	}
+
+	/**
+	 * One sanitized string out of the event data.
+	 *
+	 * @param array  $data Sanitized event data.
+	 * @param string $key  Key to read.
+	 * @return string
+	 */
+	private static function text( $data, $key ) {
+		return isset( $data[ $key ] ) && is_scalar( $data[ $key ] ) ? (string) $data[ $key ] : '';
+	}
+
+	/**
+	 * A decimal amount out of the event data, or '' when it is not one.
+	 *
+	 * @param array  $data Sanitized event data.
+	 * @param string $key  Key to read.
+	 * @return string
+	 */
+	private static function amount( $data, $key ) {
+		$value = self::text( $data, $key );
+		return preg_match( '/^\d{1,12}(\.\d{1,6})?$/', $value ) ? $value : '';
 	}
 
 	/** HMAC-SHA256 over "{timestamp}.{rawBody}", constant-time, with a bounded replay window. */
@@ -67,7 +120,7 @@ class StableCart_Webhook {
 	}
 
 	private static function apply_payment( $type, $data ) {
-		$order = self::order_from_ref( isset( $data['orderRef'] ) ? (string) $data['orderRef'] : '' );
+		$order = self::order_from_ref( self::text( $data, 'orderRef' ) );
 		if ( ! $order ) {
 			return; // Not ours (another shop's ref, or a deleted order). Acknowledge and move on.
 		}
@@ -75,16 +128,18 @@ class StableCart_Webhook {
 			return;
 		}
 
-		$session_id = isset( $data['sessionId'] ) ? sanitize_text_field( (string) $data['sessionId'] ) : '';
-		$tx         = isset( $data['transactions'][0]['txHash'] ) ? sanitize_text_field( (string) $data['transactions'][0]['txHash'] ) : '';
-		$received   = isset( $data['receivedUsdc'] ) ? sanitize_text_field( (string) $data['receivedUsdc'] ) : '';
-		$due        = isset( $data['amountUsdc'] ) ? sanitize_text_field( (string) $data['amountUsdc'] ) : '';
+		$session_id = self::text( $data, 'sessionId' );
+		$tx         = isset( $data['transactions'][0]['txHash'] ) ? (string) $data['transactions'][0]['txHash'] : '';
+		// A transaction hash is 32 bytes of hex; anything else does not go near an order note.
+		$tx         = preg_match( '/^0x[0-9a-fA-F]{64}$/', $tx ) ? $tx : '';
+		$received   = self::amount( $data, 'receivedUsdc' );
+		$due        = self::amount( $data, 'amountUsdc' );
 		$explorer   = $tx ? 'https://basescan.org/tx/' . rawurlencode( $tx ) : '';
 
 		// The amount the widget was told to charge is recorded when the pay page
 		// renders; a session for a different amount must not settle this order.
 		$expected_usd = (string) $order->get_meta( '_stablecart_amount_usd' );
-		$quoted_usd   = isset( $data['amountUsd'] ) ? (string) $data['amountUsd'] : '';
+		$quoted_usd   = self::amount( $data, 'amountUsd' );
 		if ( '' !== $expected_usd && '' !== $quoted_usd && ! self::same_dollar_amount( $expected_usd, $quoted_usd ) ) {
 			$order->add_order_note(
 				sprintf(

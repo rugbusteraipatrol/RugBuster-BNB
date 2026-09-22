@@ -4,7 +4,7 @@ Tags: crypto, usdc, stablecoin, payment gateway, base
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.2.0
+Stable tag: 0.2.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -33,18 +33,46 @@ StableCart lets a WooCommerce shop take **USDC** (a dollar stablecoin) on the **
 
 = External services =
 
-This plugin connects to the **StableCart service** (https://stablecart.org), operated by Fantom Studio, which watches the Base blockchain for your payments:
+This plugin relies on two external services. Both are listed below with what
+they send, when, and links to their terms and privacy policy.
 
-* On save of the settings it sends your **wallet address, your shop URL and a webhook secret** to register the shop, and later to change the wallet.
-* On the pay page the buyer's browser loads the StableCart checkout widget from that service and opens a payment session containing the **order amount in USD and the order reference** (order id plus a fragment of the order key). No customer name, email or address is sent.
-* The service calls your shop's `?wc-api=stablecart` endpoint to confirm payments.
-* The settings page reads your plan and usage from the service. Upgrading to Pro opens a StableCart checkout page on the same service (https://stablecart.org/pro/), which sends your shop id as the order reference.
+**1. StableCart (https://stablecart.org)** — the payment service this plugin is
+a client of, operated by Fantom Studio. It watches the Base blockchain for the
+USDC payments made to your own wallet and tells your shop when an order is paid.
+Without it the plugin cannot work.
 
-Terms and privacy: https://stablecart.org
+What is sent, and when:
 
-For currency conversion in shops not priced in USD, the plugin fetches daily exchange rates from **open.er-api.com** (https://www.exchangerate-api.com/terms). Only the request for rates is made; nothing about your shop is sent.
+* When you save the settings with a wallet address: your wallet address, your
+  shop URL and a webhook secret generated on your site, to register the shop.
+  The same data is sent again if you later change the wallet address.
+* When a buyer opens the pay page: the order total converted to US dollars and
+  an order reference (the order id plus a fragment of the order key). The
+  buyer's browser also loads the checkout script from the service. No customer
+  name, email or address is ever sent.
+* When the settings page is opened: your merchant id, to read your plan and how
+  many orders you have used.
+* When you click "Upgrade to Pro": your merchant id, in the link that opens the
+  payment page on the service.
+* The service calls back to your site at `?wc-api=stablecart` to report a
+  payment. That request is signed and verified before it is acted on.
 
-The pay page links transactions to **basescan.org**, a public block explorer.
+Terms of service: https://stablecart.org/terms/ — Privacy policy:
+https://stablecart.org/privacy/
+
+**2. ExchangeRate-API (https://open.er-api.com)** — used only when your store
+currency is not USD, to convert the order total to US dollars, because payments
+are quoted in dollars. The plugin requests the public daily rate table once
+every six hours and caches it; the request contains no data about your store,
+your orders or your customers. Set a rate manually in the gateway settings if
+you prefer the plugin never to contact it.
+
+Terms: https://www.exchangerate-api.com/terms — Privacy policy:
+https://www.exchangerate-api.com/privacy-policy
+
+The pay page also links each confirmed payment to **basescan.org**, a public
+block explorer, so you and your buyer can verify the transaction. Nothing is
+sent there by the plugin; it is a plain link.
 
 == Installation ==
 
@@ -82,6 +110,9 @@ If too little arrives the order goes on hold with a note of the amount received.
 Yes, both the classic shortcode checkout and the block-based checkout are supported. High-Performance Order Storage is supported as well.
 
 == Changelog ==
+
+= 0.2.1 =
+* Documented both external services in full, with terms and privacy links. Hardened webhook handling: every field from the event is validated and sanitized.
 
 = 0.2.0 =
 * Upgrade to Pro from the settings page, paid in USDC. Payments that arrive after the pay page expired are still matched for 24 hours.
