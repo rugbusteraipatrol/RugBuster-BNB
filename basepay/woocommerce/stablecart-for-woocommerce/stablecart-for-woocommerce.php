@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name:       StableCart for WooCommerce
- * Plugin URI:        https://stablecart.org
+ * Plugin URI:        https://stablecart.org/#woocommerce
  * Description:       Accept USDC on Base straight into your own wallet. Paste a wallet address, click Connect, done. No account, no API keys, no custody.
  * Version:           0.2.0
  * Requires at least: 6.4
@@ -10,7 +10,6 @@
  * WC requires at least: 8.2
  * WC tested up to:   11.1
  * Author:            Fantom Studio
- * Author URI:        https://stablecart.org
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       stablecart-for-woocommerce
