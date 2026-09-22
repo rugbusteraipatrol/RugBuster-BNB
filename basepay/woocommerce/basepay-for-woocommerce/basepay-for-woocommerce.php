@@ -8,13 +8,12 @@
  * Requires PHP:      7.4
  * Requires Plugins:  woocommerce
  * WC requires at least: 8.2
- * WC tested up to:   9.9
+ * WC tested up to:   11.1
  * Author:            Fantom Studio
  * Author URI:        https://basepay-production.up.railway.app
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       basepay-for-woocommerce
- * Domain Path:       /languages
  *
  * @package BasePay
  */

@@ -273,6 +273,8 @@
         <a class="brand" href="/">Base<span>Pay</span></a>
         <nav>
           <a href="#how">How it works</a>
+          <a href="#woocommerce">WooCommerce</a>
+          <a href="#pricing">Pricing</a>
           <a href="#faq">FAQ</a>
           <a href="/demo/">Demo</a>
         </nav>
@@ -290,11 +292,12 @@
             wallet address and one line of HTML.
           </p>
           <div class="cta-row">
-            <a class="btn primary" href="#start">Get started</a>
+            <a class="btn primary" href="#woocommerce">WooCommerce plugin</a>
             <a class="btn" href="/demo/">See a live checkout</a>
           </div>
           <p class="muted" style="font-size: 15px">
-            Works on Webflow, WordPress, Shopify, or a plain HTML page.
+            WooCommerce: install the plugin, paste your wallet address, done. Webflow,
+            Framer or plain HTML: one script tag.
           </p>
         </div>
       </section>
@@ -403,6 +406,52 @@
         </div>
       </section>
 
+      <section id="woocommerce">
+        <div class="wrap">
+          <h2>WooCommerce in one minute</h2>
+          <p>
+            No account to open, no API key to copy, no email to confirm. Your shop
+            registers itself the moment you save a wallet address.
+          </p>
+          <ol class="steps">
+            <li><strong>Download the plugin</strong> and upload it under <em>Plugins → Add New → Upload Plugin</em>. Activate it.</li>
+            <li><strong>Open <em>WooCommerce → Settings → Payments → BasePay</em></strong> and paste the wallet address that should receive payments.</li>
+            <li><strong>Click Save.</strong> The page says <em>Connected</em>. Buyers now see “USDC on Base” at checkout.</li>
+          </ol>
+          <div class="cta-row">
+            <a class="btn primary" href="/downloads/basepay-for-woocommerce.zip" download>Download for WooCommerce</a>
+            <a class="btn" href="/demo/">See the checkout first</a>
+          </div>
+          <p class="muted">
+            Orders complete by themselves when the payment confirms, with a link to the
+            transaction in the order notes. Works with the classic and the block checkout,
+            and with shops priced in EUR, GBP, RSD or any other currency. Your shop must be
+            on a public https address. Listing on WordPress.org is in review.
+          </p>
+        </div>
+      </section>
+
+      <section id="pricing">
+        <div class="wrap">
+          <h2>Pricing</h2>
+          <p>No fee on sales, on either plan. The money never passes through us, so we cannot take a cut of it.</p>
+          <div class="grid">
+            <div class="card">
+              <h3>Free</h3>
+              <p><strong>$0</strong> — 20 paid orders a month, every feature included. Enough to find out whether your buyers want to pay in USDC.</p>
+            </div>
+            <div class="card">
+              <h3>Pro</h3>
+              <p><strong>$12 a month</strong> — unlimited orders. <a href="mailto:fedja@rugbuster.io?subject=BasePay%20Pro">Email us to upgrade</a>; the limit lifts the same day.</p>
+            </div>
+          </div>
+          <p class="muted">
+            When a free shop reaches its 20 orders, USDC checkout pauses until the first of
+            next month. Payments already in progress always complete.
+          </p>
+        </div>
+      </section>
+
       <section id="what">
         <div class="wrap">
           <h2>What you get</h2>
@@ -425,7 +474,7 @@
             </div>
             <div class="card">
               <h3>Fits any site</h3>
-              <p>One script tag. No plugin to install, no platform to migrate to.</p>
+              <p>A WooCommerce plugin, or one script tag anywhere else. No platform to migrate to.</p>
             </div>
             <div class="card">
               <h3>Dollar pricing</h3>
@@ -488,8 +537,9 @@
             <summary>What does it cost?</summary>
             <div class="answer">
               <p>
-                <strong>Free while BasePay is in beta.</strong> No setup fee, no monthly
-                fee, and no cut of your sales.
+                <strong>Free for 20 paid orders a month; Pro is $12 a month for
+                unlimited orders.</strong> No setup fee, and no cut of your sales on
+                either plan.
               </p>
               <p>
                 Separately from anything we charge: your buyer pays the Base network fee
@@ -682,7 +732,7 @@
             "name": "What does BasePay cost?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Free while BasePay is in beta: no setup fee, no monthly fee and no cut of sales. The buyer pays the Base network fee to send the payment, typically a fraction of a cent."
+              "text": "Free for 20 paid orders a month; Pro is $12 a month for unlimited orders. No setup fee and no cut of sales on either plan. The buyer pays the Base network fee to send the payment, typically a fraction of a cent."
             }
           },
           {

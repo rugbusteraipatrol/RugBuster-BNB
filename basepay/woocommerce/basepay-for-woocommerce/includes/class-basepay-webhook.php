@@ -85,7 +85,7 @@ class BasePay_Webhook {
 		// renders; a session for a different amount must not settle this order.
 		$expected_usd = (string) $order->get_meta( '_basepay_amount_usd' );
 		$quoted_usd   = isset( $data['amountUsd'] ) ? (string) $data['amountUsd'] : '';
-		if ( '' !== $expected_usd && '' !== $quoted_usd && 0 !== bccomp_safe( $expected_usd, $quoted_usd ) ) {
+		if ( '' !== $expected_usd && '' !== $quoted_usd && ! self::same_dollar_amount( $expected_usd, $quoted_usd ) ) {
 			$order->add_order_note(
 				sprintf(
 					/* translators: 1: amount quoted to the buyer, 2: amount this order expects */
@@ -149,23 +149,15 @@ class BasePay_Webhook {
 		return $order;
 	}
 
+	/** Dollar amounts with two decimals; comparing after rounding avoids needing bcmath. */
+	private static function same_dollar_amount( $a, $b ) {
+		return abs( round( (float) $a, 2 ) - round( (float) $b, 2 ) ) < 0.005;
+	}
+
 	private static function respond( $status, $body ) {
 		status_header( $status );
 		header( 'content-type: application/json; charset=utf-8' );
 		echo wp_json_encode( $body );
 		exit;
 	}
-}
-
-/**
- * Decimal comparison that does not need the bcmath extension. Amounts here are
- * dollars with two decimals, so a float compare after rounding is exact enough.
- */
-function bccomp_safe( $a, $b ) {
-	$x = round( (float) $a, 2 );
-	$y = round( (float) $b, 2 );
-	if ( abs( $x - $y ) < 0.005 ) {
-		return 0;
-	}
-	return $x < $y ? -1 : 1;
 }
