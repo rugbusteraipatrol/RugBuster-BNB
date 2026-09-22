@@ -2,14 +2,17 @@ import type pg from 'pg';
 import type { Config } from '../config.js';
 import { getMerchant } from '../db/merchants.js';
 import {
+  attachUnmatchedPayment,
   listActivePaymentsForSession,
   listActivePaymentsFromBlock,
   orphanPayment,
   recordPayment,
   sumActivePayments,
 } from '../db/payments.js';
-import { withTransaction, type Queryable } from '../db/pool.js';
+import { isUniqueViolation, withTransaction, type Queryable } from '../db/pool.js';
 import {
+  findLateSession,
+  findOpenSessionByAmount,
   getSession,
   listConfirmingSessions,
   listOpenSessionsForAddressInRange,
@@ -40,6 +43,10 @@ export type SettlementOutcome =
   | { kind: 'confirming'; sessionId: string; matchKind: PaymentMatchKind }
   | { kind: 'underpaid'; sessionId: string }
   | { kind: 'noop'; sessionId: string; matchKind: PaymentMatchKind };
+
+export type LateOutcome =
+  | { kind: 'revived'; sessionId: string }
+  | { kind: 'skipped'; reason: 'open-session' | 'no-expired-session' | 'already-attributed' | 'raced' };
 
 /**
  * Everything that happens to a session as a consequence of chain state.
@@ -148,7 +155,8 @@ export class Settlement {
       const received = await sumActivePayments(tx, sessionId);
 
       if (result.kind === 'exact' || result.kind === 'overpaid') {
-        const updated = await updateSessionStatus(tx, sessionId, sourcesFor('confirming'), 'confirming', {
+        // Only `pending`: reviving an expired session is the late sweep's job, with its own checks.
+        const updated = await updateSessionStatus(tx, sessionId, ['pending'], 'confirming', {
           receivedUsdc: received,
           confirmations: 1,
           firstSeenAt: session.firstSeenAt ?? new Date(),
@@ -180,6 +188,73 @@ export class Settlement {
       logger.warn({ sessionId: outcome.sessionId, webhookQueued }, 'session underpaid');
     }
     return outcome;
+  }
+
+  /**
+   * A transfer that arrived after its session expired.
+   *
+   * Only an exact amount is accepted, and only when no open session holds that
+   * amount (then it is the live watcher's to attribute) and the session was
+   * created before the transfer's block. The session goes back to `confirming`;
+   * the watcher's next pass promotes it to `paid` and sends the webhook, exactly
+   * as for an on-time payment.
+   */
+  async applyLateTransfer(transfer: ObservedTransfer, blockTime: Date): Promise<LateOutcome> {
+    const windowSeconds = this.config.latePayments.windowSeconds;
+    if (windowSeconds <= 0) return { kind: 'skipped', reason: 'no-expired-session' };
+    const toLower = transfer.to.toLowerCase();
+
+    try {
+      return await withTransaction(this.pool, async (tx): Promise<LateOutcome> => {
+        if (await findOpenSessionByAmount(tx, toLower, transfer.value)) {
+          return { kind: 'skipped', reason: 'open-session' };
+        }
+        const session = await findLateSession(tx, toLower, transfer.value, blockTime, windowSeconds);
+        if (!session) return { kind: 'skipped', reason: 'no-expired-session' };
+
+        const { payment, inserted } = await recordPayment(tx, {
+          txHash: transfer.txHash,
+          logIndex: transfer.logIndex,
+          blockNumber: transfer.blockNumber,
+          blockHash: transfer.blockHash,
+          fromAddress: transfer.from,
+          toAddress: transfer.to,
+          amountUsdc: transfer.value,
+          sessionId: session.id,
+          matchKind: 'exact',
+        });
+        if (!inserted && payment.sessionId !== session.id) {
+          // Recorded unmatched by the live watcher while other sessions were open:
+          // that is exactly the transfer we are looking for. Anything already
+          // attributed elsewhere stays where it is.
+          if (payment.sessionId !== null || !(await attachUnmatchedPayment(tx, payment.id, session.id))) {
+            return { kind: 'skipped', reason: 'already-attributed' };
+          }
+        }
+
+        const received = await sumActivePayments(tx, session.id);
+        const revived = await updateSessionStatus(tx, session.id, ['expired'], 'confirming', {
+          receivedUsdc: received,
+          confirmations: 1,
+          firstSeenAt: new Date(),
+          settledAt: null,
+        });
+        if (!revived) return { kind: 'skipped', reason: 'raced' };
+        return { kind: 'revived', sessionId: session.id };
+      }).then((outcome) => {
+        if (outcome.kind === 'revived') {
+          logger.info(
+            { sessionId: outcome.sessionId, txHash: transfer.txHash, amountUsdc: formatUsdc(transfer.value) },
+            'late payment revived an expired session',
+          );
+        }
+        return outcome;
+      });
+    } catch (err) {
+      // A new session took this amount between our check and the revival.
+      if (isUniqueViolation(err, 'sessions_open_amount_uniq')) return { kind: 'skipped', reason: 'raced' };
+      throw err;
+    }
   }
 
   /**

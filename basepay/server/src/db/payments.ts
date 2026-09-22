@@ -53,6 +53,16 @@ export interface RecordPaymentResult {
   inserted: boolean;
 }
 
+/** Attaches a transfer that was recorded unmatched to a session. No-op if it is already attributed. */
+export async function attachUnmatchedPayment(db: Queryable, id: bigint, sessionId: string): Promise<boolean> {
+  const { rowCount } = await db.query(
+    `UPDATE payments SET session_id = $2, match_kind = 'exact'
+      WHERE id = $1 AND session_id IS NULL AND status = 'active'`,
+    [id.toString(), sessionId],
+  );
+  return (rowCount ?? 0) > 0;
+}
+
 /**
  * Idempotent on (tx_hash, log_index), so re-scanning a block range — which the
  * watcher does on every tick, by design — never double-counts a transfer.

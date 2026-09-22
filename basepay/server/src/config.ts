@@ -72,6 +72,11 @@ const envSchema = z.object({
   WATCHER_MAX_BLOCK_RANGE: int(500, 1, 10_000),
   WATCHER_START_BLOCK: optionalStr,
   CONFIRMATIONS_REQUIRED: int(3, 1, 200),
+
+  LATE_PAYMENT_WINDOW_SECONDS: int(86_400, 0, 604_800),
+  LATE_SWEEP_INTERVAL_MS: int(120_000, 1_000, 3_600_000),
+  LATE_SWEEP_RPC_URL: str('https://mainnet.base.org'),
+  LATE_SWEEP_BLOCK_RANGE: int(500, 1, 10_000),
   REORG_DEPTH_BLOCKS: int(12, 1, 1000),
 
   WEBHOOKS_ENABLED: bool(true),
@@ -161,6 +166,14 @@ export interface Config {
     startBlock: bigint | undefined;
     confirmationsRequired: number;
     reorgDepthBlocks: number;
+  };
+  latePayments: {
+    /** How long after expiry an exact-amount payment still settles its session; 0 disables. */
+    windowSeconds: number;
+    sweepIntervalMs: number;
+    /** A separate, free RPC: the sweep must not spend the main provider's quota. */
+    rpcUrl: string;
+    blockRange: number;
   };
   webhooks: {
     enabled: boolean;
@@ -289,6 +302,12 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
       startBlock: env.WATCHER_START_BLOCK === undefined ? undefined : BigInt(env.WATCHER_START_BLOCK),
       confirmationsRequired: env.CONFIRMATIONS_REQUIRED,
       reorgDepthBlocks: env.REORG_DEPTH_BLOCKS,
+    },
+    latePayments: {
+      windowSeconds: env.LATE_PAYMENT_WINDOW_SECONDS,
+      sweepIntervalMs: env.LATE_SWEEP_INTERVAL_MS,
+      rpcUrl: env.LATE_SWEEP_RPC_URL,
+      blockRange: env.LATE_SWEEP_BLOCK_RANGE,
     },
     webhooks: {
       enabled: env.WEBHOOKS_ENABLED,

@@ -8,7 +8,12 @@ import type { SessionStatus } from '../db/types.js';
  *      │                                           │
  *      │                                           └──(reorg: tx no longer canonical)──▶ pending
  *      ├──(transfer below the quote)──▶ underpaid
- *      └──(deadline passed)──▶ expired
+ *      └──(deadline passed)──▶ expired ──(exact transfer arrives late)──▶ confirming
+ *
+ * The late edge exists because buyers do pay after the quote runs out (they go
+ * looking for a wallet, get distracted, come back). Only the late-payment sweep
+ * takes it, only for the exact amount, only within LATE_PAYMENT_WINDOW_SECONDS,
+ * and only while no open session holds the same amount.
  *
  * `confirming` never expires: funds are already in flight, so the session must be
  * allowed to reach a terminal state.
@@ -18,9 +23,10 @@ const TRANSITIONS: Readonly<Record<SessionStatus, readonly SessionStatus[]>> = O
   confirming: ['paid', 'pending'],
   paid: [],
   underpaid: [],
-  expired: [],
+  expired: ['confirming'],
 });
 
+/** No further buyer action changes these; `expired` can still be revived by a late exact payment. */
 export const TERMINAL_STATUSES: readonly SessionStatus[] = ['paid', 'underpaid', 'expired'];
 
 /** Statuses that still hold an amount reservation and are still watched on-chain. */

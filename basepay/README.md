@@ -177,6 +177,7 @@ stateDiagram-v2
     pending --> confirming: exact transfer seen<br/>(1 confirmation)
     pending --> underpaid: transfer below the quote
     pending --> expired: 15 minutes elapsed
+    expired --> confirming: exact payment arrives late<br/>(within LATE_PAYMENT_WINDOW_SECONDS)
 
     confirming --> paid: CONFIRMATIONS_REQUIRED reached
     confirming --> pending: reorg — the transfer<br/>left the canonical chain
@@ -584,6 +585,8 @@ deciding deliberately:
 | `BASE_RPC_HTTP_URL` | public endpoint | Use a dedicated provider in production |
 | `CORS_ALLOWED_ORIGINS` | `*` | Set it to your Webflow domain |
 | `FREE_PLAN_MONTHLY_ORDERS` | `20` | Paid orders a free merchant may take per month; `0` = unlimited |
+| `LATE_PAYMENT_WINDOW_SECONDS` | `86400` | How long after expiry an exact payment still settles; `0` = off |
+| `LATE_SWEEP_RPC_URL` | `https://mainnet.base.org` | Free RPC for the late-payment sweep, kept off the metered provider |
 
 ---
 

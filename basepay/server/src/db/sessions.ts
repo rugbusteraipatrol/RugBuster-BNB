@@ -155,6 +155,44 @@ export async function findOpenSessionByAmount(
 }
 
 /**
+ * The expired session a late transfer of exactly `amount` pays for: expired
+ * within the window, and created before the transfer's block. The newest wins
+ * if a buyer reloaded the pay page and got several quotes for one order.
+ */
+export async function findLateSession(
+  db: Queryable,
+  addressLower: string,
+  amount: bigint,
+  blockTime: Date,
+  windowSeconds: number,
+): Promise<Session | null> {
+  const { rows } = await db.query<SessionRow>(
+    `SELECT ${COLUMNS} FROM sessions
+      WHERE lower(pay_to_address) = $1
+        AND amount_usdc = $2
+        AND status = 'expired'
+        AND expires_at >= now() - make_interval(secs => $3::double precision)
+        AND created_at <= $4
+      ORDER BY created_at DESC
+      LIMIT 1
+      FOR UPDATE`,
+    [addressLower, amount.toString(), windowSeconds, blockTime],
+  );
+  return rows[0] ? toSession(rows[0]) : null;
+}
+
+/** Addresses with a session that expired inside the late-payment window. Lowercased. */
+export async function listAddressesWithRecentlyExpiredSessions(db: Queryable, windowSeconds: number): Promise<string[]> {
+  const { rows } = await db.query<{ address: string }>(
+    `SELECT DISTINCT lower(pay_to_address) AS address FROM sessions
+      WHERE status = 'expired'
+        AND expires_at >= now() - make_interval(secs => $1::double precision)`,
+    [windowSeconds],
+  );
+  return rows.map((r) => r.address);
+}
+
+/**
  * Open sessions for this address whose quote falls inside [minQuote, maxQuote].
  * The window is computed from the observed transfer value; the decision about
  * which (if any) of these the transfer belongs to is made by the pure matcher in

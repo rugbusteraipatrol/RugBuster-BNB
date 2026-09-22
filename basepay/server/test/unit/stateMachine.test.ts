@@ -18,6 +18,7 @@ describe('session state machine', () => {
       'pending->confirming',
       'pending->underpaid',
       'pending->expired',
+      'expired->confirming',
       'confirming->paid',
       'confirming->pending',
     ]);
@@ -29,12 +30,19 @@ describe('session state machine', () => {
     }
   });
 
-  it('never lets a session leave a terminal state', () => {
-    for (const terminal of ['paid', 'underpaid', 'expired'] as const) {
+  it('never lets a paid or underpaid session move again', () => {
+    for (const terminal of ['paid', 'underpaid'] as const) {
       expect(isTerminal(terminal)).toBe(true);
       expect(allowedTransitions(terminal)).toHaveLength(0);
       for (const to of ALL) expect(canTransition(terminal, to)).toBe(false);
     }
+  });
+
+  it('lets an expired session go only to confirming, for a late exact payment', () => {
+    expect(isTerminal('expired')).toBe(true);
+    expect(allowedTransitions('expired')).toEqual(['confirming']);
+    expect(canTransition('expired', 'paid')).toBe(false);
+    expect(canTransition('expired', 'pending')).toBe(false);
   });
 
   it('treats only pending and confirming as open', () => {
@@ -61,7 +69,7 @@ describe('session state machine', () => {
   });
 
   it('derives the source set used as the database guard', () => {
-    expect(sourcesFor('confirming')).toEqual(['pending']);
+    expect(sourcesFor('confirming')).toEqual(['pending', 'expired']);
     expect(sourcesFor('paid')).toEqual(['confirming']);
     expect(sourcesFor('underpaid')).toEqual(['pending']);
     expect(sourcesFor('pending')).toEqual(['confirming']);

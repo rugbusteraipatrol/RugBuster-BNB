@@ -13,6 +13,7 @@ interface FakeLog {
 interface FakeBlock {
   number: bigint;
   hash: string;
+  timestamp: bigint;
   logs: FakeLog[];
 }
 
@@ -46,12 +47,13 @@ export class FakeChain {
   }
 
   /** Appends a block containing the given transfers. Returns its number. */
-  mine(transfers: PendingTransfer[] = []): bigint {
+  mine(transfers: PendingTransfer[] = [], timestamp?: Date): bigint {
     const number = BigInt(this.blocks.length);
     const hash = `0x${randomUUID().replace(/-/g, '')}${randomUUID().replace(/-/g, '')}`.slice(0, 66);
     this.blocks.push({
       number,
       hash,
+      timestamp: BigInt(Math.floor((timestamp ?? new Date()).getTime() / 1000)),
       logs: transfers.map((t) => {
         this.logCounter += 1;
         return {
@@ -115,11 +117,11 @@ export class FakeChain {
         return matched;
       },
 
-      getBlock: async (args: { blockNumber: bigint }): Promise<{ hash: string; number: bigint }> => {
+      getBlock: async (args: { blockNumber: bigint }): Promise<{ hash: string; number: bigint; timestamp: bigint }> => {
         this.calls.getBlock += 1;
         const block = this.blocks[Number(args.blockNumber)];
         if (!block) throw new Error(`block ${args.blockNumber} not found`);
-        return { hash: block.hash, number: block.number };
+        return { hash: block.hash, number: block.number, timestamp: block.timestamp };
       },
 
       // The tests drive `tick()` directly, so no subscription is needed.

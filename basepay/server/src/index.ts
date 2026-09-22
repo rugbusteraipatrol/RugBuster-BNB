@@ -10,6 +10,7 @@ import { TransakClient } from './onramp/transak.js';
 import { fetchUsdcPriceUsd } from './price/coingecko.js';
 import { PriceService } from './price/priceService.js';
 import { SessionService } from './sessions/sessionService.js';
+import { LateSweep } from './watcher/lateSweep.js';
 import { Watcher } from './watcher/watcher.js';
 import { WebhookWorker } from './webhooks/dispatcher.js';
 
@@ -54,6 +55,10 @@ const sessionService = new SessionService(pool, config, priceService, transak);
 const watcher = config.watcher.enabled ? new Watcher(pool, config) : null;
 if (watcher) await watcher.start();
 
+// Late payments ride on the watcher's confirmation pass, so they need it running.
+const lateSweep = watcher ? new LateSweep(pool, config) : null;
+lateSweep?.start();
+
 const webhookWorker = new WebhookWorker(pool, config, async (merchantId) => {
   const merchant = await getMerchant(pool, merchantId);
   return merchant?.webhookSecret ?? null;
@@ -87,7 +92,7 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 
     void (async () => {
       server.close();
-      await Promise.allSettled([watcher?.stop(), webhookWorker.stop()]);
+      await Promise.allSettled([watcher?.stop(), lateSweep?.stop(), webhookWorker.stop()]);
       await pool.end();
       process.exit(0);
     })();
