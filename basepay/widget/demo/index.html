@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Try the checkout — BasePay</title>
+    <title>Try the checkout — StableCart</title>
     <style>
       :root { color-scheme: light dark; }
       body {
@@ -55,7 +55,7 @@
   <body>
     <main>
       <section class="panel">
-        <a class="back" href="/">← BasePay</a>
+        <a class="back" href="/">← StableCart</a>
         <h1>Try the checkout</h1>
         <p>
           This is the checkout your customers see on your site: the price, the exact
@@ -108,7 +108,7 @@
           const notice = document.getElementById('network');
           notice.textContent =
             chainId === 8453
-              ? `This checkout is live on Base. You do not have to pay to try it, but if you do, it is real: $${amountUsd} in USDC goes to BasePay's wallet, and your wallet adds a network fee of about a cent.`
+              ? `This checkout is live on Base. You do not have to pay to try it, but if you do, it is real: $${amountUsd} in USDC goes to StableCart's wallet, and your wallet adds a network fee of about a cent.`
               : `Connected to a test chain (chain ID ${chainId}). Nothing here is real money; pay it with npm run dev:pay, as the README describes.`;
           notice.hidden = false;
         })
@@ -120,7 +120,7 @@
         mountPoint.replaceChildren();
         log.textContent = 'Opening a payment session…';
 
-        widget = window.BasePay.mount({
+        widget = window.StableCart.mount({
           merchantId,
           amountUsd,
           orderRef: 'DEMO',
@@ -130,7 +130,7 @@
       });
 
       // The widget announces terminal states on its host element.
-      mountPoint.addEventListener('basepay:settled', (event) => {
+      mountPoint.addEventListener('stablecart:settled', (event) => {
         log.textContent = `Session ${event.detail.sessionId} finished as "${event.detail.status}".`;
       });
     </script>
