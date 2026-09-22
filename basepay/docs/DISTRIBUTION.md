@@ -1,4 +1,58 @@
-# Where BasePay can be listed and sold
+# Where StableCart can be listed and sold
+
+## Update 2026-09-22 — platform by platform
+
+Researched after the WooCommerce plugin shipped. Ranked by reach per day of
+work. "Works today" means the embeddable widget (one script tag) already runs
+there; "channel" means a place merchants browse and install from.
+
+| Platform | Can we be a real payment method? | Channel | Effort | Verdict |
+| --- | --- | --- | --- | --- |
+| **WordPress family** (Easy Digital Downloads, Gravity Forms, WPForms, GiveWP, memberships) | Yes — each has a gateway/add-on API like WooCommerce | WordPress.org, one listing per add-on | Low each (same server, same webhook, PHP already written) | **Do next.** Crypto add-ons already exist for EDD and Gravity Forms, so the category is accepted |
+| **Payment links** (hosted checkout on stablecart.org) | Yes — any platform, invoices, Instagram, email | Our own site; no marketplace | ~1 day (we have `/pro/` as the template) | **Do first.** Works everywhere the plugins never will |
+| **Framer** | Not in a cart, but Framer has no cart either: plugins add a Stripe/Razorpay/Dodo *button* | Framer Marketplace (plugins), 0% cut | Low–medium (small React plugin that inserts our embed) | **Good second channel.** Few crypto plugins there |
+| **Webflow** | No — Webflow Ecommerce only takes Stripe and PayPal, no custom gateway API. A "buy this" button per product works today (KASETA store) | Webflow Marketplace (Designer Extension), review ~10–15 business days, needs demo video + docs | Medium | Worth it for trust and the Apps panel; after Framer |
+| **PrestaShop** | Yes — payment module API; Addons marketplace has a Cryptocurrencies category | PrestaShop Addons (technical validation; 300k stores, strong in FR/ES/IT) | Medium (PHP module, ~WooCommerce-sized) | Do after the WordPress family; Europe-heavy audience that card processors decline |
+| **OpenCart / Magento** | Yes — extension APIs | OpenCart marketplace (free listing); Magento Marketplace (strict review) | Medium each | Later; smaller and shrinking |
+| **BigCommerce** | Half — no custom gateway API; crypto apps register as an *offline payment method* | App Marketplace | Medium | Later, only if asked |
+| **Shopify** | Yes, but only via Payments Apps API after Payments Partner approval; blockchain-app rules; app must be free | Shopify App Store | High + compliance | Only on demand |
+| **Wix** | Custom providers exist (Velo Payment Provider plugin) but **cannot be published to the App Market** — site owners must paste the code themselves. Listed crypto providers (CoinGate, Triple-A) are partnerships | None public | Low for a guide + Velo snippet; high for partnership | Guide only |
+| **Squarespace** | No — Squarespace Payments, Stripe, PayPal, Square only | None | Low for a guide (embed needs Business plan) | Guide only |
+| **Carrd, Ghost** | No custom providers (Ghost is Stripe-only; Carrd embeds on Pro) | None | — | Skip |
+
+### Recommended order
+
+1. **Payment links.** `stablecart.org/pay?merchant=…&amount=…&ref=…` with the
+   widget on it and the merchant's own success message. One page, and every
+   platform above can link to it.
+2. **WordPress family add-ons**, cheapest reach we have: Easy Digital Downloads
+   gateway, Gravity Forms and WPForms payment add-on, GiveWP donations. Each is
+   its own WordPress.org listing, its own search term, and reuses the
+   self-registration and webhook code from the WooCommerce plugin.
+3. **Framer plugin.**
+4. **Webflow App.**
+5. **PrestaShop module**, then OpenCart.
+6. Shopify when a merchant asks. Wix and Squarespace get a how-to page each.
+
+### Sources
+
+- Webflow payment providers (Stripe, PayPal only; custom via embed): https://www.flowradar.com/answer/can-a-third-party-payment-gateway-be-integrated-into-webflow-for-an-ecommerce-site
+- Webflow Marketplace submission and review: https://developers.webflow.com/data/v2.0.0-beta/docs/marketplace/submitting-your-app
+- Wix Payment Provider Service Plugin (own sites only, not App Market): https://dev.wix.com/docs/velo/events-service-plugins/payments/service-plugins/wix-payments/payment-provider/introduction
+- Wix crypto providers (CoinGate, Triple-A, Bankful): https://support.wix.com/en/article/connecting-coingate-as-a-payment-provider-for-cryptocurrency-payments
+- Squarespace accepted processors: https://support.squarespace.com/hc/en-us/articles/206541017-What-payment-methods-can-I-accept-with-Squarespace-Commerce
+- Framer Marketplace payment plugins (Stripe, Razorpay, Dodo): https://www.framer.com/community/marketplace/plugins/categories/ecommerce/
+- BigCommerce crypto as offline/app payment methods: https://www.bigcommerce.com/solutions/cryptocurrency-payments/
+- Shopify blockchain app requirements: https://shopify.dev/docs/apps/build/blockchain
+- PrestaShop Addons selling: https://addons.prestashop.com/en/content/25-how-to-sell-on-prestashop-addons
+- PrestaShop Cryptocurrencies category: https://addons.prestashop.com/en/802-Cryptocurrencies
+- EDD crypto gateways already listed (StableDeliver, CryptoPay, OxaPay): https://wordpress.org/plugins/stabledeliver-crypto-payments-for-easy-digital-downloads/
+- Gravity Forms crypto add-ons: https://www.gravityforms.com/blog/gravity-forms-accept-7-cryptos/
+- Ghost: Stripe only: https://ghost.org/help/alternative-payment-gateways/
+
+---
+
+## Original research (2026-09-15)
 
 Researched 2026-09-15. Ranked by: is it actually allowed, how many merchants it
 reaches, and how much work it costs. Sources at the bottom.
