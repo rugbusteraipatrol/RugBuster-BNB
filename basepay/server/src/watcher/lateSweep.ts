@@ -12,6 +12,14 @@ import { toObservedTransfer } from './watcher.js';
 /** Base produces a block every two seconds; used only to size the first look-back. */
 const BASE_BLOCK_SECONDS = 2;
 
+/**
+ * Public endpoints rate-limit by IP, and a PaaS shares its egress IPs. The
+ * sweep is never in a hurry: it spaces its calls and does a bounded amount of
+ * work per pass. Progress is saved per chunk, so the next pass carries on.
+ */
+const PAUSE_BETWEEN_CALLS_MS = 300;
+const MAX_CHUNKS_PER_PASS = 30;
+
 export const lateSweepStateId = (chainId: number, tokenAddress: string): string =>
   `late-payments:${chainId}:${tokenAddress.toLowerCase()}`;
 
@@ -31,6 +39,8 @@ export class LateSweep {
   private readonly stateId: string;
   private timer: NodeJS.Timeout | null = null;
   private running = false;
+  /** Zero in tests, where the fake chain has no rate limit. */
+  private readonly pauseMs: number;
 
   constructor(
     private readonly pool: pg.Pool,
@@ -44,6 +54,7 @@ export class LateSweep {
         transport: http(config.latePayments.rpcUrl, { retryCount: 2, timeout: 20_000 }),
         cacheTime: 0,
       }) as PublicClient);
+    this.pauseMs = client ? 0 : PAUSE_BETWEEN_CALLS_MS;
     this.settlement = new Settlement(pool, config);
     this.stateId = lateSweepStateId(config.chain.chainId, config.chain.usdcAddress);
   }
@@ -84,7 +95,8 @@ export class LateSweep {
       let revived = 0;
       const chunk = BigInt(this.config.latePayments.blockRange);
       const blockTimes = new Map<bigint, Date>();
-      for (; from <= safeHead; from += chunk) {
+      for (let chunks = 0; from <= safeHead && chunks < MAX_CHUNKS_PER_PASS; from += chunk, chunks += 1) {
+        if (chunks > 0 && this.pauseMs > 0) await new Promise((resolve) => setTimeout(resolve, this.pauseMs));
         const to = from + chunk - 1n > safeHead ? safeHead : from + chunk - 1n;
         const logs = await this.client.getLogs({
           address: this.config.chain.usdcAddress as Address,
