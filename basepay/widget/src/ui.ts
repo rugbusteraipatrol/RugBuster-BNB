@@ -430,9 +430,10 @@ export class PaymentWidget {
       this.applySession(next);
       if (TERMINAL.includes(next.status)) {
         this.stopTimers();
-        this.host.dispatchEvent(
-          new CustomEvent('basepay:settled', { detail: { status: next.status, sessionId: next.sessionId }, bubbles: true, composed: true }),
-        );
+        const detail = { status: next.status, sessionId: next.sessionId };
+        for (const name of ['basepay:settled', 'stablecart:settled']) {
+          this.host.dispatchEvent(new CustomEvent(name, { detail, bubbles: true, composed: true }));
+        }
       }
     } catch {
       // A transient network blip must not wipe a correct screen; the next tick retries.

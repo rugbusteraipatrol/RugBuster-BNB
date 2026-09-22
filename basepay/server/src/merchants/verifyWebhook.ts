@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { isIP } from 'node:net';
 import { badRequest } from '../errors.js';
 import { logger } from '../logger.js';
-import { DELIVERY_HEADER, EVENT_HEADER, SIGNATURE_HEADER, TIMESTAMP_HEADER, signatureHeaderValue } from '../webhooks/signature.js';
+import { signatureHeaderValue, signedHeaders } from '../webhooks/signature.js';
 
 export type FetchLike = (input: string, init: RequestInit) => Promise<Response>;
 
@@ -85,10 +85,7 @@ export async function verifyWebhookEndpoint(
       headers: {
         'content-type': 'application/json',
         'user-agent': 'BasePay-Webhooks/1.0',
-        [SIGNATURE_HEADER]: signatureHeaderValue(webhookSecret, timestamp, body),
-        [TIMESTAMP_HEADER]: String(timestamp),
-        [EVENT_HEADER]: 'merchant.verify',
-        [DELIVERY_HEADER]: deliveryId,
+        ...signedHeaders(signatureHeaderValue(webhookSecret, timestamp, body), timestamp, 'merchant.verify', deliveryId),
       },
       body,
       redirect: 'manual',

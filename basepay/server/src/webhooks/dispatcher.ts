@@ -12,7 +12,7 @@ import {
 } from '../db/webhookDeliveries.js';
 import { formatUsd, formatUsdc } from '../sessions/amounts.js';
 import { logger } from '../logger.js';
-import { DELIVERY_HEADER, EVENT_HEADER, TIMESTAMP_HEADER, SIGNATURE_HEADER, signatureHeaderValue } from './signature.js';
+import { signatureHeaderValue, signedHeaders } from './signature.js';
 
 export interface WebhookPayload extends Record<string, unknown> {
   id: string;
@@ -115,10 +115,7 @@ export async function attemptDelivery(
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        [SIGNATURE_HEADER]: signatureHeaderValue(secret, timestamp, rawBody),
-        [TIMESTAMP_HEADER]: String(timestamp),
-        [EVENT_HEADER]: delivery.eventType,
-        [DELIVERY_HEADER]: delivery.id,
+        ...signedHeaders(signatureHeaderValue(secret, timestamp, rawBody), timestamp, delivery.eventType, delivery.id),
         'user-agent': 'BasePay-Webhooks/1',
       },
       body: rawBody,

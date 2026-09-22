@@ -119,10 +119,13 @@ function autoMount(script: HTMLScriptElement): void {
 declare global {
   interface Window {
     BasePay?: { mount: typeof mount };
+    StableCart?: { mount: typeof mount };
   }
 }
 
+// StableCart is the product name; BasePay stays as an alias for existing embeds.
 window.BasePay = { mount };
+window.StableCart = window.BasePay;
 
 // `document.currentScript` is only valid while this script is executing, so
 // resolve it now and hand it to the deferred mount rather than looking it up later.

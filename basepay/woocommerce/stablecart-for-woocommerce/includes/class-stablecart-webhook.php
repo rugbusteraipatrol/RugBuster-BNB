@@ -1,20 +1,20 @@
 <?php
 /**
- * Receives BasePay webhooks at /?wc-api=basepay.
+ * Receives StableCart webhooks at /?wc-api=stablecart.
  *
  * Three events: `merchant.verify` (answered during Connect, proves this site
  * holds the secret), `payment.paid` (order paid) and `payment.underpaid`
  * (order on hold with a note saying how much arrived). Every request is
  * HMAC-verified against the raw body before anything is looked at.
  *
- * @package BasePay
+ * @package StableCart
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class BasePay_Webhook {
+class StableCart_Webhook {
 
-	const ENDPOINT          = 'basepay';
+	const ENDPOINT          = 'stablecart';
 	const TOLERANCE_SECONDS = 300;
 
 	public static function init() {
@@ -23,10 +23,10 @@ class BasePay_Webhook {
 
 	public static function handle() {
 		$raw       = file_get_contents( 'php://input' );
-		$timestamp = isset( $_SERVER['HTTP_X_BASEPAY_TIMESTAMP'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_BASEPAY_TIMESTAMP'] ) ) : '';
-		$signature = isset( $_SERVER['HTTP_X_BASEPAY_SIGNATURE'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_BASEPAY_SIGNATURE'] ) ) : '';
+		$timestamp = isset( $_SERVER['HTTP_X_STABLECART_TIMESTAMP'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_STABLECART_TIMESTAMP'] ) ) : '';
+		$signature = isset( $_SERVER['HTTP_X_STABLECART_SIGNATURE'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_STABLECART_SIGNATURE'] ) ) : '';
 
-		if ( ! self::verify( $raw, $timestamp, $signature, BasePay_API::webhook_secret() ) ) {
+		if ( ! self::verify( $raw, $timestamp, $signature, StableCart_API::webhook_secret() ) ) {
 			self::respond( 401, array( 'error' => 'invalid signature' ) );
 		}
 
@@ -71,7 +71,7 @@ class BasePay_Webhook {
 		if ( ! $order ) {
 			return; // Not ours (another shop's ref, or a deleted order). Acknowledge and move on.
 		}
-		if ( 'basepay' !== $order->get_payment_method() ) {
+		if ( 'stablecart' !== $order->get_payment_method() ) {
 			return;
 		}
 
@@ -83,13 +83,13 @@ class BasePay_Webhook {
 
 		// The amount the widget was told to charge is recorded when the pay page
 		// renders; a session for a different amount must not settle this order.
-		$expected_usd = (string) $order->get_meta( '_basepay_amount_usd' );
+		$expected_usd = (string) $order->get_meta( '_stablecart_amount_usd' );
 		$quoted_usd   = isset( $data['amountUsd'] ) ? (string) $data['amountUsd'] : '';
 		if ( '' !== $expected_usd && '' !== $quoted_usd && ! self::same_dollar_amount( $expected_usd, $quoted_usd ) ) {
 			$order->add_order_note(
 				sprintf(
 					/* translators: 1: amount quoted to the buyer, 2: amount this order expects */
-					__( 'BasePay: ignored a payment quoted at $%1$s USD; this order expects $%2$s USD.', 'basepay-for-woocommerce' ),
+					__( 'StableCart: ignored a payment quoted at $%1$s USD; this order expects $%2$s USD.', 'stablecart-for-woocommerce' ),
 					$quoted_usd,
 					$expected_usd
 				)
@@ -97,9 +97,9 @@ class BasePay_Webhook {
 			return;
 		}
 
-		$order->update_meta_data( '_basepay_session_id', $session_id );
+		$order->update_meta_data( '_stablecart_session_id', $session_id );
 		if ( $tx ) {
-			$order->update_meta_data( '_basepay_tx_hash', $tx );
+			$order->update_meta_data( '_stablecart_tx_hash', $tx );
 		}
 
 		if ( 'payment.paid' === $type ) {
@@ -110,7 +110,7 @@ class BasePay_Webhook {
 			$order->add_order_note(
 				sprintf(
 					/* translators: 1: USDC amount, 2: transaction link */
-					__( 'BasePay: %1$s USDC received on Base. Transaction: %2$s', 'basepay-for-woocommerce' ),
+					__( 'StableCart: %1$s USDC received on Base. Transaction: %2$s', 'stablecart-for-woocommerce' ),
 					$received,
 					$explorer ? $explorer : $tx
 				)
@@ -124,7 +124,7 @@ class BasePay_Webhook {
 			'on-hold',
 			sprintf(
 				/* translators: 1: received USDC, 2: due USDC, 3: transaction link */
-				__( 'BasePay: underpaid — %1$s of %2$s USDC received. Nothing is refunded automatically; contact the buyer. Transaction: %3$s', 'basepay-for-woocommerce' ),
+				__( 'StableCart: underpaid — %1$s of %2$s USDC received. Nothing is refunded automatically; contact the buyer. Transaction: %3$s', 'stablecart-for-woocommerce' ),
 				$received,
 				$due,
 				$explorer ? $explorer : $tx
@@ -143,7 +143,7 @@ class BasePay_Webhook {
 			return null;
 		}
 		// The key fragment stops a guessed order id from settling somebody else's order.
-		if ( BasePay_Gateway::order_ref( $order ) !== $ref ) {
+		if ( StableCart_Gateway::order_ref( $order ) !== $ref ) {
 			return null;
 		}
 		return $order;

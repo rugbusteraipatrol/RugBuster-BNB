@@ -5,6 +5,23 @@ export const TIMESTAMP_HEADER = 'x-basepay-timestamp';
 export const EVENT_HEADER = 'x-basepay-event';
 export const DELIVERY_HEADER = 'x-basepay-delivery';
 
+/**
+ * The product is now called StableCart. Deliveries carry both header families,
+ * so receivers written against either name keep working.
+ */
+export function signedHeaders(signature: string, timestamp: number, event: string, deliveryId: string): Record<string, string> {
+  return {
+    [SIGNATURE_HEADER]: signature,
+    [TIMESTAMP_HEADER]: String(timestamp),
+    [EVENT_HEADER]: event,
+    [DELIVERY_HEADER]: deliveryId,
+    'x-stablecart-signature': signature,
+    'x-stablecart-timestamp': String(timestamp),
+    'x-stablecart-event': event,
+    'x-stablecart-delivery': deliveryId,
+  };
+}
+
 /** Default replay window a receiver should accept, in seconds. */
 export const DEFAULT_TOLERANCE_SECONDS = 300;
 

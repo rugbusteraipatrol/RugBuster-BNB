@@ -1,6 +1,6 @@
 /* global wc, wp */
 ( function () {
-	var settings = wc.wcSettings.getSetting( 'basepay_data', {} );
+	var settings = wc.wcSettings.getSetting( 'stablecart_data', {} );
 	var label = wp.htmlEntities.decodeEntities( settings.title || 'USDC on Base' );
 	var el = wp.element.createElement;
 
@@ -20,7 +20,7 @@
 	};
 
 	wc.wcBlocksRegistry.registerPaymentMethod( {
-		name: 'basepay',
+		name: 'stablecart',
 		label: el( Label ),
 		content: el( Content ),
 		edit: el( Content ),

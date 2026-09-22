@@ -4,25 +4,23 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <!-- Served from the Railway address until a custom domain exists. When one does,
-         replace basepay-production.up.railway.app everywhere in this file, in
-         robots.txt and in sitemap.xml. -->
-    <title>Accept USDC payments without a merchant account — BasePay</title>
+    <!-- Canonical domain is stablecart.org; robots.txt and sitemap.xml use it too. -->
+    <title>Accept USDC payments without a merchant account — StableCart</title>
     <meta
       name="description"
       content="Accept payments on your website with only a wallet address. No merchant account, no KYB, no bank. Funds go straight from buyer to you, never held in between."
     />
-    <link rel="canonical" href="https://basepay-production.up.railway.app/" />
+    <link rel="canonical" href="https://stablecart.org/" />
     <meta name="robots" content="index, follow" />
 
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://basepay-production.up.railway.app/" />
+    <meta property="og:url" content="https://stablecart.org/" />
     <meta property="og:title" content="Accept USDC payments without a merchant account" />
     <meta
       property="og:description"
       content="One script tag. One wallet address. Non-custodial USDC checkout on Base for merchants who cannot get a payment processor."
     />
-    <meta property="og:site_name" content="BasePay" />
+    <meta property="og:site_name" content="StableCart" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Accept USDC payments without a merchant account" />
     <meta
@@ -312,7 +310,7 @@
             too small to be worth the underwriting.
           </p>
           <p>
-            The usual advice is to apply somewhere else and wait. BasePay skips the
+            The usual advice is to apply somewhere else and wait. StableCart skips the
             gatekeeper entirely. There is no application, because there is nothing
             to approve — your customer's wallet pays your wallet, and this service
             only watches the blockchain and tells you when the money arrived.
@@ -336,13 +334,13 @@
               <h3>They send USDC straight to you</h3>
               <p class="muted">
                 Directly from their wallet to yours, on the Base network. The payment
-                does not pass through BasePay, an escrow, or anyone else.
+                does not pass through StableCart, an escrow, or anyone else.
               </p>
             </li>
             <li>
               <h3>You get told it arrived</h3>
               <p class="muted">
-                BasePay watches the chain, confirms the payment, and notifies your site
+                StableCart watches the chain, confirms the payment, and notifies your site
                 so the order completes. Typically under a minute.
               </p>
             </li>
@@ -360,7 +358,7 @@
             days, or claw it back.
           </p>
 
-          <div class="flow" role="img" aria-label="Money moves directly from the buyer's wallet to your wallet. BasePay only reads the blockchain.">
+          <div class="flow" role="img" aria-label="Money moves directly from the buyer's wallet to your wallet. StableCart only reads the blockchain.">
             <div class="node">Buyer's wallet</div>
             <div class="arrow" aria-hidden="true">→</div>
             <div class="node money">
@@ -368,10 +366,10 @@
               <small>funds arrive here</small>
             </div>
           </div>
-          <p class="aside-node">↑ BasePay sits outside this line — it only reads the blockchain and reports status.</p>
+          <p class="aside-node">↑ StableCart sits outside this line — it only reads the blockchain and reports status.</p>
 
           <p>
-            BasePay holds no private key. Not yours, not one of its own. It cannot
+            StableCart holds no private key. Not yours, not one of its own. It cannot
             move your funds, freeze them, or lose them, because it never has them.
             The flip side is stated plainly in the FAQ: it also cannot issue refunds
             for you.
@@ -385,7 +383,7 @@
           <p>Give us a wallet address. Put this where the checkout should appear:</p>
           <pre><code>&lt;div id="checkout"&gt;&lt;/div&gt;
 &lt;script
-  src="https://basepay-production.up.railway.app/widget/widget.js"
+  src="https://stablecart.org/widget/widget.js"
   data-merchant="your-store"
   data-amount-usd="45.00"
   data-order-ref="ORDER-1001"
@@ -415,11 +413,11 @@
           </p>
           <ol class="steps">
             <li><strong>Download the plugin</strong> and upload it under <em>Plugins → Add New → Upload Plugin</em>. Activate it.</li>
-            <li><strong>Open <em>WooCommerce → Settings → Payments → BasePay</em></strong> and paste the wallet address that should receive payments.</li>
+            <li><strong>Open <em>WooCommerce → Settings → Payments → StableCart</em></strong> and paste the wallet address that should receive payments.</li>
             <li><strong>Click Save.</strong> The page says <em>Connected</em>. Buyers now see “USDC on Base” at checkout.</li>
           </ol>
           <div class="cta-row">
-            <a class="btn primary" href="/downloads/basepay-for-woocommerce.zip" download>Download for WooCommerce</a>
+            <a class="btn primary" href="/downloads/stablecart-for-woocommerce.zip" download>Download for WooCommerce</a>
             <a class="btn" href="/demo/">See the checkout first</a>
           </div>
           <p class="muted">
@@ -516,7 +514,7 @@
                 Most likely, because nobody is reviewing you. Do check that what you
                 sell is legal where you and your customers are — being outside the card
                 networks does not put you outside the law, and this is your
-                responsibility, not something BasePay can check for you.
+                responsibility, not something StableCart can check for you.
               </p>
             </div>
           </details>
@@ -526,7 +524,7 @@
             <div class="answer">
               <p>
                 No. Funds go from the buyer's wallet to your wallet in a single
-                blockchain transaction. BasePay holds no private key and has no ability
+                blockchain transaction. StableCart holds no private key and has no ability
                 to move, freeze, or withhold your money. It reads public blockchain data
                 and reports payment status.
               </p>
@@ -543,7 +541,7 @@
               </p>
               <p>
                 Separately from anything we charge: your buyer pays the Base network fee
-                to send the transaction, typically a fraction of a cent. BasePay takes no
+                to send the transaction, typically a fraction of a cent. StableCart takes no
                 cut of the payment itself — it cannot, since the money never passes
                 through it.
               </p>
@@ -588,7 +586,7 @@
             <summary>What about refunds?</summary>
             <div class="answer">
               <p>
-                You issue them yourself, from your own wallet. BasePay cannot send money
+                You issue them yourself, from your own wallet. StableCart cannot send money
                 on your behalf because it holds no keys — the same property that stops
                 anyone from freezing your funds also stops automated refunds. If a
                 customer underpays, you are told what arrived and you decide what to do.
@@ -666,7 +664,7 @@
             Bring a wallet address. Everything else takes about ten minutes.
           </p>
           <div class="cta-row">
-            <a class="btn primary" href="mailto:fedja@rugbuster.io?subject=BasePay%20setup">Get set up</a>
+            <a class="btn primary" href="mailto:fedja@rugbuster.io?subject=StableCart%20setup">Get set up</a>
             <a class="btn" href="/demo/">Try the demo checkout</a>
           </div>
         </div>
@@ -676,8 +674,8 @@
     <footer class="site">
       <div class="wrap">
         <p>
-          BasePay — non-custodial USDC checkout on Base. Funds move directly from buyer
-          to merchant; BasePay never takes custody.
+          StableCart — non-custodial USDC checkout on Base. Funds move directly from buyer
+          to merchant; StableCart never takes custody.
         </p>
         <p>
           Cryptocurrency payments are final and are not covered by card-network
@@ -690,10 +688,10 @@
       {
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
-        "name": "BasePay",
+        "name": "StableCart",
         "applicationCategory": "BusinessApplication",
         "operatingSystem": "Web",
-        "url": "https://basepay-production.up.railway.app/",
+        "url": "https://stablecart.org/",
         "description": "Non-custodial USDC checkout on the Base network. Accept payments on any website with only a wallet address — no merchant account, no KYB, no bank."
       }
     </script>
@@ -721,15 +719,15 @@
           },
           {
             "@type": "Question",
-            "name": "Does BasePay hold my money?",
+            "name": "Does StableCart hold my money?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "No. Funds go from the buyer's wallet to your wallet in a single blockchain transaction. BasePay holds no private key and cannot move, freeze, or withhold your money."
+              "text": "No. Funds go from the buyer's wallet to your wallet in a single blockchain transaction. StableCart holds no private key and cannot move, freeze, or withhold your money."
             }
           },
           {
             "@type": "Question",
-            "name": "What does BasePay cost?",
+            "name": "What does StableCart cost?",
             "acceptedAnswer": {
               "@type": "Answer",
               "text": "Free for 20 paid orders a month; Pro is $12 a month for unlimited orders. No setup fee and no cut of sales on either plan. The buyer pays the Base network fee to send the payment, typically a fraction of a cent."
@@ -756,7 +754,7 @@
             "name": "What about refunds and chargebacks?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Blockchain payments are final, so there are no chargebacks. Refunds are issued by the merchant from their own wallet; BasePay cannot send money on their behalf because it holds no keys."
+              "text": "Blockchain payments are final, so there are no chargebacks. Refunds are issued by the merchant from their own wallet; StableCart cannot send money on their behalf because it holds no keys."
             }
           },
           {

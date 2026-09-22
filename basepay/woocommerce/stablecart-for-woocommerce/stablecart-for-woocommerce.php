@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name:       BasePay – USDC Payments for WooCommerce
- * Plugin URI:        https://basepay-production.up.railway.app
+ * Plugin Name:       StableCart for WooCommerce
+ * Plugin URI:        https://stablecart.org
  * Description:       Accept USDC on Base straight into your own wallet. Paste a wallet address, click Connect, done. No account, no API keys, no custody.
  * Version:           0.2.0
  * Requires at least: 6.4
@@ -10,27 +10,27 @@
  * WC requires at least: 8.2
  * WC tested up to:   11.1
  * Author:            Fantom Studio
- * Author URI:        https://basepay-production.up.railway.app
+ * Author URI:        https://stablecart.org
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain:       basepay-for-woocommerce
+ * Text Domain:       stablecart-for-woocommerce
  *
- * @package BasePay
+ * @package StableCart
  */
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'BASEPAY_WC_VERSION', '0.2.0' );
-define( 'BASEPAY_WC_FILE', __FILE__ );
-define( 'BASEPAY_WC_DIR', plugin_dir_path( __FILE__ ) );
-define( 'BASEPAY_WC_URL', plugin_dir_url( __FILE__ ) );
+define( 'STABLECART_WC_VERSION', '0.2.0' );
+define( 'STABLECART_WC_FILE', __FILE__ );
+define( 'STABLECART_WC_DIR', plugin_dir_path( __FILE__ ) );
+define( 'STABLECART_WC_URL', plugin_dir_url( __FILE__ ) );
 
 /**
- * Where the BasePay service lives. Filterable so a self-hosted service can be
- * pointed at without editing the plugin: add_filter( 'basepay_api_base_url', ... ).
+ * Where the StableCart service lives. Filterable so a self-hosted service can be
+ * pointed at without editing the plugin: add_filter( 'stablecart_api_base_url', ... ).
  */
-function basepay_wc_api_base_url() {
-	return untrailingslashit( apply_filters( 'basepay_api_base_url', 'https://basepay-production.up.railway.app' ) );
+function stablecart_wc_api_base_url() {
+	return untrailingslashit( apply_filters( 'stablecart_api_base_url', 'https://stablecart.org' ) );
 }
 
 add_action(
@@ -49,17 +49,17 @@ add_action(
 		if ( ! class_exists( 'WC_Payment_Gateway' ) ) {
 			return;
 		}
-		require_once BASEPAY_WC_DIR . 'includes/class-basepay-api.php';
-		require_once BASEPAY_WC_DIR . 'includes/class-basepay-rates.php';
-		require_once BASEPAY_WC_DIR . 'includes/class-basepay-webhook.php';
-		require_once BASEPAY_WC_DIR . 'includes/class-basepay-gateway.php';
+		require_once STABLECART_WC_DIR . 'includes/class-stablecart-api.php';
+		require_once STABLECART_WC_DIR . 'includes/class-stablecart-rates.php';
+		require_once STABLECART_WC_DIR . 'includes/class-stablecart-webhook.php';
+		require_once STABLECART_WC_DIR . 'includes/class-stablecart-gateway.php';
 
-		BasePay_Webhook::init();
+		StableCart_Webhook::init();
 
 		add_filter(
 			'woocommerce_payment_gateways',
 			function ( $gateways ) {
-				$gateways[] = 'BasePay_Gateway';
+				$gateways[] = 'StableCart_Gateway';
 				return $gateways;
 			}
 		);
@@ -72,11 +72,11 @@ add_action(
 		if ( ! class_exists( \Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType::class ) ) {
 			return;
 		}
-		require_once BASEPAY_WC_DIR . 'includes/class-basepay-blocks.php';
+		require_once STABLECART_WC_DIR . 'includes/class-stablecart-blocks.php';
 		add_action(
 			'woocommerce_blocks_payment_method_type_registration',
 			function ( \Automattic\WooCommerce\Blocks\Payments\PaymentMethodRegistry $registry ) {
-				$registry->register( new BasePay_Blocks() );
+				$registry->register( new StableCart_Blocks() );
 			}
 		);
 	}
@@ -85,8 +85,8 @@ add_action(
 add_filter(
 	'plugin_action_links_' . plugin_basename( __FILE__ ),
 	function ( $links ) {
-		$settings = '<a href="' . esc_url( admin_url( 'admin.php?page=wc-settings&tab=checkout&section=basepay' ) ) . '">'
-			. esc_html__( 'Settings', 'basepay-for-woocommerce' ) . '</a>';
+		$settings = '<a href="' . esc_url( admin_url( 'admin.php?page=wc-settings&tab=checkout&section=stablecart' ) ) . '">'
+			. esc_html__( 'Settings', 'stablecart-for-woocommerce' ) . '</a>';
 		array_unshift( $links, $settings );
 		return $links;
 	}

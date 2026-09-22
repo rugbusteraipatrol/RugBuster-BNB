@@ -1,21 +1,21 @@
 <?php
 /**
- * Thin HTTP client for the BasePay service.
+ * Thin HTTP client for the StableCart service.
  *
  * Three calls: register this shop, read its plan and usage, update its wallet.
  * Payment sessions are opened by the widget in the buyer's browser, not here.
  *
- * @package BasePay
+ * @package StableCart
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class BasePay_API {
+class StableCart_API {
 
-	const OPTION_MERCHANT_ID    = 'basepay_merchant_id';
-	const OPTION_MERCHANT_KEY   = 'basepay_merchant_key';
-	const OPTION_WEBHOOK_SECRET = 'basepay_webhook_secret';
-	const OPTION_WALLET         = 'basepay_connected_wallet';
+	const OPTION_MERCHANT_ID    = 'stablecart_merchant_id';
+	const OPTION_MERCHANT_KEY   = 'stablecart_merchant_key';
+	const OPTION_WEBHOOK_SECRET = 'stablecart_webhook_secret';
+	const OPTION_WALLET         = 'stablecart_connected_wallet';
 
 	/** Secret used to sign webhooks; generated once per site. */
 	public static function webhook_secret() {
@@ -28,7 +28,7 @@ class BasePay_API {
 	}
 
 	public static function webhook_url() {
-		return add_query_arg( 'wc-api', BasePay_Webhook::ENDPOINT, home_url( '/' ) );
+		return add_query_arg( 'wc-api', StableCart_Webhook::ENDPOINT, home_url( '/' ) );
 	}
 
 	public static function merchant_id() {
@@ -62,7 +62,7 @@ class BasePay_API {
 		update_option( self::OPTION_MERCHANT_ID, $response['merchantId'], false );
 		update_option( self::OPTION_MERCHANT_KEY, $response['merchantKey'], false );
 		update_option( self::OPTION_WALLET, $response['walletAddress'], false );
-		delete_transient( 'basepay_merchant_view' );
+		delete_transient( 'stablecart_merchant_view' );
 		return $response['merchantId'];
 	}
 
@@ -73,7 +73,7 @@ class BasePay_API {
 			return $response;
 		}
 		update_option( self::OPTION_WALLET, $response['walletAddress'], false );
-		delete_transient( 'basepay_merchant_view' );
+		delete_transient( 'stablecart_merchant_view' );
 		return $response['walletAddress'];
 	}
 
@@ -82,7 +82,7 @@ class BasePay_API {
 		if ( ! self::is_connected() ) {
 			return null;
 		}
-		$cached = $force ? false : get_transient( 'basepay_merchant_view' );
+		$cached = $force ? false : get_transient( 'stablecart_merchant_view' );
 		if ( is_array( $cached ) ) {
 			return $cached;
 		}
@@ -90,7 +90,7 @@ class BasePay_API {
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
-		set_transient( 'basepay_merchant_view', $response, 5 * MINUTE_IN_SECONDS );
+		set_transient( 'stablecart_merchant_view', $response, 5 * MINUTE_IN_SECONDS );
 		return $response;
 	}
 
@@ -98,7 +98,7 @@ class BasePay_API {
 		delete_option( self::OPTION_MERCHANT_ID );
 		delete_option( self::OPTION_MERCHANT_KEY );
 		delete_option( self::OPTION_WALLET );
-		delete_transient( 'basepay_merchant_view' );
+		delete_transient( 'stablecart_merchant_view' );
 	}
 
 	/**
@@ -110,7 +110,7 @@ class BasePay_API {
 			'timeout' => 20,
 			'headers' => array(
 				'accept'     => 'application/json',
-				'user-agent' => 'BasePay-WooCommerce/' . BASEPAY_WC_VERSION . '; ' . home_url( '/' ),
+				'user-agent' => 'StableCart-WooCommerce/' . STABLECART_WC_VERSION . '; ' . home_url( '/' ),
 			),
 		);
 		if ( null !== $body ) {
@@ -121,7 +121,7 @@ class BasePay_API {
 			$args['headers']['authorization'] = 'Bearer ' . get_option( self::OPTION_MERCHANT_KEY );
 		}
 
-		$response = wp_remote_request( basepay_wc_api_base_url() . $path, $args );
+		$response = wp_remote_request( stablecart_wc_api_base_url() . $path, $args );
 		if ( is_wp_error( $response ) ) {
 			return new WP_Error( 'NETWORK', $response->get_error_message() );
 		}
@@ -132,7 +132,7 @@ class BasePay_API {
 			return $decoded;
 		}
 		$code    = isset( $decoded['error']['code'] ) ? (string) $decoded['error']['code'] : 'HTTP_' . $status;
-		$message = isset( $decoded['error']['message'] ) ? (string) $decoded['error']['message'] : __( 'The BasePay service returned an unexpected response.', 'basepay-for-woocommerce' );
+		$message = isset( $decoded['error']['message'] ) ? (string) $decoded['error']['message'] : __( 'The StableCart service returned an unexpected response.', 'stablecart-for-woocommerce' );
 		return new WP_Error( $code, $message, array( 'status' => $status ) );
 	}
 }

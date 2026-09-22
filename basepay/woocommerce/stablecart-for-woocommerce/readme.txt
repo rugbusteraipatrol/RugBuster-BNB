@@ -1,4 +1,4 @@
-=== BasePay – USDC Payments for WooCommerce ===
+=== StableCart for WooCommerce ===
 Contributors: fantomstudio
 Tags: crypto, usdc, stablecoin, payment gateway, base
 Requires at least: 6.4
@@ -12,9 +12,9 @@ Accept USDC on Base straight into your own wallet. Paste a wallet address, save,
 
 == Description ==
 
-BasePay lets a WooCommerce shop take **USDC** (a dollar stablecoin) on the **Base** network. The buyer pays your wallet directly, in one blockchain transaction. BasePay never holds the money and cannot freeze, delay or reverse it.
+StableCart lets a WooCommerce shop take **USDC** (a dollar stablecoin) on the **Base** network. The buyer pays your wallet directly, in one blockchain transaction. StableCart never holds the money and cannot freeze, delay or reverse it.
 
-**Setup takes one minute.** Paste your wallet address into the gateway settings and save. The plugin registers your shop with the BasePay service by itself: there is no account to open, no email to confirm, no API key to copy and no identity check. If you can receive USDC in a wallet, you can take payments.
+**Setup takes one minute.** Paste your wallet address into the gateway settings and save. The plugin registers your shop with the StableCart service by itself: there is no account to open, no email to confirm, no API key to copy and no identity check. If you can receive USDC in a wallet, you can take payments.
 
 **What the buyer sees.** At checkout they pick "USDC on Base" and land on a pay page with the exact amount and a QR code. They scan it with any wallet app on their phone, or pay from a browser wallet such as MetaMask or Coinbase Wallet. The page updates itself while the network confirms the payment, then sends them to your order-received page. The pay page speaks English and Serbian.
 
@@ -26,21 +26,21 @@ BasePay lets a WooCommerce shop take **USDC** (a dollar stablecoin) on the **Bas
 
 = How it stays safe =
 
-* Every payment gets its own exact amount (for example 45.000173 USDC). That is how BasePay knows which order was paid without giving each order a new wallet.
+* Every payment gets its own exact amount (for example 45.000173 USDC). That is how StableCart knows which order was paid without giving each order a new wallet.
 * Payment notifications are signed (HMAC-SHA256). The plugin checks the signature against the raw request before touching an order.
 * A payment only completes an order if it was quoted for that order's amount.
 * Blockchain reorganisations are handled: a payment that disappears from the chain does not complete an order.
 
 = External services =
 
-This plugin connects to the **BasePay service** (https://basepay-production.up.railway.app), operated by Fantom Studio, which watches the Base blockchain for your payments:
+This plugin connects to the **StableCart service** (https://stablecart.org), operated by Fantom Studio, which watches the Base blockchain for your payments:
 
 * On save of the settings it sends your **wallet address, your shop URL and a webhook secret** to register the shop, and later to change the wallet.
-* On the pay page the buyer's browser loads the BasePay checkout widget from that service and opens a payment session containing the **order amount in USD and the order reference** (order id plus a fragment of the order key). No customer name, email or address is sent.
-* The service calls your shop's `?wc-api=basepay` endpoint to confirm payments.
-* The settings page reads your plan and usage from the service. Upgrading to Pro opens a BasePay checkout page on the same service (https://basepay-production.up.railway.app/pro/), which sends your shop id as the order reference.
+* On the pay page the buyer's browser loads the StableCart checkout widget from that service and opens a payment session containing the **order amount in USD and the order reference** (order id plus a fragment of the order key). No customer name, email or address is sent.
+* The service calls your shop's `?wc-api=stablecart` endpoint to confirm payments.
+* The settings page reads your plan and usage from the service. Upgrading to Pro opens a StableCart checkout page on the same service (https://stablecart.org/pro/), which sends your shop id as the order reference.
 
-Terms and privacy: https://basepay-production.up.railway.app
+Terms and privacy: https://stablecart.org
 
 For currency conversion in shops not priced in USD, the plugin fetches daily exchange rates from **open.er-api.com** (https://www.exchangerate-api.com/terms). Only the request for rates is made; nothing about your shop is sent.
 
@@ -49,7 +49,7 @@ The pay page links transactions to **basescan.org**, a public block explorer.
 == Installation ==
 
 1. Install and activate the plugin.
-2. Go to *WooCommerce → Settings → Payments → BasePay – USDC on Base*.
+2. Go to *WooCommerce → Settings → Payments → StableCart – USDC on Base*.
 3. Paste the wallet address that should receive payments and click *Save changes*.
 4. The page shows *Connected*. You are taking USDC.
 
@@ -57,7 +57,7 @@ Your shop must be reachable over https from the internet, so payment notificatio
 
 == Frequently Asked Questions ==
 
-= Do I need an account with BasePay? =
+= Do I need an account with StableCart? =
 
 No. Saving a wallet address is the whole registration. Your shop proves it controls its own webhook address, and that is the only credential.
 

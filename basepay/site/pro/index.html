@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Upgrade to Pro — BasePay</title>
+    <title>Upgrade to Pro — StableCart</title>
     <meta name="robots" content="noindex" />
     <style>
       :root { color-scheme: light dark; }
@@ -45,7 +45,7 @@
   <body>
     <main>
       <section class="panel">
-        <a class="back" href="/">← BasePay</a>
+        <a class="back" href="/">← StableCart</a>
         <h1>Upgrade to Pro</h1>
         <p id="for"></p>
         <ul>
@@ -55,7 +55,7 @@
           <li>No subscription to cancel: when the 30 days end, the shop goes back to the free plan (20 orders a month).</li>
         </ul>
         <p class="notice" id="status" role="status" aria-live="polite" hidden></p>
-        <p>Questions: <a href="mailto:fedja@rugbuster.io?subject=BasePay%20Pro">fedja@rugbuster.io</a></p>
+        <p>Questions: <a href="mailto:fedja@rugbuster.io?subject=StableCart%20Pro">fedja@rugbuster.io</a></p>
       </section>
       <section class="panel">
         <div id="basepay"></div>
@@ -76,22 +76,22 @@
 
         if (!/^[a-zA-Z0-9._-]{1,128}$/.test(merchant)) {
           document.getElementById('for').textContent = 'This link is missing your shop id.';
-          show('Open this page from the BasePay settings in your WooCommerce admin: the "Upgrade to Pro" button fills it in.', 'err');
+          show('Open this page from the StableCart settings in your WooCommerce admin: the "Upgrade to Pro" button fills it in.', 'err');
           return;
         }
         document.getElementById('for').innerHTML = 'For shop <code></code>.';
         document.querySelector('#for code').textContent = merchant;
 
         var slot = document.getElementById('basepay');
-        window.BasePay.mount({
+        window.StableCart.mount({
           merchantId: 'basepay-billing',
           amountUsd: '12.00',
           orderRef: 'PRO-' + merchant,
           target: slot,
         });
-        slot.addEventListener('basepay:settled', function (event) {
+        slot.addEventListener('stablecart:settled', function (event) {
           if (event.detail && event.detail.status === 'paid') {
-            show('Paid, thank you. Pro is active for 30 more days. Reload the BasePay settings page in WordPress to see it.', 'ok');
+            show('Paid, thank you. Pro is active for 30 more days. Reload the StableCart settings page in WordPress to see it.', 'ok');
           } else if (event.detail && event.detail.status === 'underpaid') {
             show('Less than $12 arrived, so Pro was not switched on. Email us with the transaction and we will sort it out.', 'err');
           }

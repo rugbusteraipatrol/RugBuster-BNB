@@ -8,4 +8,4 @@ Disallow: /admin/
 Disallow: /healthz
 Disallow: /readyz
 
-Sitemap: https://basepay-production.up.railway.app/sitemap.xml
+Sitemap: https://stablecart.org/sitemap.xml
