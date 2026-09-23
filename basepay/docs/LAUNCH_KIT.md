@@ -107,3 +107,40 @@ once, say you built it. No cross-posting the same text.
 - [ ] Alchemy key rotated.
 - [x] Custom domain: stablecart.org (bought 2026-09-22). The product was renamed
       from BasePay because Coinbase ships a product called "Base Pay".
+
+---
+
+## 5. While the plugin is in review (added 2026-09-23)
+
+Version 0.2.2 was uploaded and answered in the review thread on 23 September;
+the plugin is back in the reviewer's queue. Until it is approved there is **no
+wordpress.org listing to link to**, so every post below points at the payment
+links and the zip instead. Do not write "available on WordPress.org" yet.
+
+### What can be published today
+
+| Where | Link | Why it is worth it |
+| --- | --- | --- |
+| Base Dashboard — register the app | https://dashboard.base.org/register | Sign in with the wallet that receives payments. Registered apps are discoverable in Base's own surfaces, and registration is the entry point for Base's growth programmes |
+| Builder Rewards (Talent Protocol) | https://www.builderscore.xyz | Weekly ETH pool split between builders on Base; needs a Basename and a Builder Score of 40+, computed from public GitHub and onchain activity. No application — the score is computed and rewards are paid to the Farcaster primary wallet |
+| SaaSHub | https://www.saashub.com/submit | Free listing, reachable, no login wall |
+| BetaList | https://betalist.com/submit | Free queue for pre-launch products |
+| AlternativeTo | https://alternativeto.net/software/new/ | List as an alternative to Coinbase Commerce, NOWPayments, CoinPayments |
+| Product Hunt | https://www.producthunt.com/posts/new | Keep for the day the plugin is approved — one shot, and "install from WordPress.org" is most of the pitch |
+
+### Channels to stay out of
+
+- **Other plugins' support threads on wordpress.org.** Answering a NOWPayments
+  or CryptAPI support topic with our plugin is self-promotion in someone else's
+  forum; it gets the account flagged, and the plugin is still under review by
+  the same organisation. Not worth it at any conversion rate.
+- **Reddit link-drops.** Reddit can only be posted to by hand (its pages are not
+  reachable from the tooling here), and a first post from an account with no
+  history reads as spam. Answer an existing question or post nothing.
+
+### The one thing that beats all of it
+
+Payment links need no approval from anyone: https://www.stablecart.org/links/
+One real merchant using them — a photographer invoicing a client, a shop
+selling to a crypto-paying customer — is worth more than ten directory
+listings, because it produces a screenshot, a quote and a first paid order.
