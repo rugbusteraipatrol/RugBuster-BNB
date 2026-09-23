@@ -49,6 +49,27 @@ export function encodeTransfer(to: string, amountMicroUnits: string): string {
   return `0x${TRANSFER_SELECTOR}${address.padStart(64, '0')}${amount.toString(16).padStart(64, '0')}`;
 }
 
+/** StableCart's Base Builder Code, from base.dev → Builder Codes. */
+export const BUILDER_CODE = 'bc_lmzae89w';
+
+/** Every ERC-8021 attribution suffix ends with this 16-byte marker. */
+const ERC8021_MARKER = '80218021802180218021802180218021';
+
+/**
+ * ERC-8021 schema 0, appended after the calldata: the codes as ASCII joined by
+ * commas ∥ their byte length (1 byte) ∥ schema id 0x00 ∥ the marker. The token
+ * contract reads only the two arguments it expects and ignores the tail, and
+ * Base attributes the transaction to the code. Returned without `0x` so it can
+ * be concatenated onto calldata.
+ */
+export function builderCodeSuffix(codes: readonly string[]): string {
+  const text = codes.join(',');
+  if (!/^[\x20-\x7e]{1,255}$/.test(text)) throw new Error('builder codes must be printable ASCII, 1-255 bytes');
+  let hex = '';
+  for (let i = 0; i < text.length; i += 1) hex += text.charCodeAt(i).toString(16).padStart(2, '0');
+  return `${hex}${text.length.toString(16).padStart(2, '0')}00${ERC8021_MARKER}`;
+}
+
 export const toHexChainId = (chainId: number): string => `0x${chainId.toString(16)}`;
 
 const BASE_MAINNET = {
@@ -130,7 +151,9 @@ export async function payWithWallet(session: SessionView): Promise<string> {
         {
           from,
           to: session.token.address,
-          data: encodeTransfer(session.payToAddress, session.amountUsdcMicro),
+          // The suffix only credits the payment to StableCart on Base; the
+          // transfer, and the Transfer event the backend matches on, are unchanged.
+          data: encodeTransfer(session.payToAddress, session.amountUsdcMicro) + builderCodeSuffix([BUILDER_CODE]),
           value: '0x0',
         },
       ],
