@@ -3,9 +3,9 @@
 Written 2026-09-22. Everything here is posted by a person from their own
 accounts; nothing is automated. Links:
 
-- Site: https://stablecart.org
-- Plugin download: https://stablecart.org/downloads/stablecart-for-woocommerce.zip
-- Live checkout demo: https://stablecart.org/demo/
+- Site: https://www.stablecart.org
+- Plugin download: https://www.stablecart.org/downloads/stablecart-for-woocommerce.zip
+- Live checkout demo: https://www.stablecart.org/demo/
 - Demo store (Webflow): https://basepay-demo-store.webflow.io — unfinished (KASETA), do not link it yet
 
 Order matters: WordPress.org first (the review clock is the long pole), then
@@ -75,13 +75,13 @@ once, say you built it. No cross-posting the same text.
 >
 > Pricing: free for 20 paid orders a month, $12 per 30 days unlimited (paid in USDC from the plugin), no cut of sales.
 >
-> Live demo (pay $0.01 if you want to see it settle): https://stablecart.org/demo/
+> Live demo (pay $0.01 if you want to see it settle): https://www.stablecart.org/demo/
 >
 > Would love feedback, especially from anyone who's been de-platformed by a processor.
 
 ### Reddit — r/woocommerce (only as an answer, or a Showcase flair post if the sub allows)
 
-> I ran into the same thing and ended up building a plugin for it: StableCart. Buyers pay USDC on Base straight into your wallet, the order completes when the payment confirms, and setup is literally pasting a wallet address — no account or KYC on our side. Free up to 20 orders/month. It's in review on WordPress.org; the zip is here in the meantime: https://stablecart.org/downloads/stablecart-for-woocommerce.zip — happy to answer questions, I'm the developer.
+> I ran into the same thing and ended up building a plugin for it: StableCart. Buyers pay USDC on Base straight into your wallet, the order completes when the payment confirms, and setup is literally pasting a wallet address — no account or KYC on our side. Free up to 20 orders/month. It's in review on WordPress.org; the zip is here in the meantime: https://www.stablecart.org/downloads/stablecart-for-woocommerce.zip — happy to answer questions, I'm the developer.
 
 ### Reddit — r/webflow
 
@@ -97,7 +97,7 @@ once, say you built it. No cross-posting the same text.
 > Each order gets a unique amount (25.000173) so payments match orders without a wallet per order.
 >
 > Free up to 20 orders/mo.
-> https://stablecart.org
+> https://www.stablecart.org
 
 ---
 

@@ -26,37 +26,33 @@ this repository folder — were deliberately left alone.
 
 | | |
 | --- | --- |
-| Domain | `stablecart.org`, bought at Cloudflare 2026-09-22 |
+| Domain | `www.stablecart.org` (live). Bought `stablecart.org` at Cloudflare 2026-09-22; the apex is not served yet, see below |
 | WordPress.org | `stablecart-for-woocommerce` submitted 2026-09-22 under account **ffurduj**; automated scan passed; awaiting manual review. Assets for the listing are in `woocommerce/wporg-assets/` |
 | Pricing | Free = 20 paid orders/month, Pro = $12 per 30 days, bought with USDC through StableCart itself (`/pro/?merchant=<id>`, order ref `PRO-<id>` to merchant `basepay-billing`) |
 | Site | New white Apple-style landing page, Inter, `stablecart.` wordmark, `site/icon.svg` |
 | Railway | Spend warning set at $15/month (workspace-wide). StableCart itself costs ~$0.20/month |
 
-### The one thing left: stablecart.org does not serve the app yet
+### The domain: www works, apex still does not
 
-- DNS at Cloudflare is correct: `CNAME @ → y84ujrj6.up.railway.app`, plus the
-  `_railway-verify` TXT. SSL/TLS mode is **Full**. The Cloudflare proxy
-  (orange cloud) is **on**, so https works.
-- **Railway never verified the domain.** Its status sat at
+- The site is live on **https://www.stablecart.org** — Railway verified the
+  `www` domain in seconds (`CNAME www → rp9cohin.up.railway.app`, DNS only /
+  grey cloud, plus the `_railway-verify.www` TXT). Every page answers 200:
+  `/`, `/healthz`, `/links/`, `/pay/`, `/pro/`, `/demo/`, `/terms/`,
+  `/privacy/`, `/downloads/stablecart-for-woocommerce.zip`.
+- The whole project now points at the `www` host: site pages and canonicals,
+  `robots.txt`, `sitemap.xml`, the plugin's default API base
+  (`stablecart_api_base_url`), `readme.txt`, and `PUBLIC_BASE_URL` on Railway
+  (which builds the Pro upgrade link the plugin shows).
+- **The bare `stablecart.org` never verified.** Its status sat at
   `CERTIFICATE_STATUS_TYPE_VALIDATING_OWNERSHIP` for hours, before and after
-  deleting and re-adding the custom domain, so Railway's edge answers
-  `Application not found` for the hostname.
-- Plan: make Cloudflare talk to the origin as the hostname Railway does know.
-  This account's dashboard has no Origin Rules, so use **Rules → Snippets**:
-
-  ```js
-  export default {
-    async fetch(request) {
-      const url = new URL(request.url);
-      url.hostname = 'basepay-production.up.railway.app';
-      return fetch(new Request(url, request));
-    }
-  };
-  ```
-
-  Then set `PUBLIC_BASE_URL=https://stablecart.org` on Railway (the Pro upgrade
-  link the plugin shows is built from it) and re-test `/`, `/demo/`, `/pro/`
-  and `/downloads/stablecart-for-woocommerce.zip`.
+  deleting and re-adding the custom domain; with the Cloudflare proxy on, TLS
+  worked but Railway's edge answered `Application not found`. Its DNS records
+  were removed, so the apex currently returns 530.
+- To fix the apex later, on the free plan: add a **proxied** dummy record
+  (e.g. `AAAA @ → 100::`, orange cloud) and a **Redirect Rule**
+  (Rules → Redirect Rules, free) from `stablecart.org/*` to
+  `https://www.stablecart.org/$1`, 301. Cloudflare Snippets are paid and this
+  account's dashboard has no Origin Rules, so a Redirect Rule is the free path.
 - The user is willing to log into Cloudflare in the in-app browser so Claude can
   click through it; Claude must not handle the API token itself.
 

@@ -4,7 +4,7 @@ Tags: crypto, usdc, stablecoin, payment gateway, base
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.2.1
+Stable tag: 0.2.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -36,7 +36,7 @@ StableCart lets a WooCommerce shop take **USDC** (a dollar stablecoin) on the **
 This plugin relies on two external services. Both are listed below with what
 they send, when, and links to their terms and privacy policy.
 
-**1. StableCart (https://stablecart.org)** — the payment service this plugin is
+**1. StableCart (https://www.stablecart.org)** — the payment service this plugin is
 a client of, operated by Fantom Studio. It watches the Base blockchain for the
 USDC payments made to your own wallet and tells your shop when an order is paid.
 Without it the plugin cannot work.
@@ -57,8 +57,8 @@ What is sent, and when:
 * The service calls back to your site at `?wc-api=stablecart` to report a
   payment. That request is signed and verified before it is acted on.
 
-Terms of service: https://stablecart.org/terms/ — Privacy policy:
-https://stablecart.org/privacy/
+Terms of service: https://www.stablecart.org/terms/ — Privacy policy:
+https://www.stablecart.org/privacy/
 
 **2. ExchangeRate-API (https://open.er-api.com)** — used only when your store
 currency is not USD, to convert the order total to US dollars, because payments
@@ -110,6 +110,9 @@ If too little arrives the order goes on hold with a note of the amount received.
 Yes, both the classic shortcode checkout and the block-based checkout are supported. High-Performance Order Storage is supported as well.
 
 == Changelog ==
+
+= 0.2.2 =
+* The service now lives at www.stablecart.org; the plugin talks to it there.
 
 = 0.2.1 =
 * Documented both external services in full, with terms and privacy links. Hardened webhook handling: every field from the event is validated and sanitized.

@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name:       StableCart for WooCommerce
- * Plugin URI:        https://stablecart.org/#woocommerce
+ * Plugin URI:        https://www.stablecart.org/#woocommerce
  * Description:       Accept USDC on Base straight into your own wallet. Paste a wallet address, click Connect, done. No account, no API keys, no custody.
- * Version:           0.2.1
+ * Version:           0.2.2
  * Requires at least: 6.4
  * Requires PHP:      7.4
  * Requires Plugins:  woocommerce
@@ -19,7 +19,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'STABLECART_WC_VERSION', '0.2.1' );
+define( 'STABLECART_WC_VERSION', '0.2.2' );
 define( 'STABLECART_WC_FILE', __FILE__ );
 define( 'STABLECART_WC_DIR', plugin_dir_path( __FILE__ ) );
 define( 'STABLECART_WC_URL', plugin_dir_url( __FILE__ ) );
@@ -29,7 +29,7 @@ define( 'STABLECART_WC_URL', plugin_dir_url( __FILE__ ) );
  * pointed at without editing the plugin: add_filter( 'stablecart_api_base_url', ... ).
  */
 function stablecart_wc_api_base_url() {
-	return untrailingslashit( apply_filters( 'stablecart_api_base_url', 'https://stablecart.org' ) );
+	return untrailingslashit( apply_filters( 'stablecart_api_base_url', 'https://www.stablecart.org' ) );
 }
 
 add_action(
