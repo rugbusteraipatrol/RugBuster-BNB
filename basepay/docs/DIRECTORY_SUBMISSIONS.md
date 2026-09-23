@@ -16,7 +16,7 @@ the honest phrasing, and it is already how the site reads.
 | Website | https://www.stablecart.org |
 | Download | https://www.stablecart.org/downloads/stablecart-for-woocommerce.zip |
 | Maker | Fantom Studio, Serbia |
-| Contact | fedja@rugbuster.io |
+| Contact | hello@stablecart.org |
 | Pricing model | Freemium — free for 20 paid orders a month, Pro $12 per 30 days, no fee on sales on either plan |
 | Platforms | Web, WordPress / WooCommerce |
 | Categories | Payments, E-commerce, Cryptocurrency, Developer tools |
