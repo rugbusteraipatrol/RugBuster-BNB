@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>How to accept USDC on WooCommerce — StableCart</title>
+    <meta name="description" content="Take USDC payments in a WooCommerce shop, straight into your own wallet. What to choose, how to set it up in a minute, and what changes for refunds and bookkeeping." />
+    <link rel="canonical" href="https://www.stablecart.org/accept-usdc-woocommerce/" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://www.stablecart.org/accept-usdc-woocommerce/" />
+    <meta property="og:title" content="How to accept USDC on WooCommerce" />
+    <meta property="og:description" content="Take USDC payments in a WooCommerce shop, straight into your own wallet. What to choose, how to set it up in a minute, and what changes for refunds and bookkeeping." />
+    <meta property="og:image" content="https://www.stablecart.org/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+    <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Why USDC and not Bitcoin?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "USDC holds its value at one dollar, so the price you charged is the amount you keep. Bitcoin and other coins can move several percent between the sale and the day you use the money."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Why the Base network?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Base is an Ethereum network run by Coinbase where a USDC transfer costs cents and confirms in seconds. Most wallets and exchanges, Coinbase included, can send and receive USDC on Base."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I refund a buyer?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Send the USDC back from your wallet to the address that paid. StableCart never holds the money, so it cannot move it for you — which is also why it cannot freeze or reverse a payment."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do I need to register a company or pass KYC?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Not with StableCart: there is no account and no application. Your tax and legal duties where you live do not change because the payment is in USDC — ask your accountant how to book it."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is the plugin on WordPress.org?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "It is in review there now. Until the listing is live, the same plugin downloads from this site."
+      }
+    }
+  ]
+}
+    </script>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #1d1d1f; --ink-2: #6e6e73; --line: #d2d2d7; --accent: #4f6ef7; --bg-alt: #f5f5f7;
+        --grad: linear-gradient(135deg, #6d5dfc 0%, #3b82f6 55%, #22d3ee 100%);
+        --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #fff; color: var(--ink); font: 17px/1.6 var(--sans); letter-spacing: -0.011em; -webkit-font-smoothing: antialiased; }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      .wrap { max-width: 760px; margin: 0 auto; padding: 0 22px; }
+      header.nav { position: sticky; top: 0; z-index: 10; background: rgba(250,250,252,.8); backdrop-filter: saturate(180%) blur(20px); }
+      header.nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 48px; }
+      .wordmark { font-weight: 700; letter-spacing: -0.045em; color: var(--ink); font-size: 19px; }
+      .wordmark i { display: inline-block; width: .2em; height: .2em; border-radius: 50%; background: var(--grad); margin-left: .045em; vertical-align: baseline; }
+      header.nav nav a { color: var(--ink); font-size: 12.5px; opacity: .88; }
+      main { padding: 56px 0 72px; }
+      .eyebrow { font-size: 14px; font-weight: 600; color: var(--ink-2); margin: 0 0 10px; }
+      h1 { font-size: clamp(34px, 5.4vw, 52px); letter-spacing: -0.035em; font-weight: 650; line-height: 1.07; margin: 0 0 18px; }
+      .lede { font-size: 20px; color: var(--ink-2); margin: 0 0 28px; }
+      h2 { font-size: 26px; letter-spacing: -0.025em; margin: 48px 0 12px; line-height: 1.2; }
+      p, li { color: #33333a; }
+      ul, ol { padding-left: 22px; }
+      li { margin-bottom: 6px; }
+      .cta { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin: 8px 0 0; }
+      .btn { display: inline-block; background: var(--accent); color: #fff; font-weight: 600; border-radius: 980px; padding: 13px 24px; }
+      .btn:hover { text-decoration: none; filter: brightness(1.06); }
+      .note { font-size: 14px; color: var(--ink-2); }
+      .facts { background: var(--bg-alt); border-radius: 20px; padding: 20px 22px; margin: 28px 0 0; }
+      .facts p { margin: 0 0 8px; }
+      .facts p:last-child { margin: 0; font-size: 14px; color: var(--ink-2); }
+      .table-wrap { overflow-x: auto; margin: 14px 0 0; }
+      table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 15.5px; }
+      th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 11px 10px 11px 0; vertical-align: top; }
+      th { font-weight: 600; color: var(--ink); }
+      td:first-child { color: var(--ink-2); width: 34%; }
+      .faq h3 { font-size: 18px; letter-spacing: -0.015em; margin: 26px 0 6px; }
+      .faq p { margin: 0; }
+      footer { border-top: 1px solid var(--line); padding: 22px 0 40px; font-size: 12.5px; color: var(--ink-2); }
+    </style>
+  </head>
+  <body>
+    <header class="nav">
+      <div class="wrap">
+        <a class="wordmark" href="/">stablecart<i></i></a>
+        <nav><a href="/downloads/stablecart-for-woocommerce.zip">Download plugin</a></nav>
+      </div>
+    </header>
+
+    <main>
+      <div class="wrap">
+        <p class="eyebrow">Guide · WooCommerce</p>
+        <h1>How to accept USDC on WooCommerce.</h1>
+        <p class="lede">USDC is a dollar stablecoin: one USDC is one US dollar. Taking it in a WooCommerce shop means a buyer can pay from any crypto wallet, and the money never swings in value while it sits with you.</p>
+        <div class="cta"><a class="btn" href="/downloads/stablecart-for-woocommerce.zip">Download for WooCommerce</a> <a href="/demo/">Try the live checkout ›</a></div>
+
+        <h2>Two ways to do it</h2>
+        <ul>
+          <li><strong>A payment processor.</strong> You open an account, pass their checks, and they collect the payment and pay you out. Convenient if you want many coins or a bank payout, but you wait for their payouts and they can hold your funds.</li>
+          <li><strong>Non-custodial checkout.</strong> The buyer pays your own wallet directly, in one transaction. Nobody holds the money, nobody can freeze it, and there is nothing to apply for. This is what StableCart does.</li>
+        </ul>
+
+        <h2>Set it up in a minute</h2>
+        <ol>
+          <li><a href="/downloads/stablecart-for-woocommerce.zip">Download StableCart</a> and upload it under <em>Plugins → Add New → Upload Plugin</em>.</li>
+          <li>Open <em>WooCommerce → Settings → Payments → StableCart</em>, paste the wallet address that should receive USDC on Base, and save. The shop registers itself — no account, no API key.</li>
+          <li>Place a small test order and pay it from any wallet. The order completes by itself once the payment confirms.</li>
+        </ol>
+
+        <h2>What your buyer sees</h2>
+        <p>At checkout they pick "USDC on Base" and land on a pay page with the exact amount and a QR code. They scan it with any wallet app, or pay from a browser wallet such as MetaMask or Coinbase Wallet. The page updates while the network confirms, then sends them to your order-received page. It works with the WooCommerce block checkout and with High-Performance Order Storage.</p>
+
+        <h2>How a payment finds its order</h2>
+        <p>Every order is quoted a unique amount, such as 25.000173 USDC instead of 25.00. That tiny difference is how StableCart matches a payment to the right order without creating a new wallet for each one. Payments that arrive after the quote expired are still matched for 24 hours.</p>
+
+        <h2>What it costs</h2>
+        <p>Free for 20 paid orders per calendar month. Pro removes the limit for $12 per 30 days, paid in USDC. Neither plan takes a percentage of your sales. The buyer pays the network fee, which on Base is usually a few cents.</p>
+
+        <div class="faq">
+          <h2>Questions</h2>
+          <h3>Why USDC and not Bitcoin?</h3><p>USDC holds its value at one dollar, so the price you charged is the amount you keep. Bitcoin and other coins can move several percent between the sale and the day you use the money.</p><h3>Why the Base network?</h3><p>Base is an Ethereum network run by Coinbase where a USDC transfer costs cents and confirms in seconds. Most wallets and exchanges, Coinbase included, can send and receive USDC on Base.</p><h3>How do I refund a buyer?</h3><p>Send the USDC back from your wallet to the address that paid. StableCart never holds the money, so it cannot move it for you — which is also why it cannot freeze or reverse a payment.</p><h3>Do I need to register a company or pass KYC?</h3><p>Not with StableCart: there is no account and no application. Your tax and legal duties where you live do not change because the payment is in USDC — ask your accountant how to book it.</p><h3>Is the plugin on WordPress.org?</h3><p>It is in review there now. Until the listing is live, the same plugin downloads from this site.</p>
+        </div>
+
+        <h2>Ready when you are</h2>
+        <div class="cta"><a class="btn" href="/downloads/stablecart-for-woocommerce.zip">Download for WooCommerce</a> <a href="/demo/">Try the live checkout ›</a></div>
+      </div>
+    </main>
+
+    <footer><div class="wrap"><span class="wordmark" style="font-size:15px;margin-right:10px">stablecart<i></i></span>© 2026 Fantom Studio · <a href="/">Home</a> · <a href="/links/">Payment links</a> · <a href="/terms/">Terms</a> · <a href="/privacy/">Privacy</a></div></footer>
+  </body>
+</html>
