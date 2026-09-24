@@ -59,35 +59,56 @@ Izvori:
 - https://github.com/elizaOS/eliza
 - https://github.com/elizaos-plugins/plugin-bnb
 
-## 3. Činjenice o ovom repou (provereno u kodu)
+## 3. Činjenice o API-jima (ispravljeno 24.09.2026, provereno živim pozivima)
 
-- API (`api/server.py`) ima `GET /score?address=0x...`. Radi samo za EVM i BNB adrese, jer odbija sve što ne prođe `Web3.is_address`.
-- Oznake su `GOOD / WARN / DANGER`, a ne ALLOW / WARN / BLOCK.
-- Endpoint `/api/v1/preflight?chain=solana` iz Geminijevog plana **ne postoji**. Solana podaci postoje u tabeli `solana_scans`, ali nemaju javni endpoint u ovom API-ju.
-- Kad sken ne uspe, `/score` vraća 502 sa `"error": "live_scan_failed"`, uz napomenu da je to greška kod nas, a ne nalaz o tokenu.
-- Javni API: `rugbuster-api-production.up.railway.app`
+Prva verzija ovog fajla gledala je samo repo RugBuster-BNB i imala je dve greške:
+- `rugbuster-api-production.up.railway.app` **nije** BNB API. Ta adresa je zastarela: `/health` vraća „Avalanche C-Chain Mainnet“, a `/score` vraća 404.
+- Tvrdnja „Solana nema javni endpoint“ je netačna. Solana ima svoj servis.
 
-## 4. Preporučeni plan (korisnik ga još nije odobrio)
+RugBuster ima zaseban javni API za svaki od 5 lanaca. Adrese su iste one koje koristi rugbuster.io (`/`, `/bnb/`, `/base/`, `/solana/`, `/tron/`):
+
+| Lanac | Endpoint | Polje sa ocenom | Provera 24.09.2026 |
+|---|---|---|---|
+| Avalanche | `https://web-production-376bf.up.railway.app/score?address=0x...` | `label` | 200 |
+| BNB | `https://bnb-api-production.up.railway.app/score?address=0x...` | `label` | 200 (build `27a1b30` = kod na ovoj grani) |
+| Base | `https://base-api-production-6887.up.railway.app/score?address=0x...` | `label` | 200 |
+| Solana | `https://rugbuster-solana-api-production.up.railway.app/score?address=<mint>` | `label` + `risk_score` | 200 (scoring 2026.09.22) |
+| TRON | `https://tron-api-production-b482.up.railway.app/api/tron/score?address=T...` | `verdict` + `risk_score` | 200 (USDT `TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t`) |
+
+Oznake (u kodu BNB-a: `api/server.py`):
+- `GOOD`, `WARN`, `DANGER`, i **`INSUFFICIENT_DATA`** kad provera ugovora nije završena. API tada namerno ne daje GOOD. Avalanche i Base su za USDC vratili upravo `INSUFFICIENT_DATA`.
+- Svi odgovori imaju `ok`, `chain`, `verdict_summary`, `verdict_basis` i `not_established`. Ostala polja se razlikuju po lancu, zato svaki lanac treba svoj mali adapter.
+- Neispravna adresa daje 400 sa `ok:false` i porukom u `error`, npr. BNB: „Invalid BNB Chain token address“, Solana: „invalid solana mint address“.
+- Kad sken ne uspe, BNB `/score` vraća 502 sa `"error": "live_scan_failed"`. To je greška kod nas, ne nalaz o tokenu.
+- Endpoint `/api/v1/preflight?chain=solana` iz Geminijevog plana ne postoji.
+- `rugbuster-score-staging-production.up.railway.app/score?chain=...` jeste zajednički API za više lanaca (avax, bnb, solana), ali čita samo keš. Za BNB i AVAX je vratio `not_found`, a za Solanu podatak iz maja. **Ne koristiti ga za plugin.**
+
+## 4. Preporučeni plan (korisnik je 24.09.2026 tražio da plugin pokrije sve lance)
 
 Ideja ostaje dobra: provera tokena pre transakcije za AI agente. Menja se samo cilj finansiranja.
 
-- Plugin cilja **BNB/EVM**, jer API za to već radi. Postoji zvanični `plugin-bnb` za elizaOS, koji je napravio BNB Chain tim.
-- Plugin služi kao **dokaz upotrebljivosti u BNB Chain grant prijavi**. Vidi `docs/BNB_GRANT_PREP.md` i `docs/BNB_GRANT_UPDATE_2026-06-05.md`.
+- Plugin pokriva **svih 5 lanaca**: Avalanche, BNB, Base, Solana i TRON. Za prva četiri adapter je skoro isti. TRON ima drugu putanju i čita se iz polja `verdict`.
+- Za BNB postoji zvanični `plugin-bnb` za elizaOS, koji je napravio BNB Chain tim. Na njemu se najlakše pokazuje omotač oko swap akcije.
+- Plugin služi kao **dokaz upotrebljivosti u grant prijavama**: BNB Chain (vidi `docs/BNB_GRANT_PREP.md` i `docs/BNB_GRANT_UPDATE_2026-06-05.md`), a i za druge lance. Pre prijave proveri svaki program ponaosob.
 - Objavljuje se kao sopstveni npm paket i repo, ne kroz elizaOS registry.
 
 Tehnički (npr. `integrations/eliza-plugin/`, TypeScript, elizaOS v2 API; proveri tačne tipove u `@elizaos/core` pre pisanja):
-1. `RugBusterService`: poziva `/score` i pretvara GOOD→ALLOW, WARN→WARN, DANGER→BLOCK.
-   **Fail-closed:** timeout, 5xx ili `live_scan_failed` daju BLOCK (ili WARN, ako operater tako podesi), nikad ALLOW.
+1. `RugBusterService` sa tabelom lanac → endpoint i adapterom po lancu. Pretvara `GOOD`→ALLOW, `WARN`→WARN, `DANGER`→BLOCK.
+   **`INSUFFICIENT_DATA` nikad ne daje ALLOW.** Podrazumevano daje WARN, a operater može da ga podesi na BLOCK.
+   **Fail-closed:** timeout, 5xx, `ok:false`, `live_scan_failed` ili nepoznata oznaka daju BLOCK (ili WARN, ako operater tako podesi), nikad ALLOW.
+   Adrese endpointa se podešavaju spolja (env/config), jer su se već jednom menjale.
 2. Blokiranje mora biti u kodu, ne u promptu:
-   - akcija `CHECK_TOKEN_RISK`,
+   - akcija `CHECK_TOKEN_RISK` (parametri: lanac i adresa),
    - omotač `withRugBuster(action)` za akcije swapa i transfera (npr. iz `plugin-bnb`),
    - ili sopstvene akcije `GUARDED_SWAP` i `GUARDED_TRANSFER`.
 3. Provider služi samo kao dodatni kontekst za LLM, ne kao zaštita, jer ga prompt injection zaobilazi.
-4. Pravila za WARN podešava operater, npr. `maxWarnPosition` i `requireAdminApproval`, a ne zakucane vrednosti.
-5. Testovi sa mockovanim API-jem i README sa demo scenarijem: tweet sa injekcijom → agent pokuša swap → DANGER → akcija odbijena u kodu.
+4. Pravila za WARN i INSUFFICIENT_DATA podešava operater, npr. `maxWarnPosition` i `requireAdminApproval`, a ne zakucane vrednosti.
+5. Testovi sa mockovanim API-jem za svaki lanac, uključujući 400, 502, timeout i INSUFFICIENT_DATA. README sa demo scenarijem: tweet sa injekcijom → agent pokuša swap → DANGER → akcija odbijena u kodu.
+
+Napomena: linkovi sa rugbuster.io ka GitHub dokumentaciji (npr. `RugBuster-Avalanche/docs/AVALANCHE_API.md`) posetiocima trenutno vraćaju 404, jer je GitHub nalog sakriven od 23.09.2026. API dokumentaciju za plugin ne treba linkovati na GitHub dok se to ne reši.
 
 ## 5. Sledeći korak
 
-Pitaj korisnika da li da kreneš sa pluginom po planu iz sekcije 4.
+Korisnik je odobrio ispravku ovog fajla. Pre pisanja plugina potvrdi sa korisnikom da kreneš po sekciji 4.
 Radna grana je `claude/rugbuster-eliza-plugin-8895ol`. Ne pravi PR dok korisnik ne traži.
 Korisnik piše na srpskom, pa mu odgovaraj na srpskom.
