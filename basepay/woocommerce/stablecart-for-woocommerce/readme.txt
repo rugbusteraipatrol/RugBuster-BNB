@@ -4,7 +4,7 @@ Tags: crypto, usdc, stablecoin, payment gateway, base
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.2.2
+Stable tag: 0.2.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -68,7 +68,7 @@ your orders or your customers. Set a rate manually in the gateway settings if
 you prefer the plugin never to contact it.
 
 Terms: https://www.exchangerate-api.com/terms — Privacy policy:
-https://www.exchangerate-api.com/privacy-policy
+https://www.exchangerate-api.com/privacy
 
 The pay page also links each confirmed payment to **basescan.org**, a public
 block explorer, so you and your buyer can verify the transaction. Nothing is
@@ -110,6 +110,9 @@ If too little arrives the order goes on hold with a note of the amount received.
 Yes, both the classic shortcode checkout and the block-based checkout are supported. High-Performance Order Storage is supported as well.
 
 == Changelog ==
+
+= 0.2.3 =
+* Corrected the ExchangeRate-API privacy policy link.
 
 = 0.2.2 =
 * The service now lives at www.stablecart.org; the plugin talks to it there.
