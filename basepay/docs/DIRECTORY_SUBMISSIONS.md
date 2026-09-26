@@ -105,6 +105,35 @@ day the plugin is approved, or today), a market, a tagline and one image — use
   **CoinPayments**, **BitPay**, **OpenNode**, **CryptAPI**
 - Tags: usdc, base, non-custodial, woocommerce, payment-gateway, stablecoin
 
+### Launching Next — submitted (free queue, about 4 months)
+
+### Alchemy Dapp Store — submitted 2026-09-26 — https://www.alchemy.com/dapps/submit
+
+- Category: Stablecoins (there is no Payments), chain: Base,
+  languages: JavaScript, TypeScript (PHP is not offered), pricing: Freemium
+- X: https://x.com/FAYZER33333, slug `stablecart`
+- Logo: `https://www.stablecart.org/icon-400.png` (400×400 required)
+- Alchemy publishes new listings twice a month
+
+### Uneed — free waiting line, launches 2027-02-23 — uneed.best/tool/stablecart
+
+- Needs an upvote score of 10 on launch day to stay published (20 for do-follow);
+  below 10 it cannot rejoin the free line. Ask people to upvote that day.
+- Uneed's AI pre-filled "Free" and "no fees"; corrected to Freemium and our text.
+
+### SideProjectors — submitted 2026-09-26 (showcase, review 2-3 days), plus ComingUp
+
+- No screenshot: an ad overlay blocked the upload. Add `site/og.png` later.
+
+### Startup Stash — submitted 2026-09-26 (Typeform, category Payments, no logo)
+
+### Fazier — not submitted
+
+- The free plan needs 3 comments on other launches and a Fazier badge linked
+  from our homepage or footer. Both are the founder's call.
+
+### MicroLaunch — site down (Cloudflare 526, bad SSL) on 2026-09-26
+
 ### Product Hunt — hold
 
 Keep it until the plugin is approved. One shot per product, and half the pitch
