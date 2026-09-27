@@ -73,7 +73,9 @@ Under 160 characters:
 
 ## Per site
 
-### SaaSHub — https://www.saashub.com/submit
+### SaaSHub — **approved 2026-09-26**, listed under "Recently verified"
+
+Submitted with:
 
 - Name: **StableCart**
 - URL: `https://www.stablecart.org`
@@ -82,6 +84,35 @@ Under 160 characters:
 - Categories: Payment Gateways, E-commerce, Cryptocurrency
 - Pricing: Freemium
 - Alternatives to: Coinbase Commerce, NOWPayments, CoinPayments, BitPay, OpenNode
+
+The approval mail offers four things. Only two are worth anything right now:
+
+| Offer | Decision |
+| --- | --- |
+| Premium featured listing, "one month free" | **No.** It is a paid placement; the free month is a bonus on top of a purchase. Paying to be seen before the plugin is approved buys traffic to a page that says "in review". |
+| SaaSHub Submit — their free tool for submitting to other directories | **Yes, but read every screen.** See below. |
+| "Approved on SaaSHub" badge | Yes, once the site has a footer to carry it. Free credibility, no downside. |
+| SaaSHub Experts voting | No. Vote-trading needs an audience we do not have. |
+
+#### SaaSHub Submit — before using it
+
+Unverified from this session: `saashub.com` is blocked by the network here, so
+the tool has not been opened and what follows is caution, not a description.
+
+Two things to check on the first screen, because they are hard to undo:
+
+1. **It will offer directories we have already submitted to.** Launching Next,
+   Alchemy, Uneed, SideProjectors and Startup Stash are all in flight above.
+   Submitting twice looks careless to a human reviewer and can get an entry
+   rejected as a duplicate. Untick anything already listed on this page.
+2. **Check what it sends before it sends it.** Uneed's AI already filled in
+   "Free" and "no fees" on our behalf, which was wrong on both counts and had
+   to be corrected by hand. Anything that auto-fills from our homepage will
+   make the same guess. The pricing line is freemium — free for 20 paid orders
+   a month, Pro $12 per 30 days, no fee on sales — and that distinction is the
+   whole pitch.
+
+Do not let it post "available on WordPress.org" anywhere. Still in review.
 
 ### BetaList — https://betalist.com/submit
 
