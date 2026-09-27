@@ -114,6 +114,12 @@ Two things to check on the first screen, because they are hard to undo:
 
 Do not let it post "available on WordPress.org" anywhere. Still in review.
 
+**Run on 2026-09-27.** Which directories it actually reached is not recorded
+here — the tool was driven from the founder's browser and saashub.com is blocked
+from the session that keeps this file. Before submitting anywhere by hand from
+now on, search the destination for "StableCart" first; a duplicate entry is
+worse than a late one.
+
 ### BetaList — https://betalist.com/submit
 
 Wants a product that is early, which we are. It asks for a launch date (use the
