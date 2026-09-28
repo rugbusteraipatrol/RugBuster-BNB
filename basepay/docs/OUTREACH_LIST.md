@@ -57,8 +57,9 @@ iz inostranstva koji plaćaju u kriptu.
 - Bez provizije na prodaju. Besplatno do 20 porudžbina mesečno, posle
   toga $12 mesečno.
 
-Plugin je u recenziji na WordPress.org, a do tada se preuzima sa sajta:
-https://www.stablecart.org
+Plugin je odobren i objavljen na WordPress.org, pa se instalira direktno
+iz kontrolne table prodavnice:
+https://wordpress.org/plugins/stablecart-for-woocommerce/
 
 Ako imate klijenta kome bi ovo koristilo, rado pomognem oko podešavanja.
 Ako vam nije zanimljivo, samo odgovorite "ne" i neću se više javljati.
@@ -74,3 +75,24 @@ hello@stablecart.org
 - 5–10 dnevno, ne sve odjednom.
 - Ko kaže "ne" — briše se sa liste.
 - Ko odgovori sa interesovanjem: ponuditi pomoć pri prvom podešavanju uživo.
+
+## Kad agencija odgovori
+
+Agencija ne pita "da li ovo radi" nego "šta ja imam od toga". Tri stvari koje
+joj se mogu ponuditi, a nijedna nas ništa ne košta:
+
+- **Podešavanje prve prodavnice radimo mi, besplatno, uživo.** Njima je to sat
+  vremena koji ne moraju da naplate klijentu, a nama prvi pravi korisnik.
+- **Oni naplaćuju svoje vreme, mi ne uzimamo ništa od toga.** Nema provizije na
+  prodaju ni podele prihoda — agencija zadržava ceo iznos koji naplati klijentu
+  za integraciju.
+- **Direktna linija do onoga ko je pisao kod**, bez tiketa i bez podrške na
+  prvom nivou. To agencija ne dobija ni od jednog velikog procesora.
+
+Čega se pribojavaju, i pošten odgovor:
+
+| Pitanje | Odgovor |
+| --- | --- |
+| "Šta ako vi ugasite firmu?" | Novac nikad ne prolazi kroz nas, pa nema šta da propadne. Plugin je otvorenog koda na WordPress.org i radi dok god radi Base mreža. |
+| "Da li je ovo legalno?" | Plaćanje u USDC nije zabranjeno; poreske i knjigovodstvene obaveze prodavca se ne menjaju. Neka pita svog knjigovođu kako da to proknjiži — mi ne dajemo poreski savet. |
+| "Ko ovo stvarno koristi?" | Pošteno: još je novo. Zato i nudimo prvo podešavanje besplatno. |
