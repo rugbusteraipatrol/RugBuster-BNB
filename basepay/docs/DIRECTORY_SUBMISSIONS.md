@@ -1,12 +1,13 @@
 # Directory submissions — field by field
 
-Written 2026-09-23, while the WooCommerce plugin is in review at WordPress.org.
-Every field below is meant to be pasted as it stands. The person submitting is
-the account holder; nothing here is posted automatically.
+Written 2026-09-23. Every field below is meant to be pasted as it stands. The
+person submitting is the account holder; nothing here is posted automatically.
 
-**Do not write "available on WordPress.org" anywhere yet.** The listing does not
-exist until the review passes. "Plugin in review, direct download available" is
-the honest phrasing, and it is already how the site reads.
+**The plugin was approved on 2026-09-28** and is live at
+<https://wordpress.org/plugins/stablecart-for-woocommerce/>. Say so — it is the
+strongest line we have, because it is the one claim here that a stranger can
+verify without trusting us. The site no longer says "in review" anywhere.
+Product Hunt was held for this and is now unblocked.
 
 ## The facts every form asks for
 
@@ -112,7 +113,7 @@ Two things to check on the first screen, because they are hard to undo:
    a month, Pro $12 per 30 days, no fee on sales — and that distinction is the
    whole pitch.
 
-Do not let it post "available on WordPress.org" anywhere. Still in review.
+It may now say the plugin is on WordPress.org; that became true on 2026-09-28.
 
 **Run on 2026-09-27.** Which directories it actually reached is not recorded
 here — the tool was driven from the founder's browser and saashub.com is blocked
@@ -171,11 +172,11 @@ day the plugin is approved, or today), a market, a tagline and one image — use
 
 ### MicroLaunch — site down (Cloudflare 526, bad SSL) on 2026-09-26
 
-### Product Hunt — hold
+### Product Hunt — unblocked 2026-09-28, not yet launched
 
-Keep it until the plugin is approved. One shot per product, and half the pitch
-is "install it from WordPress.org in one click". Launching before approval wastes
-the slot.
+It was held for the WordPress.org approval, which has now landed, so the pitch
+can say "install it from WordPress.org in one click" and mean it. Still one shot
+per product: go when the listing has a screenshot and the demo store is up.
 
 ## Indie Hackers post (when two directories are live)
 
@@ -200,7 +201,7 @@ Body:
 > payments are still matched for 24 hours after the page expires.
 >
 > Free for 20 paid orders a month, $12 per 30 days after that, no cut of sales.
-> The plugin is in review at WordPress.org; the payment links work today.
+> The plugin is on WordPress.org; the payment links work today.
 >
 > What I would like feedback on: is a monthly fee the right shape for this, or
 > should it be a one-off? Taking a percentage is off the table — it would mean
