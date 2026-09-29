@@ -39,34 +39,33 @@ Jedna agencija = više prodavnica. Kontakt preko javne kontakt stranice firme.
 Za još: https://clutch.co/rs/developers/ecommerce i
 https://techbehemoths.com/companies/e-commerce-development/serbia
 
-## Poruka za agencije (srpski)
+## Message for agencies (English)
 
-Naslov: Kripto plaćanje za WooCommerce prodavnice vaših klijenata
+Subject: USDC payments for your clients' WooCommerce shops
 
-Zdravo,
-
-Vidim da pravite WooCommerce prodavnice, pa pišem kratko.
-
-Napravio sam StableCart, plugin koji prodavnici omogućava da prima USDC
-(digitalni dolar, 1 USDC = 1 $) direktno u svoj novčanik. Koristi se kad
-klijentu Stripe ne radi (u Srbiji zvanično ne radi) ili kad prodaje kupcima
-iz inostranstva koji plaćaju u kriptu.
-
-- Podešavanje je jedno polje: adresa novčanika. Bez naloga, bez API ključeva.
-- Novac ide direktno prodavcu; mi ga nikad ne držimo.
-- Bez provizije na prodaju. Besplatno do 20 porudžbina mesečno, posle
-  toga $12 mesečno.
-
-Plugin je odobren i objavljen na WordPress.org, pa se instalira direktno
-iz kontrolne table prodavnice:
-https://wordpress.org/plugins/stablecart-for-woocommerce/
-
-Ako imate klijenta kome bi ovo koristilo, rado pomognem oko podešavanja.
-Ako vam nije zanimljivo, samo odgovorite "ne" i neću se više javljati.
-
-Pozdrav,
-Feđa
-hello@stablecart.org
+> Hi,
+>
+> I see you build WooCommerce shops, so I will keep this short.
+>
+> I made StableCart, a plugin that lets a shop accept USDC (a digital dollar,
+> 1 USDC = $1) paid straight into the shop's own wallet. It is useful when a
+> client cannot get Stripe or another card processor, or sells to buyers abroad
+> who prefer to pay in crypto.
+>
+> - Setup is one field: a wallet address. No account, no API keys.
+> - The money goes directly to the merchant. We never hold it.
+> - No fee on sales. Free up to 20 orders a month, then $12 a month.
+>
+> The plugin is approved and published on WordPress.org, so it installs from
+> the shop's own dashboard:
+> https://wordpress.org/plugins/stablecart-for-woocommerce/
+>
+> If you have a client it would suit, I am glad to help with the first setup.
+> If it is not of interest, just reply "no" and I will not write again.
+>
+> Best,
+> Fedja
+> hello@stablecart.org
 
 ## Pravila
 
