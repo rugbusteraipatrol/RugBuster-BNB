@@ -76,6 +76,29 @@ hello@stablecart.org
 - Ko kaže "ne" — briše se sa liste.
 - Ko odgovori sa interesovanjem: ponuditi pomoć pri prvom podešavanju uživo.
 
+## Follow-up for agencies that got the "in review" version (English)
+
+For anyone messaged before 2026-09-28. One line of news, no new pitch.
+
+Subject: Update: StableCart is now on WordPress.org
+
+> Hi,
+>
+> A quick follow-up to my earlier message: the StableCart plugin has since been
+> approved on WordPress.org, so it now installs straight from your shop's
+> dashboard (Plugins → Add New → "StableCart"):
+> https://wordpress.org/plugins/stablecart-for-woocommerce/
+>
+> It lets a WooCommerce shop accept USDC, paid straight to the shop's own
+> wallet. Setup is one field, with no account. Free up to 20 orders a month,
+> and no fee on sales.
+>
+> If a client of yours could use it, I am happy to set up the first shop with
+> you. If not, no reply needed.
+>
+> Fedja
+> hello@stablecart.org
+
 ## Kad agencija odgovori
 
 Agencija ne pita "da li ovo radi" nego "šta ja imam od toga". Tri stvari koje
