@@ -56,6 +56,32 @@ this repository folder — were deliberately left alone.
 - The user is willing to log into Cloudflare in the in-app browser so Claude can
   click through it; Claude must not handle the API token itself.
 
+### Next: send mail as hello@stablecart.org (Proton)
+
+Receiving works: Cloudflare Email Routing forwards `hello@stablecart.org` to
+Proton (`fedja@rugbuster.io`). Sending from `hello@` does not, because Proton
+does not know the domain. The cloud session cannot reach Cloudflare or Proton,
+so this is for the local session, in the in-app browser, with the user logged
+in. Claude clicks; the user types every password and 2FA code.
+
+1. **Proton → Settings → Domain names.** Check that the plan allows another
+   custom domain (`rugbuster.io` may already use the only slot). If it does
+   not, stop and tell the user: the fallback is Gmail "Send mail as" through a
+   free SMTP relay (Brevo or Resend), keeping Cloudflare for receiving.
+2. **Add domain `stablecart.org` in Proton.** Copy every DNS value from
+   Proton's screen; never type them from memory.
+3. **Cloudflare → Email → Email Routing: disable it**, and delete the MX and
+   SPF records it created. Two systems cannot receive mail for one domain.
+4. **Cloudflare → DNS:** add Proton's TXT verification, 2 MX, one SPF (exactly
+   one SPF record may exist), 3 DKIM CNAMEs set to **DNS only (grey cloud)**,
+   and DMARC. Leave the `www` records for Railway alone.
+5. **Proton → Addresses:** create `hello@stablecart.org`.
+6. Send a test from `hello@` to `ffurduj@gmail.com`; the cloud session can read
+   it through the Gmail connector and confirm SPF, DKIM and DMARC pass.
+
+Do it when no important mail is expected; mail arriving mid-switch can be
+delayed.
+
 ### Also open
 
 - KASETA demo store is on hold (prints not made). Its prices are still $0.10 and
