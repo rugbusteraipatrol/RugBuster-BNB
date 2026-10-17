@@ -1,14 +1,25 @@
 import pg from 'pg';
+import { logger } from '../logger.js';
 
 export type Queryable = Pick<pg.Pool, 'query'> | Pick<pg.PoolClient, 'query'>;
 
 export function createPool(databaseUrl: string): pg.Pool {
-  return new pg.Pool({
+  const pool = new pg.Pool({
     connectionString: databaseUrl,
     max: 10,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 10_000,
   });
+
+  // A managed Postgres drops idle connections when its compute restarts or
+  // scales. node-postgres re-emits that on the pool as 'error', and an
+  // EventEmitter with no 'error' listener throws, which kills the whole process.
+  // The pool discards the broken client itself, so logging is all that is needed.
+  pool.on('error', (err) => {
+    logger.warn({ err }, 'idle database client error; the pool will replace it');
+  });
+
+  return pool;
 }
 
 /** Runs `fn` inside a transaction, rolling back on any throw. */
