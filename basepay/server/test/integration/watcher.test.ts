@@ -1,5 +1,6 @@
 import type pg from 'pg';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Activity } from '../../src/activity.js';
 import type { Config } from '../../src/config.js';
 import { listActivePaymentsForSession, listUnmatchedPayments } from '../../src/db/payments.js';
 import { getSession } from '../../src/db/sessions.js';
@@ -287,5 +288,65 @@ describe.skipIf(!hasDatabase)('watcher loop', () => {
     expect(failing.getStatus().lastError).toBe('RPC unavailable');
     expect(failing.getStatus().ok).toBe(false);
     expect((await getWatcherState(pool, stateId))?.lastProcessedBlock).toBe(before?.lastProcessedBlock);
+  });
+
+  describe('going quiet when idle', () => {
+    function buildQuiet(chain: FakeChain) {
+      const config: Config = testConfig({ WATCHER_ENABLED: 'true', CONFIRMATIONS_REQUIRED: '1' });
+      const activity = new Activity();
+      return {
+        activity,
+        watcher: new Watcher(pool, config, chain.asClient(), activity),
+        sessions: new SessionService(pool, config, fixedPriceService()),
+      };
+    }
+
+    it('stops touching the database and the RPC once nothing is open', async () => {
+      const chain = new FakeChain(USDC, 5);
+      const { activity, watcher } = buildQuiet(chain);
+
+      await watcher.tick();
+      expect(activity.isAsleep()).toBe(true);
+
+      const query = vi.spyOn(pool, 'query');
+      const rpcBefore = { ...chain.calls };
+      await watcher.tick();
+      await watcher.tick();
+      expect(query).not.toHaveBeenCalled();
+      expect(chain.calls).toEqual(rpcBefore);
+      // A quiet pass still counts, so /readyz does not report a stall.
+      expect(watcher.getStatus().ok).toBe(true);
+      query.mockRestore();
+    });
+
+    it('stays awake while a session is open', async () => {
+      const chain = new FakeChain(USDC, 5);
+      const { activity, watcher, sessions } = buildQuiet(chain);
+      await sessions.createSession({ merchantId: 'demo', amountUsd: '45.00' });
+
+      await watcher.tick();
+      expect(activity.isAsleep()).toBe(false);
+    });
+
+    it('settles a payment after waking without backfilling the blocks it slept through', async () => {
+      const chain = new FakeChain(USDC, 5);
+      const { activity, watcher, sessions } = buildQuiet(chain);
+      await watcher.tick();
+      expect(activity.isAsleep()).toBe(true);
+
+      // A long quiet stretch, with one stray transfer early in it.
+      chain.mine([{ to: MERCHANT_ADDRESS, value: 1_000_000n }]);
+      for (let i = 0; i < 2_000; i += 1) chain.mine();
+
+      activity.wake(); // what the API middleware does before a checkout
+      const session = await sessions.createSession({ merchantId: 'demo', amountUsd: '45.00' });
+      chain.mine([{ to: MERCHANT_ADDRESS, value: BigInt(session.amountUsdcMicro) }]);
+
+      const getLogsBefore = chain.calls.getLogs;
+      await watcher.tick();
+      expect(await status(session.sessionId)).toBe('paid');
+      expect(chain.calls.getLogs - getLogsBefore).toBeLessThan(10);
+      expect(await listUnmatchedPayments(pool)).toHaveLength(0);
+    });
   });
 });

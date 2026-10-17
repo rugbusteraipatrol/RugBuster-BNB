@@ -1,12 +1,19 @@
 import { Router } from 'express';
 import type pg from 'pg';
+import type { Activity } from '../../activity.js';
 import type { Config } from '../../config.js';
 import type { PriceService } from '../../price/priceService.js';
 import { redactUrls } from '../../redact.js';
 import type { Watcher } from '../../watcher/watcher.js';
 import { asyncRoute } from '../middleware.js';
 
-export function healthRoutes(config: Config, pool: pg.Pool, price: PriceService, watcher: Watcher | null): Router {
+export function healthRoutes(
+  config: Config,
+  pool: pg.Pool,
+  price: PriceService,
+  watcher: Watcher | null,
+  activity: Activity | null = null,
+): Router {
   const router = Router();
 
   /** Liveness: the process is up. Never touches dependencies. */
@@ -24,12 +31,19 @@ export function healthRoutes(config: Config, pool: pg.Pool, price: PriceService,
       const checks: Record<string, unknown> = {};
       let ready = true;
 
-      try {
-        await pool.query('SELECT 1');
-        checks['database'] = { ok: true };
-      } catch (err) {
-        ready = false;
-        checks['database'] = { ok: false, error: redactUrls((err as Error).message) };
+      // While idle the database is left alone, or an uptime monitor polling this
+      // route would keep a scale-to-zero compute awake around the clock. The
+      // first checkout wakes it, and the first query reports any failure.
+      if (activity?.isAsleep()) {
+        checks['database'] = { ok: true, checked: false, reason: 'idle' };
+      } else {
+        try {
+          await pool.query('SELECT 1');
+          checks['database'] = { ok: true };
+        } catch (err) {
+          ready = false;
+          checks['database'] = { ok: false, error: redactUrls((err as Error).message) };
+        }
       }
 
       // The cache refreshes only when a checkout asks for a quote, so an idle

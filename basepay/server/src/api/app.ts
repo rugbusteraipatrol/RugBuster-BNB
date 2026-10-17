@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import cors from 'cors';
 import express, { type Express } from 'express';
 import type pg from 'pg';
+import type { Activity } from '../activity.js';
 import type { Config } from '../config.js';
 import type { PriceService } from '../price/priceService.js';
 import type { SessionService } from '../sessions/sessionService.js';
@@ -24,10 +25,12 @@ export interface AppDependencies {
   sessionService: SessionService;
   watcher: Watcher | null;
   merchantRoutes?: MerchantRoutesOptions;
+  activity?: Activity | null;
 }
 
 export function createApp(deps: AppDependencies): Express {
   const { config, pool, priceService, sessionService, watcher } = deps;
+  const activity = deps.activity ?? null;
   const app = express();
 
   // The widget runs on the merchant's own domain (Webflow), so requests are
@@ -47,7 +50,16 @@ export function createApp(deps: AppDependencies): Express {
   // Behind a single reverse proxy in the Docker/Railway setups; needed for req.ip.
   app.set('trust proxy', 1);
 
-  app.use(healthRoutes(config, pool, priceService, watcher));
+  app.use(healthRoutes(config, pool, priceService, watcher, activity));
+  // Sessions only come from these routes, so any request here wakes the
+  // background loops before its handler can create one. The landing page and
+  // the widget files below never touch the database and do not wake it.
+  if (activity) {
+    app.use(['/api', '/admin'], (_req, _res, next) => {
+      activity.wake();
+      next();
+    });
+  }
   app.use('/api', sessionRoutes(config, sessionService));
   app.use('/api', merchantRoutes(config, pool, deps.merchantRoutes ?? {}));
   app.use('/admin', adminRoutes(config, pool));

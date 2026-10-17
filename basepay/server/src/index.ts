@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { Activity } from './activity.js';
 import { createApp } from './api/app.js';
 import { loadConfig } from './config.js';
 import { getMerchant } from './db/merchants.js';
@@ -52,25 +53,29 @@ const transak =
 
 const sessionService = new SessionService(pool, config, priceService, transak);
 
-const watcher = config.watcher.enabled ? new Watcher(pool, config) : null;
+// Only the watcher puts this to sleep, so without it the loops simply never idle.
+const activity = new Activity();
+
+const watcher = config.watcher.enabled ? new Watcher(pool, config, undefined, activity) : null;
 if (watcher) await watcher.start();
 
 // Late payments ride on the watcher's confirmation pass, so they need it running.
-const lateSweep = watcher ? new LateSweep(pool, config) : null;
+const lateSweep = watcher ? new LateSweep(pool, config, undefined, activity) : null;
 lateSweep?.start();
 
 const webhookWorker = new WebhookWorker(pool, config, async (merchantId) => {
   const merchant = await getMerchant(pool, merchantId);
   return merchant?.webhookSecret ?? null;
-});
+}, activity);
 webhookWorker.start();
 
 const expiryTimer = setInterval(() => {
+  if (activity.isAsleep()) return;
   void sessionService.sweepExpired().catch((err) => logger.error({ err }, 'expiry sweep failed'));
 }, config.sessions.expirySweepIntervalMs);
 expiryTimer.unref?.();
 
-const app = createApp({ config, pool, priceService, sessionService, watcher });
+const app = createApp({ config, pool, priceService, sessionService, watcher, activity });
 const server = app.listen(config.port, () => {
   logger.info(
     { port: config.port, chainId: config.chain.chainId, usdc: config.chain.usdcAddress },

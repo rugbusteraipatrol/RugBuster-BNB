@@ -193,6 +193,23 @@ export async function listAddressesWithRecentlyExpiredSessions(db: Queryable, wi
 }
 
 /**
+ * True while any background loop still has work: an open session, a session
+ * inside the late-payment window, or a webhook waiting to be delivered. When
+ * this is false the loops stop querying (see `Activity`).
+ */
+export async function hasBackgroundWork(db: Queryable, lateWindowSeconds: number): Promise<boolean> {
+  const { rows } = await db.query<{ busy: boolean }>(
+    `SELECT EXISTS (SELECT 1 FROM sessions WHERE status IN ('pending', 'confirming'))
+         OR EXISTS (SELECT 1 FROM sessions
+                     WHERE status = 'expired'
+                       AND expires_at >= now() - make_interval(secs => $1::double precision))
+         OR EXISTS (SELECT 1 FROM webhook_deliveries WHERE status = 'pending') AS busy`,
+    [Math.max(lateWindowSeconds, 0)],
+  );
+  return rows[0]?.busy ?? true;
+}
+
+/**
  * Open sessions for this address whose quote falls inside [minQuote, maxQuote].
  * The window is computed from the observed transfer value; the decision about
  * which (if any) of these the transfer belongs to is made by the pure matcher in

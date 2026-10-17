@@ -1,6 +1,7 @@
 import type pg from 'pg';
 import { createPublicClient, http, type Address, type PublicClient } from 'viem';
 import { base } from 'viem/chains';
+import type { Activity } from '../activity.js';
 import type { Config } from '../config.js';
 import { listAddressesWithRecentlyExpiredSessions } from '../db/sessions.js';
 import { getWatcherState, setWatcherState } from '../db/watcherState.js';
@@ -46,6 +47,7 @@ export class LateSweep {
     private readonly pool: pg.Pool,
     private readonly config: Config,
     client?: PublicClient,
+    private readonly activity: Activity | null = null,
   ) {
     this.client =
       client ??
@@ -75,7 +77,7 @@ export class LateSweep {
   /** One pass. Returns how many sessions were revived. Exposed for tests. */
   async tick(): Promise<number> {
     const windowSeconds = this.config.latePayments.windowSeconds;
-    if (this.running || windowSeconds <= 0) return 0;
+    if (this.running || windowSeconds <= 0 || this.activity?.isAsleep()) return 0;
     this.running = true;
     try {
       const head = await this.client.getBlockNumber();
@@ -84,7 +86,10 @@ export class LateSweep {
 
       const state = await getWatcherState(this.pool, this.stateId);
       const lookBack = BigInt(Math.ceil(windowSeconds / BASE_BLOCK_SECONDS));
-      let from = state ? state.lastProcessedBlock + 1n : safeHead > lookBack ? safeHead - lookBack : 0n;
+      // A late payment lands after its session expired, so never earlier than the
+      // window. Clamping also skips the blocks a sleeping service left behind.
+      const earliest = safeHead > lookBack ? safeHead - lookBack : 0n;
+      let from = state && state.lastProcessedBlock + 1n > earliest ? state.lastProcessedBlock + 1n : earliest;
 
       const addresses = await listAddressesWithRecentlyExpiredSessions(this.pool, windowSeconds);
       if (addresses.length === 0 || from > safeHead) {

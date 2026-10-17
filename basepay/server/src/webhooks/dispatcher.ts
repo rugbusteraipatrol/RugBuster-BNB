@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
+import type { Activity } from '../activity.js';
 import type { Config } from '../config.js';
 import { listActivePaymentsForSession } from '../db/payments.js';
 import type { Queryable } from '../db/pool.js';
@@ -158,6 +159,7 @@ export class WebhookWorker {
     private readonly pool: pg.Pool,
     private readonly config: Config,
     private readonly secretLookup: (merchantId: string) => Promise<string | null>,
+    private readonly activity: Activity | null = null,
   ) {}
 
   start(): void {
@@ -181,7 +183,8 @@ export class WebhookWorker {
 
   /** Exposed for tests: drain whatever is currently due, once. */
   async tick(): Promise<DeliveryResult[]> {
-    if (this.running || this.stopped) return [];
+    // Asleep only once no delivery is pending (see `hasBackgroundWork`).
+    if (this.running || this.stopped || this.activity?.isAsleep()) return [];
     this.running = true;
     try {
       const leaseSeconds = Math.max(30, Math.ceil(this.config.webhooks.timeoutMs / 1000) * 2);

@@ -1,7 +1,9 @@
 import type pg from 'pg';
 import type { Address, PublicClient } from 'viem';
+import type { Activity } from '../activity.js';
 import type { Config } from '../config.js';
 import { listAddressesWithOpenSessions, listMerchantAddresses } from '../db/merchants.js';
+import { hasBackgroundWork } from '../db/sessions.js';
 import { getWatcherState, setWatcherState } from '../db/watcherState.js';
 import { logger } from '../logger.js';
 import { redactUrls } from '../redact.js';
@@ -26,6 +28,9 @@ export interface WatcherStatus {
  * means the watcher is failing rather than between passes.
  */
 const STALL_AFTER_SAFETY_INTERVALS = 3;
+
+/** Base produces a block every two seconds; used to turn time asleep into blocks. */
+const BASE_BLOCK_MS = 2_000;
 
 /**
  * Watches USDC Transfer events into merchant addresses on Base.
@@ -60,6 +65,8 @@ export class Watcher {
     private readonly pool: pg.Pool,
     private readonly config: Config,
     client?: PublicClient,
+    /** Lets the service go quiet when idle. Tests leave it out, so passes always run. */
+    private readonly activity: Activity | null = null,
   ) {
     const chain = client ? null : createChainClient(config);
     this.client = client ?? (chain?.client as PublicClient);
@@ -149,10 +156,20 @@ export class Watcher {
     this.ticking = true;
     this.lastTickStartedAt = Date.now();
     try {
+      // Asleep means nothing is open and nothing is owed, so there is nothing a
+      // pass could settle. It still counts as a pass, so `/readyz` stays green.
+      if (this.activity?.isAsleep()) {
+        this.markPassed();
+        return;
+      }
+      const mark = this.activity?.mark() ?? 0;
+
       const head = await this.client.getBlockNumber();
       this.status.headBlock = head.toString();
 
-      const from = await this.resolveScanStart(head);
+      let from = await this.resolveScanStart(head);
+      const wokeAt = this.activity?.takeWokeAt() ?? null;
+      if (wokeAt !== null) from = this.skipSleptBlocks(from, head, wokeAt);
 
       // Re-validate first: drop transfers that left the canonical chain before
       // re-scanning, so a re-included transfer is re-recorded in the same tick.
@@ -177,16 +194,43 @@ export class Watcher {
 
       await this.settlement.advanceConfirmations(head);
 
-      this.lastSuccessAt = Date.now();
+      if (
+        this.activity &&
+        openAddresses.length === 0 &&
+        !(await hasBackgroundWork(this.pool, this.config.latePayments.windowSeconds)) &&
+        this.activity.sleepIfQuietSince(mark)
+      ) {
+        logger.info('nothing open; background work paused until the next API request');
+      }
+
       this.status.lastProcessedBlock = head.toString();
-      this.status.lastTickAt = new Date(this.lastSuccessAt).toISOString();
-      this.status.lastError = null;
+      this.markPassed();
     } catch (err) {
       this.status.lastError = redactUrls((err as Error).message);
       logger.error({ err }, 'watcher tick failed');
     } finally {
       this.ticking = false;
     }
+  }
+
+  private markPassed(): void {
+    this.lastSuccessAt = Date.now();
+    this.status.lastTickAt = new Date(this.lastSuccessAt).toISOString();
+    this.status.lastError = null;
+  }
+
+  /**
+   * The bookmark stood still while asleep. Every session open now was created
+   * after the request that woke us, and a payment cannot precede its session, so
+   * the blocks from before waking are skipped rather than backfilled, which
+   * after a quiet week would be tens of thousands of getLogs calls. The estimate
+   * leans early: the reorg depth plus a few blocks of slack.
+   */
+  private skipSleptBlocks(from: bigint, head: bigint, wokeAt: number): bigint {
+    const sinceWake = BigInt(Math.ceil(Math.max(Date.now() - wokeAt, 0) / BASE_BLOCK_MS));
+    const margin = sinceWake + BigInt(this.config.watcher.reorgDepthBlocks) + 5n;
+    const floor = head > margin ? head - margin : 0n;
+    return floor > from ? floor : from;
   }
 
   /**
