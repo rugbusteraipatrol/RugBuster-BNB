@@ -1,3 +1,4 @@
+import { normalizeApiBaseUrl } from './apiBase.js';
 import { resolveLocale } from './i18n.js';
 import { renderQrSvg } from './qr.js';
 import type { WidgetOptions } from './types.js';
@@ -37,7 +38,7 @@ function resolveTarget(target: HTMLElement | string): HTMLElement {
 }
 
 export function mount(options: MountOptions): PaymentWidget {
-  const apiBaseUrl = (options.apiBaseUrl ?? defaultApiBaseUrl(currentScript())).replace(/\/$/, '');
+  const apiBaseUrl = normalizeApiBaseUrl(options.apiBaseUrl ?? defaultApiBaseUrl(currentScript()));
   const widgetOptions: WidgetOptions = {
     apiBaseUrl,
     merchantId: options.merchantId,
