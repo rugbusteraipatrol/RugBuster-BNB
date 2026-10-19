@@ -1,0 +1,11 @@
+# Replace the Railway address with the custom domain once one exists.
+User-agent: *
+Allow: /
+
+# Nothing here is useful to a crawler and the admin surface should never be indexed.
+Disallow: /api/
+Disallow: /admin/
+Disallow: /healthz
+Disallow: /readyz
+
+Sitemap: https://www.stablecart.org/sitemap.xml

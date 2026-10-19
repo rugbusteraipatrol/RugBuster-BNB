@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy policy — StableCart</title>
+    <meta name="description" content="What data the StableCart payment service receives, why, and how long it is kept." />
+    <link rel="canonical" href="https://www.stablecart.org/privacy/" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #1d1d1f; --ink-2: #6e6e73; --line: #d2d2d7; --accent: #4f6ef7;
+        --grad: linear-gradient(135deg, #6d5dfc 0%, #3b82f6 55%, #22d3ee 100%);
+        --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #fff; color: var(--ink); font: 17px/1.6 var(--sans); letter-spacing: -0.011em; -webkit-font-smoothing: antialiased; }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      .wrap { max-width: 720px; margin: 0 auto; padding: 0 22px; }
+      header.nav { position: sticky; top: 0; background: rgba(250,250,252,.8); backdrop-filter: saturate(180%) blur(20px); }
+      header.nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 48px; }
+      .wordmark { font-weight: 700; letter-spacing: -0.045em; color: var(--ink); font-size: 19px; }
+      .wordmark i { display: inline-block; width: .2em; height: .2em; border-radius: 50%; background: var(--grad); margin-left: .045em; vertical-align: baseline; }
+      main { padding: 48px 0 80px; }
+      h1 { font-size: clamp(34px, 5vw, 48px); letter-spacing: -0.035em; font-weight: 650; line-height: 1.08; margin: 0 0 8px; }
+      .updated { color: var(--ink-2); font-size: 15px; margin: 0 0 34px; }
+      h2 { font-size: 22px; letter-spacing: -0.02em; margin: 34px 0 10px; }
+      p, li, td, th { color: #33333a; }
+      ul { padding-left: 22px; }
+      table { border-collapse: collapse; width: 100%; margin: 12px 0 18px; font-size: 15.5px; }
+      th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 9px 8px 9px 0; vertical-align: top; }
+      th { font-weight: 600; color: var(--ink); }
+      footer { border-top: 1px solid var(--line); padding: 22px 0 40px; font-size: 12.5px; color: var(--ink-2); }
+    </style>
+  </head>
+  <body>
+    <header class="nav"><div class="wrap"><a class="wordmark" href="/">stablecart<i></i></a><a href="/terms/" style="font-size:12.5px">Terms</a></div></header>
+    <main>
+      <div class="wrap">
+        <h1>Privacy policy</h1>
+        <p class="updated">Last updated 23 September 2026. The service is operated by Fantom Studio, Serbia. Questions: <a href="mailto:hello@stablecart.org">hello@stablecart.org</a>.</p>
+
+        <p>StableCart is built to need as little personal data as possible. It never receives a buyer's name, email, address or card details, and it has no user accounts.</p>
+
+        <h2>What we receive</h2>
+        <table>
+          <tr><th>Data</th><th>When and why</th><th>Kept</th></tr>
+          <tr><td>Your wallet address on Base</td><td>When you register a shop or make payment links. It is where payments are sent, so it is the whole point of the service.</td><td>Until you ask us to delete the merchant</td></tr>
+          <tr><td>Your shop URL or name (optional)</td><td>Given at registration so your merchant id is readable and support is possible.</td><td>Same</td></tr>
+          <tr><td>The amount, currency and your own order reference</td><td>Sent by your shop or link when a checkout opens, so the payment can be matched to your order.</td><td>Payment records are kept for 24 months for accounting and dispute support</td></tr>
+          <tr><td>Public blockchain data</td><td>Transaction hash, sender address, amount and block, read from the public Base blockchain to confirm a payment.</td><td>Same</td></tr>
+          <tr><td>Technical logs</td><td>IP address, time and request path, written by the server and our host to run the service and stop abuse.</td><td>Up to 30 days</td></tr>
+        </table>
+
+        <p>Buyers do not enter personal data into the StableCart checkout. Whatever the buyer's name and address are, they stay in your shop, not with us.</p>
+
+        <h2>Cookies</h2>
+        <p>The checkout and this website set no cookies and run no advertising or analytics trackers. The payment-link builder stores your merchant id and key in your own browser's local storage so you do not have to set it up again; clearing your browser data removes it.</p>
+
+        <h2>Who else is involved</h2>
+        <ul>
+          <li><strong>Railway</strong> (hosting) and <strong>Neon</strong> (database), which store the data above on our behalf inside the EU.</li>
+          <li><strong>Alchemy</strong> and the public Base RPC, which we query to read the blockchain.</li>
+          <li><strong>CoinGecko</strong>, for the USDC price. No merchant or buyer data is sent.</li>
+          <li><strong>exchangerate-api.com</strong>, queried by the WooCommerce plugin for daily currency rates. No shop data is sent.</li>
+          <li><strong>Cloudflare</strong>, which serves this website.</li>
+        </ul>
+        <p>We do not sell data and we do not share it for advertising.</p>
+
+        <h2>The blockchain part</h2>
+        <p>Payments happen on a public blockchain. Transactions, wallet addresses and amounts are visible to anyone, forever, and neither we nor you can delete them. That is a property of the network, not a choice we make.</p>
+
+        <h2>Your rights</h2>
+        <p>If you are in the EU or a country with similar law, you can ask for a copy of your data, its correction, or its deletion, and you can object to processing. Write to <a href="mailto:hello@stablecart.org">hello@stablecart.org</a> and we will answer within 30 days. Deleting a merchant removes the wallet address, the shop name and the keys; blockchain transactions remain public, as above.</p>
+
+        <h2>Changes</h2>
+        <p>If this policy changes, the date at the top changes with it.</p>
+      </div>
+    </main>
+    <footer><div class="wrap"><span class="wordmark" style="font-size:15px;margin-right:10px">stablecart<i></i></span>© 2026 Fantom Studio · <a href="/terms/">Terms</a> · <a href="/">Home</a></div></footer>
+  </body>
+</html>

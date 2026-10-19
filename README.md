@@ -62,7 +62,14 @@ RugBuster-BNB/
     deploy_bsc_testnet.py
     deploy_activity_logger.js
     deploy_scanner_bsc_testnet.js
+  basepay/                        # BasePay: non-custodial USDC checkout on Base
+    server/                       # Payment sessions, chain watcher, webhooks
+    widget/                       # Embeddable checkout widget + demo page
 ```
+
+`basepay/` is a self-contained Node/TypeScript project with its own
+dependencies, tests and Docker stack. It shares no code with the Python
+collectors above. See [basepay/README.md](basepay/README.md).
 
 ## Railway
 

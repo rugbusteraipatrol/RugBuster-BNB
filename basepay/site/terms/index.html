@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Terms of service — StableCart</title>
+    <meta name="description" content="The terms under which the StableCart payment service may be used." />
+    <link rel="canonical" href="https://www.stablecart.org/terms/" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #1d1d1f; --ink-2: #6e6e73; --line: #d2d2d7; --accent: #4f6ef7;
+        --grad: linear-gradient(135deg, #6d5dfc 0%, #3b82f6 55%, #22d3ee 100%);
+        --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #fff; color: var(--ink); font: 17px/1.6 var(--sans); letter-spacing: -0.011em; -webkit-font-smoothing: antialiased; }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      .wrap { max-width: 720px; margin: 0 auto; padding: 0 22px; }
+      header.nav { position: sticky; top: 0; background: rgba(250,250,252,.8); backdrop-filter: saturate(180%) blur(20px); }
+      header.nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 48px; }
+      .wordmark { font-weight: 700; letter-spacing: -0.045em; color: var(--ink); font-size: 19px; }
+      .wordmark i { display: inline-block; width: .2em; height: .2em; border-radius: 50%; background: var(--grad); margin-left: .045em; vertical-align: baseline; }
+      main { padding: 48px 0 80px; }
+      h1 { font-size: clamp(34px, 5vw, 48px); letter-spacing: -0.035em; font-weight: 650; line-height: 1.08; margin: 0 0 8px; }
+      .updated { color: var(--ink-2); font-size: 15px; margin: 0 0 34px; }
+      h2 { font-size: 22px; letter-spacing: -0.02em; margin: 34px 0 10px; }
+      p, li { color: #33333a; }
+      ul { padding-left: 22px; }
+      footer { border-top: 1px solid var(--line); padding: 22px 0 40px; font-size: 12.5px; color: var(--ink-2); }
+    </style>
+  </head>
+  <body>
+    <header class="nav"><div class="wrap"><a class="wordmark" href="/">stablecart<i></i></a><a href="/privacy/" style="font-size:12.5px">Privacy</a></div></header>
+    <main>
+      <div class="wrap">
+        <h1>Terms of service</h1>
+        <p class="updated">Last updated 23 September 2026. StableCart is operated by Fantom Studio, Serbia. Contact: <a href="mailto:hello@stablecart.org">hello@stablecart.org</a>.</p>
+
+        <h2>1. What the service does</h2>
+        <p>StableCart watches the Base blockchain for USDC payments made to a wallet address you provide, and reports the status of those payments to you — through a checkout page, a webhook to your website, or a plugin.</p>
+
+        <h2>2. What the service does not do</h2>
+        <ul>
+          <li>It never takes custody of money. Payments go from the buyer's wallet to your wallet in a single blockchain transaction.</li>
+          <li>It holds no private keys and cannot move, freeze, reverse or refund a payment.</li>
+          <li>It is not a bank, a payment institution, an exchange or a money transmitter, and it does not convert between currencies.</li>
+        </ul>
+
+        <h2>3. Your responsibilities</h2>
+        <ul>
+          <li>The wallet address you enter is where every payment lands. You are responsible for it being correct and for keeping its keys safe. A payment sent to a wrong address cannot be recovered by anyone, including us.</li>
+          <li>You are responsible for what you sell, for your taxes, and for complying with the law where you and your buyers are.</li>
+          <li>You must not use the service for anything illegal, for sanctioned persons or jurisdictions, or to deceive buyers about who they are paying.</li>
+        </ul>
+
+        <h2>4. Plans and payment</h2>
+        <p>The free plan covers 20 paid orders per calendar month; once reached, new checkouts are refused until the next month. Pro costs $12 for 30 days and removes the limit. Pro is paid in USDC, is not a recurring subscription, and is not refundable once the period has started. Prices may change with notice on this site; a period you already paid for is unaffected.</p>
+
+        <h2>5. Availability</h2>
+        <p>The service is provided as is, without any warranty. It depends on third parties — blockchain nodes, a price feed, hosting — and may be unavailable or delayed. When the service is down, buyers may still pay your wallet directly; the blockchain, not this service, is the record of what was paid.</p>
+
+        <h2>6. Liability</h2>
+        <p>To the extent permitted by law, Fantom Studio is not liable for lost profits, lost payments, mis-typed wallet addresses, buyer mistakes, exchange-rate movements, or any indirect or consequential damages. Our total liability for any claim is limited to the amount you paid us in the 12 months before the claim.</p>
+
+        <h2>7. Suspension</h2>
+        <p>We may suspend an account that abuses the service, attacks it, or uses it for something illegal. We will tell you why, at the address you gave us, if you gave us one.</p>
+
+        <h2>8. Changes and law</h2>
+        <p>We may update these terms; the date above shows when. Continued use after a change means you accept it. Serbian law applies, and the courts of Belgrade have jurisdiction, unless mandatory consumer law where you live says otherwise.</p>
+      </div>
+    </main>
+    <footer><div class="wrap"><span class="wordmark" style="font-size:15px;margin-right:10px">stablecart<i></i></span>© 2026 Fantom Studio · <a href="/privacy/">Privacy</a> · <a href="/">Home</a></div></footer>
+  </body>
+</html>

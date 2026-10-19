@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BitPay alternative with no fee on sales — StableCart</title>
+    <meta name="description" content="BitPay charges 2% + 25¢ per transaction under $500,000 a month. If your buyers pay in USDC, StableCart puts it straight into your own wallet for a flat $12 per 30 days, free up to 20 orders." />
+    <link rel="canonical" href="https://www.stablecart.org/bitpay-alternative/" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://www.stablecart.org/bitpay-alternative/" />
+    <meta property="og:title" content="A BitPay alternative with no fee on sales" />
+    <meta property="og:description" content="BitPay charges 2% + 25¢ per transaction under $500,000 a month. If your buyers pay in USDC, StableCart puts it straight into your own wallet for a flat $12 per 30 days, free up to 20 orders." />
+    <meta property="og:image" content="https://www.stablecart.org/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+    <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Can I run StableCart next to BitPay?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. They are separate WooCommerce payment methods, so you can offer USDC through StableCart and keep BitPay for other coins."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does StableCart convert USDC to dollars?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. The USDC lands in your wallet and stays USDC, which holds its value at one dollar. You can move it to an exchange and withdraw to a bank whenever you like; the exchange charges its own fee."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does StableCart ever hold my money?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. The buyer pays your wallet directly. StableCart only watches the Base network and tells your shop when the payment arrived."
+      }
+    }
+  ]
+}
+    </script>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #1d1d1f; --ink-2: #6e6e73; --line: #d2d2d7; --accent: #4f6ef7; --bg-alt: #f5f5f7;
+        --grad: linear-gradient(135deg, #6d5dfc 0%, #3b82f6 55%, #22d3ee 100%);
+        --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #fff; color: var(--ink); font: 17px/1.6 var(--sans); letter-spacing: -0.011em; -webkit-font-smoothing: antialiased; }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      .wrap { max-width: 760px; margin: 0 auto; padding: 0 22px; }
+      header.nav { position: sticky; top: 0; z-index: 10; background: rgba(250,250,252,.8); backdrop-filter: saturate(180%) blur(20px); }
+      header.nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 48px; }
+      .wordmark { font-weight: 700; letter-spacing: -0.045em; color: var(--ink); font-size: 19px; }
+      .wordmark i { display: inline-block; width: .2em; height: .2em; border-radius: 50%; background: var(--grad); margin-left: .045em; vertical-align: baseline; }
+      header.nav nav a { color: var(--ink); font-size: 12.5px; opacity: .88; }
+      main { padding: 56px 0 72px; }
+      .eyebrow { font-size: 14px; font-weight: 600; color: var(--ink-2); margin: 0 0 10px; }
+      h1 { font-size: clamp(34px, 5.4vw, 52px); letter-spacing: -0.035em; font-weight: 650; line-height: 1.07; margin: 0 0 18px; }
+      .lede { font-size: 20px; color: var(--ink-2); margin: 0 0 28px; }
+      h2 { font-size: 26px; letter-spacing: -0.025em; margin: 48px 0 12px; line-height: 1.2; }
+      p, li { color: #33333a; }
+      ul, ol { padding-left: 22px; }
+      li { margin-bottom: 6px; }
+      .cta { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin: 8px 0 0; }
+      .btn { display: inline-block; background: var(--accent); color: #fff; font-weight: 600; border-radius: 980px; padding: 13px 24px; }
+      .btn:hover { text-decoration: none; filter: brightness(1.06); }
+      .note { font-size: 14px; color: var(--ink-2); }
+      .facts { background: var(--bg-alt); border-radius: 20px; padding: 20px 22px; margin: 28px 0 0; }
+      .facts p { margin: 0 0 8px; }
+      .facts p:last-child { margin: 0; font-size: 14px; color: var(--ink-2); }
+      .table-wrap { overflow-x: auto; margin: 14px 0 0; }
+      table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 15.5px; }
+      th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 11px 10px 11px 0; vertical-align: top; }
+      th { font-weight: 600; color: var(--ink); }
+      td:first-child { color: var(--ink-2); width: 34%; }
+      .faq h3 { font-size: 18px; letter-spacing: -0.015em; margin: 26px 0 6px; }
+      .faq p { margin: 0; }
+      footer { border-top: 1px solid var(--line); padding: 22px 0 40px; font-size: 12.5px; color: var(--ink-2); }
+    </style>
+  </head>
+  <body>
+    <header class="nav">
+      <div class="wrap">
+        <a class="wordmark" href="/">stablecart<i></i></a>
+        <nav><a href="/downloads/stablecart-for-woocommerce.zip">Download plugin</a></nav>
+      </div>
+    </header>
+
+    <main>
+      <div class="wrap">
+        <p class="eyebrow">BitPay alternative</p>
+        <h1>Paying BitPay 2% on stablecoin sales?</h1>
+        <p class="lede">BitPay is built for merchants who want crypto converted and paid out to a bank. If your buyers pay in USDC and you are happy to keep USDC, you can skip the processor and its fee.</p>
+        <div class="cta"><a class="btn" href="/downloads/stablecart-for-woocommerce.zip">Download for WooCommerce</a> <a href="/links/">No website? Payment links ›</a></div>
+
+        <div class="facts">
+          <p><strong>What BitPay charges.</strong> Its pricing page lists 2% + 25¢ per transaction below $500,000 of monthly volume, 1.5% + 25¢ up to $1 million, and 1% + 25¢ above that, with higher fees for high-risk industries.</p>
+          <p>Checked 26 September 2026 on <a href="https://www.bitpay.com/pricing" rel="nofollow">bitpay.com/pricing</a>. Compare against their current page before deciding.</p>
+        </div>
+
+        <h2>Side by side</h2>
+        <div class="table-wrap">
+          <table>
+            <tr><th></th><th>StableCart</th><th>BitPay</th></tr>
+            <tr><td>Fee on sales</td><td>None. Free up to 20 orders a month, then $12 per 30 days</td><td>2% + 25¢ per transaction under $500,000 a month</td></tr>
+            <tr><td>Account</td><td>None. Paste a wallet address and save</td><td>A BitPay merchant account</td></tr>
+            <tr><td>Coins</td><td>USDC on Base only</td><td>Many coins and networks</td></tr>
+            <tr><td>Payout</td><td>The buyer pays your wallet directly, in one transaction</td><td>Settlement in local currency, crypto, or both</td></tr>
+          </table>
+        </div>
+
+        <h2>What the fee adds up to</h2>
+        <table style="min-width:0">
+          <tr><th>Monthly sales</th><th>Orders</th><th>2% + 25¢</th><th>StableCart</th></tr>
+          <tr><td>$1,000</td><td>20 × $50</td><td>$25</td><td>$0 (free plan)</td></tr>
+          <tr><td>$5,000</td><td>100 × $50</td><td>$125</td><td>$12</td></tr>
+          <tr><td>$20,000</td><td>400 × $50</td><td>$500</td><td>$12</td></tr>
+        </table>
+
+        <h2>When BitPay is the better fit</h2>
+        <p>If you need your sales in dollars or euros in a bank account, if buyers pay in Bitcoin, or if you want the processor to carry the conversion risk, BitPay does things StableCart deliberately does not. StableCart does one thing: USDC on Base, straight to you. Turning USDC into bank money is a separate step you do at an exchange of your choice.</p>
+
+        <div class="faq">
+          <h2>Questions</h2>
+          <h3>Can I run StableCart next to BitPay?</h3><p>Yes. They are separate WooCommerce payment methods, so you can offer USDC through StableCart and keep BitPay for other coins.</p><h3>Does StableCart convert USDC to dollars?</h3><p>No. The USDC lands in your wallet and stays USDC, which holds its value at one dollar. You can move it to an exchange and withdraw to a bank whenever you like; the exchange charges its own fee.</p><h3>Does StableCart ever hold my money?</h3><p>No. The buyer pays your wallet directly. StableCart only watches the Base network and tells your shop when the payment arrived.</p>
+        </div>
+
+        <h2>Try it on a test order</h2>
+        <div class="cta"><a class="btn" href="/downloads/stablecart-for-woocommerce.zip">Download for WooCommerce</a> <a href="/links/">No website? Payment links ›</a></div>
+      </div>
+    </main>
+
+    <footer><div class="wrap"><span class="wordmark" style="font-size:15px;margin-right:10px">stablecart<i></i></span>© 2026 Fantom Studio · <a href="/">Home</a> · <a href="/links/">Payment links</a> · <a href="/terms/">Terms</a> · <a href="/privacy/">Privacy</a></div></footer>
+  </body>
+</html>

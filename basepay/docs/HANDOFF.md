@@ -1,0 +1,214 @@
+# Handoff — continuing BasePay from another session
+
+Read this first, then [`DEPLOY.md`](./DEPLOY.md). Everything below is settled;
+do not re-litigate it.
+
+## What this is
+
+`basepay/` is a self-contained Node/TypeScript project in this repository. It is
+**non-custodial USDC checkout on Base**: a merchant gives a wallet address, the
+buyer pays it directly, and this service watches the chain and reports status.
+It holds no key and moves no funds. It shares nothing with the Python collectors
+at the repository root.
+
+## State: 2026-09-22 — renamed to StableCart, plugin submitted, domain half-done
+
+Read this section first; the older one below is still true about the service
+itself.
+
+**The product is now called StableCart** (was BasePay). Coinbase ships a product
+called "Base Pay" on the same chain, and WordPress.org rejects names that close
+to someone else's. Renamed before the first submission: plugin, landing page,
+widget global (`window.StableCart`, `BasePay` kept as an alias) and the
+`x-stablecart-*` webhook headers (sent alongside `x-basepay-*`). Internal ids —
+the Railway project/service `basepay`, the billing merchant `basepay-billing`,
+this repository folder — were deliberately left alone.
+
+| | |
+| --- | --- |
+| Domain | `www.stablecart.org` (live). Bought `stablecart.org` at Cloudflare 2026-09-22; the apex is not served yet, see below |
+| WordPress.org | `stablecart-for-woocommerce` submitted 2026-09-22 under account **ffurduj**; automated scan passed; awaiting manual review. Assets for the listing are in `woocommerce/wporg-assets/` |
+| Pricing | Free = 20 paid orders/month, Pro = $12 per 30 days, bought with USDC through StableCart itself (`/pro/?merchant=<id>`, order ref `PRO-<id>` to merchant `basepay-billing`) |
+| Site | New white Apple-style landing page, Inter, `stablecart.` wordmark, `site/icon.svg` |
+| Railway | Spend warning set at $15/month (workspace-wide). StableCart itself costs ~$0.20/month |
+
+### The domain: www works, apex still does not
+
+- The site is live on **https://www.stablecart.org** — Railway verified the
+  `www` domain in seconds (`CNAME www → rp9cohin.up.railway.app`, DNS only /
+  grey cloud, plus the `_railway-verify.www` TXT). Every page answers 200:
+  `/`, `/healthz`, `/links/`, `/pay/`, `/pro/`, `/demo/`, `/terms/`,
+  `/privacy/`, `/downloads/stablecart-for-woocommerce.zip`.
+- The whole project now points at the `www` host: site pages and canonicals,
+  `robots.txt`, `sitemap.xml`, the plugin's default API base
+  (`stablecart_api_base_url`), `readme.txt`, and `PUBLIC_BASE_URL` on Railway
+  (which builds the Pro upgrade link the plugin shows).
+- **The bare `stablecart.org` never verified.** Its status sat at
+  `CERTIFICATE_STATUS_TYPE_VALIDATING_OWNERSHIP` for hours, before and after
+  deleting and re-adding the custom domain; with the Cloudflare proxy on, TLS
+  worked but Railway's edge answered `Application not found`. Its DNS records
+  were removed, so the apex currently returns 530.
+- To fix the apex later, on the free plan: add a **proxied** dummy record
+  (e.g. `AAAA @ → 100::`, orange cloud) and a **Redirect Rule**
+  (Rules → Redirect Rules, free) from `stablecart.org/*` to
+  `https://www.stablecart.org/$1`, 301. Cloudflare Snippets are paid and this
+  account's dashboard has no Origin Rules, so a Redirect Rule is the free path.
+- The user is willing to log into Cloudflare in the in-app browser so Claude can
+  click through it; Claude must not handle the API token itself.
+
+### Next: send mail as hello@stablecart.org (Proton)
+
+Receiving works: Cloudflare Email Routing forwards `hello@stablecart.org` to
+Proton (`fedja@rugbuster.io`). Sending from `hello@` does not, because Proton
+does not know the domain. The cloud session cannot reach Cloudflare or Proton,
+so this is for the local session, in the in-app browser, with the user logged
+in. Claude clicks; the user types every password and 2FA code.
+
+1. **Proton → Settings → Domain names.** Check that the plan allows another
+   custom domain (`rugbuster.io` may already use the only slot). If it does
+   not, stop and tell the user: the fallback is Gmail "Send mail as" through a
+   free SMTP relay (Brevo or Resend), keeping Cloudflare for receiving.
+2. **Add domain `stablecart.org` in Proton.** Copy every DNS value from
+   Proton's screen; never type them from memory.
+3. **Cloudflare → Email → Email Routing: disable it**, and delete the MX and
+   SPF records it created. Two systems cannot receive mail for one domain.
+4. **Cloudflare → DNS:** add Proton's TXT verification, 2 MX, one SPF (exactly
+   one SPF record may exist), 3 DKIM CNAMEs set to **DNS only (grey cloud)**,
+   and DMARC. Leave the `www` records for Railway alone.
+5. **Proton → Addresses:** create `hello@stablecart.org`.
+6. Send a test from `hello@` to `ffurduj@gmail.com`; the cloud session can read
+   it through the Gmail connector and confirm SPF, DKIM and DMARC pass.
+
+Do it when no important mail is expected; mail arriving mid-switch can be
+delayed.
+
+### Also open
+
+- KASETA demo store is on hold (prints not made). Its prices are still $0.10 and
+  it is not linked from the launch copy.
+- Alchemy key rotation, still pending, before real merchants arrive.
+- `docs/LAUNCH_KIT.md` holds the directory and community posts, to publish once
+  the plugin is approved.
+
+## State: live on Base mainnet (2026-09-15)
+
+A real $1 payment went end to end: widget quote, payment by scanning the QR code
+with MetaMask on a phone, session `paid`, funds in the merchant wallet.
+
+| | |
+| --- | --- |
+| Service | https://basepay-production.up.railway.app — Railway project `basepay`, service `basepay`, EU West, 1 replica, deploys this branch with Root Directory `/basepay` on every push |
+| Database | Neon project `Base`, AWS eu-central-1, branch `production`, direct (unpooled) connection |
+| RPC | Alchemy free tier, Base mainnet, WebSocket + HTTP |
+| Price feed | CoinGecko with a free demo key |
+| Merchants | `rugbuster`, `demo` and `kaseta`, all → `0x3208F5DfE9B2010bBe711033f39fF7Ee83039AAf`, no webhooks. `demo` backs the $0.01 checkout at `/demo/`; `kaseta` backs the Webflow demo store |
+| Landing page | `/` — Railway address as the domain, free during beta, contact `fedja@rugbuster.io`, no card-payment claims |
+
+Railway variables set (values live only in Railway): `DATABASE_URL`,
+`ADMIN_TOKEN`, `BASE_RPC_HTTP_URL`, `COINGECKO_API_KEY`, `PUBLIC_BASE_URL`,
+`NODE_ENV=production`, `WATCHER_MIN_TICK_INTERVAL_MS=15000`,
+`WATCHER_MAX_BLOCK_RANGE=10`, `WATCHER_POLL_INTERVAL_MS=15000`,
+`REORG_DEPTH_BLOCKS=4`. **`BASE_RPC_WS_URL` must stay unset** — see below.
+
+Railway deploys on push without waiting for CI. To run CI before a risky change
+reaches production, push it to another branch first (for example
+`claude/basepay-ci-shared-wallet`), then to this one once CI is green.
+
+### What going live taught
+
+- **Alchemy's free tier caps `getLogs` at 10 blocks.** With the default of 500,
+  every pass failed from the moment the merchant was registered.
+- **`/readyz` said `ready` throughout**, and served the full RPC URL (API key
+  included) on a public endpoint. Fixed: URLs in errors and logs are cut to
+  their host, and `/readyz` returns `503` when the watcher has stalled.
+- **An idle service read as degraded**, because the price only refreshed on
+  checkout. `/readyz` now refreshes it.
+- **CoinGecko without a key rate-limits Railway's shared IPs** (HTTP 429), which
+  left no price and refused every checkout. Fixed with a demo key, plus a 30s
+  cool-down so failures are not retried on every request.
+- **Merchants sharing a wallet could be issued the same amount**, so a payment
+  could settle the wrong session. Migration 002 reserves amounts per address.
+
+## Demo storefront (Webflow)
+
+https://basepay-demo-store.webflow.io is a full demo shop for showing BasePay on
+a real Webflow site: a fictional retro brand, KASETA, with six white tees (site id
+`6aaa6b8a53b07de8aafbd777`). White background, 80s palette (pink, blue, yellow),
+Impact headlines, 2px black borders. Pages: `/`, `/shop`, `/about`,
+`/thank-you`, and one page per tee (`/sunset-86`, `/neon-nights`, `/kaseta-c60`,
+`/rewind-86`, `/player-2`, `/beograd-nocu`).
+
+The tee renders, logo and banners are generated SVG rendered to PNG by headless
+Chrome, then uploaded as Webflow assets. Pages were inserted with the Webflow MCP
+WHTML builder (classes prefixed `k-`); product pages 2-6 are duplicates of
+`/sunset-86` with text, image and checkout data swapped.
+
+Each product page has a native Webflow form (email, full name, shipping address)
+and an Embed with the live BasePay checkout: a "PAY $X WITH USDC" button that
+mounts the widget on click (so a session is only opened when a buyer asks), for
+merchant `kaseta` (same wallet as `rugbuster`), order ref `KASETA-<slug>`, and a
+redirect to `/thank-you` two and a half seconds after the session reaches `paid`.
+The site is on Webflow's free plan: no site-wide custom code, system fonts only.
+
+### 2026-09-21 — the Alchemy free tier ran to 90% in six days
+
+Two causes. Alchemy bills WebSocket subscriptions by bandwidth, about 40 CU per
+`newHeads`, and Base produces a block every ~2s: **~1.7M CU a day for the
+subscription alone**, before a single request. And the watcher scanned every
+block for transfers whether or not any session was open, so an idle deployment
+paid as much as a busy one.
+
+Fixed on both sides:
+
+- **Code** (this branch): while no session is open the watcher reads the head,
+  advances its bookmark, and does not call `getLogs`. Idle costs ~10 CU a pass.
+  The scan resumes on the first pass after a session opens. Trade-off: a stray
+  transfer to a merchant wallet during idle is not recorded as `unmatched`.
+- **Config** (operator, in Railway): remove `BASE_RPC_WS_URL`; set
+  `WATCHER_POLL_INTERVAL_MS=15000` and `REORG_DEPTH_BLOCKS=4`. HTTP polling at
+  15s is ~60k CU a day; depth 4 re-scans a third of what 12 did.
+
+With both, expect well under 100k CU a day idle, low hundreds of thousands
+with traffic — against a 30M/month allowance. Do not move to PAYG for this;
+it would pay for waste. If the cap is hit before the config lands: funds still
+arrive in the wallet (non-custodial), but sessions stop settling, expire, and
+their payments surface at `GET /admin/payments/unmatched` for manual matching.
+
+## Decisions already made
+
+| | |
+| --- | --- |
+| Product shape | Embeddable `<script>` widget, not a Webflow Marketplace app. A Marketplace app is wanted later as a second channel, and would *install* this widget — the widget is its prerequisite, not its alternative. |
+| Who it is for | Merchants a card processor will not take. BasePay is the product; each merchant runs their own webhook receiver from [`../examples/`](../examples/). |
+| Pricing | Subscription, decided 2026-09-22: **Free = 20 paid orders per calendar month, Pro = $12/month unlimited.** Enforced server-side (`FREE_PLAN_MONTHLY_ORDERS`); an operator flips a merchant to `pro` via `POST /admin/merchants/:id/plan`. There is no self-service way to pay for Pro yet — that is the next server piece. The landing page still says "free while in beta" until launch copy is written. |
+| Database | **Neon** free tier, to avoid Railway's Postgres cost until there is traffic |
+| App hosting | **Railway** (the user already runs other services there) |
+| RPC | **Alchemy**, free tier, Base mainnet, **HTTP only**. The WebSocket URL was removed on 2026-09-22 because block subscriptions burned ~90% of the monthly quota; `WATCHER_POLL_INTERVAL_MS=15000`. |
+| CORS | `CORS_ALLOWED_ORIGINS=*` stays. Merchants embed the widget on their own domains, so a single allowed origin would break every other merchant. |
+
+Secrets — the RPC URLs, `DATABASE_URL`, `ADMIN_TOKEN`, API keys, webhook
+secrets — go straight into Railway's environment variables. They must not be
+pasted into chat or committed.
+
+## Next steps, in order
+
+0. **Apply the RPC config above in Railway** if not already done: delete
+   `BASE_RPC_WS_URL`, set `WATCHER_POLL_INTERVAL_MS=15000`,
+   `REORG_DEPTH_BLOCKS=4`. Then check the Alchemy dashboard's usage-by-method
+   the next day to confirm `newHeads` bandwidth is gone.
+1. **Rotate the Alchemy API key** and update both `BASE_RPC_*` variables. The
+   old key was exposed through `/readyz` before the fix. The user chose to do
+   this later, but before the first real customers.
+2. **Card on-ramp** for buyers with no crypto: supported in code, off
+   (`ONRAMP_PROVIDER=none`). If it is turned on, restore the card copy on the
+   landing page.
+3. **A custom domain**, then replace the Railway address in `site/`.
+4. **WooCommerce plugin** (`woocommerce/basepay-for-woocommerce/`): built 2026-09-22, not yet tested on a real WordPress site and not yet submitted to WordPress.org. Its differentiator is one-minute onboarding: paste a wallet, save, the plugin self-registers (`POST /api/merchants`, webhook challenge). Test on a public https WordPress site, then submit.
+5. **Pro billing**: a way for a merchant to pay $12/month (USDC through BasePay itself, or Stripe) that flips the plan automatically.
+6. **Webflow Marketplace app**, as a later channel.
+
+## How the user wants to be worked with
+
+Short answers. One step at a time. They asked explicitly for less text and for
+finishing one thing before starting the next. Do not send long plans; send the
+next step and wait. They write in Serbian; answer in Serbian.

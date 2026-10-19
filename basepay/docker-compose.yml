@@ -1,0 +1,102 @@
+# Local BasePay stack: Postgres, an anvil dev chain, and the service itself.
+#
+#   docker compose up --build
+#   npm run dev:chain --workspace server      # deploy the stand-in USDC
+#   open http://localhost:8080/demo/
+#
+# Nothing here is production configuration. The passwords are literals on
+# purpose so the stack starts with no setup.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: basepay
+      POSTGRES_PASSWORD: basepay
+      POSTGRES_DB: basepay
+    ports:
+      - '5432:5432'
+    volumes:
+      - basepay-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U basepay -d basepay']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  anvil:
+    image: ghcr.io/foundry-rs/foundry:latest
+    # --block-time 2 approximates Base, so confirmations accrue the way they do
+    # in production instead of instantly.
+    entrypoint: ['anvil', '--host', '0.0.0.0', '--port', '8545', '--chain-id', '31337', '--block-time', '2']
+    ports:
+      - '8545:8545'
+
+  app:
+    build:
+      context: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      anvil:
+        condition: service_started
+    environment:
+      PORT: '8080'
+      DATABASE_URL: postgres://basepay:basepay@postgres:5432/basepay
+      LOG_LEVEL: debug
+
+      ADMIN_TOKEN: local-dev-admin-token
+      MERCHANTS_FILE: /app/config/merchants.json
+      DEMO_WEBHOOK_SECRET: local-dev-webhook-secret-0123456
+
+      # Local dev chain, not Base. The stand-in USDC lands at this address as
+      # anvil account 0's first deployment (see `npm run dev:chain`).
+      CHAIN_ID: '31337'
+      USDC_ADDRESS: '0x5FbDB2315678afecb367f032d93F642f64180aa3'
+      BASE_RPC_HTTP_URL: http://anvil:8545
+      WATCHER_START_BLOCK: '0'
+      WATCHER_POLL_INTERVAL_MS: '1000'
+      CONFIRMATIONS_REQUIRED: '3'
+      REORG_DEPTH_BLOCKS: '5'
+
+      # No CoinGecko call in local dev; the stub below always reports parity.
+      COINGECKO_BASE_URL: http://pricestub:9090
+      PRICE_CACHE_TTL_SECONDS: '60'
+
+      SESSION_TTL_SECONDS: '900'
+      CORS_ALLOWED_ORIGINS: '*'
+    ports:
+      - '8080:8080'
+    volumes:
+      - ./config:/app/config:ro
+
+  # The merchant's side of the integration: verifies the signature and prints the
+  # payload, so `docker compose logs -f webhooksink` shows settlement arriving.
+  webhooksink:
+    image: node:22-alpine
+    command: ['node', '/app/scripts/webhook-sink.mjs']
+    environment:
+      PORT: '4001'
+      WEBHOOK_SECRET: local-dev-webhook-secret-0123456
+    volumes:
+      - ./scripts:/app/scripts:ro
+    expose:
+      - '4001'
+
+  # A one-file stand-in for CoinGecko so the local stack needs no internet and
+  # no API key. Production points COINGECKO_BASE_URL at the real API.
+  pricestub:
+    image: node:22-alpine
+    command:
+      - node
+      - -e
+      - |
+        require('http').createServer((req, res) => {
+          res.setHeader('content-type', 'application/json');
+          res.end(JSON.stringify({ 'usd-coin': { usd: 1 } }));
+        }).listen(9090, '0.0.0.0');
+    expose:
+      - '9090'
+
+volumes:
+  basepay-postgres:
