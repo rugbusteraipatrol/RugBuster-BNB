@@ -20,29 +20,41 @@ Google Fonts (Anton, Shrikhand, Monoton, Bungee, Bungee Shade, Righteous, Rubik
 Wet Paint, Modak). The paths in `mock.py` assume the layout of the session that
 wrote it and need adjusting before it runs elsewhere.
 
-## Redesign progress (unpublished)
+## Redesign status (applied in Webflow, unpublished)
 
-Nothing below is live until the site is published from Webflow. Last update
-2026-11-10.
-
-Done:
+Nothing below is live until the site is published from Webflow. Applied
+2026-11-10. It has not been viewed in a browser yet: the session that made the
+edits could not open the site or the Designer, so check every page type after
+the first publish.
 
 - Twelve images uploaded (ids in `assets.json`).
 - Home (`6aaa6b8c53b07de8aafbd7a2`): new hero image and copy, Strana B section
-  with ten cards (`61688f75-484f-8ea2-b1b8-5fb25ee8a336`), rainbow bar, older
-  grid relabelled "Strana A", announce and ticker text, FX embed
-  (`194fc7bf-2d81-a2c6-ef39-d952063f5513`).
-- `/trece-oko` created (`6af240218780ca9c7a5a1f0e`) as a plain duplicate of
-  `/sunset-86`; its content is still Sunset '86.
+  with ten cards, rainbow bar, older grid relabelled "Strana A", announce and
+  ticker text, FX embed.
+- Shop (`6aaa7240afee14d00a0c9c6a`): banner, Strana B grid, heading for the
+  Strana A grid, texts, FX embed.
+- Ten Strana B product pages, all duplicates of `/trece-oko` and therefore
+  sharing its element ids. Each has its own name, copy, image, tee colour
+  swatch and `data-product` value in the checkout embed.
 
-To do:
+  | slug | page id | tee |
+  |---|---|---|
+  | trece-oko | `6af240218780ca9c7a5a1f0e` | black |
+  | tecno-sunce | `6af2cecb4c918da2c831179b` | white |
+  | sumski-trip | `6af2cecbead7d7f72ea5a125` | white |
+  | hipnoza | `6af2cecc7efaf61368e677e2` | black |
+  | tunel | `6af2cecc135b3cab05099006` | white |
+  | lava | `6af2cece4c918da2c8311918` | black |
+  | kaleidoskop | `6af2ced1135b3cab0509931a` | white |
+  | leto-ljubavi | `6af2ced22237cb12f01687d8` | black |
+  | kosmicka-kaseta | `6af2ced332f37deb8f6581d0` | white |
+  | dobre-vibracije | `6af2ced38949ac4cedee516c` | white |
 
-- Shop: banner, Strana B grid, heading for the Strana A grid, texts, FX embed.
-- Turn `/trece-oko` into the Strana B product template, then duplicate it for
-  the other nine slugs in `ksite.STRANA_B` and swap name, copy, image, tee
-  colour and the `data-product` value in the checkout embed.
-- Older pages (six products, about, thank-you): FX embed, announce and ticker
-  text, nav link "STRANA B", "SVIH 16".
+- Six older product pages, about and thank-you: FX embed, announce and ticker
+  text, nav link "STRANA B" to `/#strana-b`, "SVIH 16" on the product pages.
+
+The FX embed is a copy of `ksite.FX` on every page, so a change to it has to be
+written to each page's embed again.
 
 Webflow's API returned 502 on batches of about twenty element edits; batches
 of eight or fewer went through.
