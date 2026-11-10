@@ -20,12 +20,12 @@ Google Fonts (Anton, Shrikhand, Monoton, Bungee, Bungee Shade, Righteous, Rubik
 Wet Paint, Modak). The paths in `mock.py` assume the layout of the session that
 wrote it and need adjusting before it runs elsewhere.
 
-## Redesign status (applied in Webflow, unpublished)
+## Redesign status (published 2026-11-10)
 
-Nothing below is live until the site is published from Webflow. Applied
-2026-11-10. It has not been viewed in a browser yet: the session that made the
-edits could not open the site or the Designer, so check every page type after
-the first publish.
+Published to `basepay-demo-store.webflow.io` on 2026-11-10 at the owner's
+request. It has not been viewed in a browser yet: the session that made the
+edits could not open the site or the Designer, so every page type still needs
+a look.
 
 - Twelve images uploaded (ids in `assets.json`).
 - Home (`6aaa6b8c53b07de8aafbd7a2`): new hero image and copy, Strana B section
