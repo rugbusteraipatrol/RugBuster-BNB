@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Payment — StableCart</title>
+    <meta name="robots" content="noindex" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #1d1d1f; --ink-2: #6e6e73; --line: #d2d2d7; --accent: #4f6ef7;
+        --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; min-height: 100vh; background: #f5f5f7; color: var(--ink);
+        font: 17px/1.47 var(--sans); letter-spacing: -0.012em; -webkit-font-smoothing: antialiased;
+        display: flex; flex-direction: column; align-items: center; padding: 28px 16px 40px;
+      }
+      a { color: var(--accent); text-decoration: none; }
+      .wordmark { font-weight: 700; letter-spacing: -0.045em; color: var(--ink); font-size: 17px; }
+      .wordmark i { display: inline-block; width: .2em; height: .2em; border-radius: 50%; background: linear-gradient(135deg, #6d5dfc, #3b82f6 55%, #22d3ee); margin-left: .045em; vertical-align: baseline; }
+      main { width: 100%; max-width: 440px; }
+      .card { background: #fff; border-radius: 22px; padding: 22px; box-shadow: 0 20px 50px -30px rgba(29,29,31,.4); }
+      .head { text-align: center; margin: 22px 0 18px; }
+      .title { font-size: 22px; font-weight: 650; letter-spacing: -0.02em; margin: 0 0 4px; word-break: break-word; }
+      .to { font-size: 14px; color: var(--ink-2); margin: 0; }
+      .notice { margin: 0 0 14px; font-size: 15px; color: var(--ink-2); }
+      .err { background: #fff; border-radius: 22px; padding: 24px; text-align: center; }
+      .err h1 { font-size: 20px; margin: 0 0 8px; letter-spacing: -0.02em; }
+      .foot { text-align: center; font-size: 12.5px; color: var(--ink-2); margin-top: 22px; line-height: 1.5; }
+      .paid { display: none; text-align: center; padding: 10px 0 4px; margin-top: 14px; }
+      .paid.show { display: block; }
+      .paid .tick { width: 54px; height: 54px; border-radius: 50%; background: #30d158; display: inline-grid; place-items: center; margin-bottom: 12px; }
+      .paid .tick svg { width: 28px; height: 28px; stroke: #fff; fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+      .paid strong { display: block; font-size: 20px; letter-spacing: -0.02em; }
+      .paid span { color: var(--ink-2); font-size: 15px; }
+      .invite { display: none; margin-top: 14px; text-align: center; }
+      .invite.show { display: block; }
+      .invite h2 { font-size: 18px; letter-spacing: -0.02em; margin: 0 0 6px; }
+      .invite p { margin: 0 0 16px; font-size: 15px; color: var(--ink-2); }
+      .invite a.btn { display: inline-block; background: var(--accent); color: #fff; font-weight: 600; font-size: 15.5px; border-radius: 980px; padding: 12px 22px; }
+      .invite a.btn:hover { text-decoration: none; filter: brightness(1.06); }
+      .foot .make { display: inline-block; margin-top: 8px; }
+    </style>
+  </head>
+  <body>
+    <a class="wordmark" href="/">stablecart<i></i></a>
+    <main>
+      <div class="head" id="head" hidden>
+        <p class="title" id="title"></p>
+        <p class="to" id="to"></p>
+      </div>
+      <div id="slot"></div>
+      <div class="card paid" id="paid">
+        <span class="tick"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg></span>
+        <strong id="paid-title">Paid</strong>
+        <span id="paid-note">Thank you. Show this screen to the seller if they ask.</span>
+      </div>
+      <div class="card invite" id="invite">
+        <h2 id="invite-title">Get paid like this yourself</h2>
+        <p id="invite-text">Paste your wallet address, set an amount, send the link. The money lands in your wallet in seconds. No account, no fee on payments.</p>
+        <a class="btn" id="invite-btn" href="/links/?ref=pay-paid">Make your own payment link</a>
+      </div>
+      <div class="err" id="err" hidden>
+        <h1>This payment link is not valid</h1>
+        <p class="notice" id="err-msg">Ask the seller for a new one.</p>
+        <a href="/">What is StableCart?</a>
+      </div>
+      <p class="foot">
+        <span id="foot-text">You pay USDC on Base directly to the seller's wallet.<br />
+        StableCart never holds the money and cannot reverse a payment.</span><br />
+        <a class="make" id="foot-make" href="/links/?ref=pay-footer">Want to get paid like this? Make a link ›</a>
+      </p>
+    </main>
+
+    <script src="/widget/widget.js" data-auto="false"></script>
+    <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var merchant = (params.get('m') || '').trim();
+        var amount = (params.get('a') || '').trim();
+        var reference = (params.get('r') || '').trim();
+        var title = (params.get('t') || '').trim().slice(0, 120);
+        var locale = (params.get('l') || '').trim();
+
+        // The widget translates itself; these are the page's own strings. Serbian
+        // follows the link's `l`, or the browser when the link does not set one.
+        var browser = (navigator.language || '').toLowerCase();
+        var lang = /^sr/i.test(locale) || (!locale && /^(sr|hr|bs|me)/.test(browser)) ? 'sr' : 'en';
+        var T = {
+          en: {
+            paid: 'Paid',
+            received: ' received. Thank you. Show this screen to the seller if they ask.',
+            inviteTitle: 'Get paid like this yourself',
+            inviteText: 'Paste your wallet address, set an amount, send the link. The money lands in your wallet in seconds. No account, no fee on payments.',
+            inviteBtn: 'Make your own payment link',
+            foot: "You pay USDC on Base directly to the seller's wallet.<br />StableCart never holds the money and cannot reverse a payment.",
+            footMake: 'Want to get paid like this? Make a link ›'
+          },
+          sr: {
+            paid: 'Plaćeno',
+            received: ' primljeno. Hvala. Pokaži ovaj ekran prodavcu ako traži.',
+            inviteTitle: 'I ti možeš da primaš uplate ovako',
+            inviteText: 'Nalepi adresu novčanika, upiši iznos i pošalji link. Novac stiže u tvoj novčanik za nekoliko sekundi. Bez naloga i bez provizije na uplatu.',
+            inviteBtn: 'Napravi svoj link za plaćanje',
+            foot: 'Plaćaš u USDC na mreži Base, direktno u novčanik prodavca.<br />StableCart nikad ne drži novac i ne može da poništi uplatu.',
+            footMake: 'Hoćeš i ti ovako da naplaćuješ? Napravi link ›'
+          }
+        }[lang];
+        document.documentElement.lang = lang;
+        document.getElementById('paid-title').textContent = T.paid;
+        document.getElementById('invite-title').textContent = T.inviteTitle;
+        document.getElementById('invite-text').textContent = T.inviteText;
+        document.getElementById('invite-btn').textContent = T.inviteBtn;
+        document.getElementById('foot-text').innerHTML = T.foot;
+        document.getElementById('foot-make').textContent = T.footMake;
+
+        var fail = function (message) {
+          document.getElementById('err').hidden = false;
+          if (message) document.getElementById('err-msg').textContent = message;
+        };
+
+        if (!/^[a-zA-Z0-9._-]{1,128}$/.test(merchant)) return fail('The link is missing the seller.');
+        if (!/^\d{1,9}(\.\d{1,2})?$/.test(amount) || Number(amount) <= 0) return fail('The link is missing a valid amount.');
+        if (reference && !/^[\w .\/-]{1,64}$/.test(reference)) return fail('The link has an invalid reference.');
+
+        var head = document.getElementById('head');
+        document.getElementById('title').textContent = title || 'Payment';
+        document.getElementById('to').textContent = reference ? 'Reference ' + reference : 'to ' + merchant;
+        head.hidden = false;
+
+        var slot = document.getElementById('slot');
+        window.StableCart.mount({
+          merchantId: merchant,
+          amountUsd: amount,
+          orderRef: reference || null,
+          target: slot,
+          locale: locale,
+        });
+
+        slot.addEventListener('stablecart:settled', function (event) {
+          if (!event.detail || event.detail.status !== 'paid') return;
+          var note = title ? title + ' · $' + amount : '$' + amount;
+          document.getElementById('paid-note').textContent = note + T.received;
+          document.getElementById('paid').classList.add('show');
+          // The buyer has just seen it work; this is the moment to offer it to them.
+          document.getElementById('invite').classList.add('show');
+        });
+      })();
+    </script>
+  </body>
+</html>

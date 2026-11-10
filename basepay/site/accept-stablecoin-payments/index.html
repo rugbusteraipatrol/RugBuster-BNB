@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>How to accept stablecoin payments as a small business — StableCart</title>
+    <meta name="description" content="What stablecoins are, what taking them costs, custodial versus non-custodial checkout, and the two simplest ways to start: a WooCommerce plugin or a payment link." />
+    <link rel="canonical" href="https://www.stablecart.org/accept-stablecoin-payments/" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://www.stablecart.org/accept-stablecoin-payments/" />
+    <meta property="og:title" content="How to accept stablecoin payments as a small business" />
+    <meta property="og:description" content="What stablecoins are, what taking them costs, custodial versus non-custodial checkout, and the two simplest ways to start: a WooCommerce plugin or a payment link." />
+    <meta property="og:image" content="https://www.stablecart.org/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+    <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Do buyers need to own crypto already?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, they need USDC on Base in a wallet or an exchange account. This suits buyers who already hold crypto; buyers who only use cards need another payment method alongside it."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is a stablecoin payment reversible?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Once it confirms, it is final. That protects you from chargebacks, and means refunds are something you send yourself."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do I need a business account or KYC?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Not with StableCart: there is no account and no application. Your legal and tax duties where you live stay the same."
+      }
+    }
+  ]
+}
+    </script>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #1d1d1f; --ink-2: #6e6e73; --line: #d2d2d7; --accent: #4f6ef7; --bg-alt: #f5f5f7;
+        --grad: linear-gradient(135deg, #6d5dfc 0%, #3b82f6 55%, #22d3ee 100%);
+        --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #fff; color: var(--ink); font: 17px/1.6 var(--sans); letter-spacing: -0.011em; -webkit-font-smoothing: antialiased; }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      .wrap { max-width: 760px; margin: 0 auto; padding: 0 22px; }
+      header.nav { position: sticky; top: 0; z-index: 10; background: rgba(250,250,252,.8); backdrop-filter: saturate(180%) blur(20px); }
+      header.nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 48px; }
+      .wordmark { font-weight: 700; letter-spacing: -0.045em; color: var(--ink); font-size: 19px; }
+      .wordmark i { display: inline-block; width: .2em; height: .2em; border-radius: 50%; background: var(--grad); margin-left: .045em; vertical-align: baseline; }
+      header.nav nav a { color: var(--ink); font-size: 12.5px; opacity: .88; }
+      main { padding: 56px 0 72px; }
+      .eyebrow { font-size: 14px; font-weight: 600; color: var(--ink-2); margin: 0 0 10px; }
+      h1 { font-size: clamp(34px, 5.4vw, 52px); letter-spacing: -0.035em; font-weight: 650; line-height: 1.07; margin: 0 0 18px; }
+      .lede { font-size: 20px; color: var(--ink-2); margin: 0 0 28px; }
+      h2 { font-size: 26px; letter-spacing: -0.025em; margin: 48px 0 12px; line-height: 1.2; }
+      p, li { color: #33333a; }
+      ul, ol { padding-left: 22px; }
+      li { margin-bottom: 6px; }
+      .cta { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin: 8px 0 0; }
+      .btn { display: inline-block; background: var(--accent); color: #fff; font-weight: 600; border-radius: 980px; padding: 13px 24px; }
+      .btn:hover { text-decoration: none; filter: brightness(1.06); }
+      .note { font-size: 14px; color: var(--ink-2); }
+      .facts { background: var(--bg-alt); border-radius: 20px; padding: 20px 22px; margin: 28px 0 0; }
+      .facts p { margin: 0 0 8px; }
+      .facts p:last-child { margin: 0; font-size: 14px; color: var(--ink-2); }
+      .table-wrap { overflow-x: auto; margin: 14px 0 0; }
+      table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 15.5px; }
+      th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 11px 10px 11px 0; vertical-align: top; }
+      th { font-weight: 600; color: var(--ink); }
+      td:first-child { color: var(--ink-2); width: 34%; }
+      .faq h3 { font-size: 18px; letter-spacing: -0.015em; margin: 26px 0 6px; }
+      .faq p { margin: 0; }
+      footer { border-top: 1px solid var(--line); padding: 22px 0 40px; font-size: 12.5px; color: var(--ink-2); }
+    </style>
+  </head>
+  <body>
+    <header class="nav">
+      <div class="wrap">
+        <a class="wordmark" href="/">stablecart<i></i></a>
+        <nav><a href="/downloads/stablecart-for-woocommerce.zip">Download plugin</a></nav>
+      </div>
+    </header>
+
+    <main>
+      <div class="wrap">
+        <p class="eyebrow">Guide · stablecoins</p>
+        <h1>How to accept stablecoin payments as a small business.</h1>
+        <p class="lede">A stablecoin is a digital dollar: it moves like crypto, fast and worldwide, but keeps its value like cash. Taking one lets a buyer anywhere pay you in seconds without a card network in between.</p>
+        <div class="cta"><a class="btn" href="/downloads/stablecart-for-woocommerce.zip">Download for WooCommerce</a> <a href="/links/">No website? Payment links ›</a></div>
+
+        <h2>Which stablecoin, which network</h2>
+        <p>USDC, issued by Circle, is the most widely supported dollar stablecoin in wallets and exchanges. Every stablecoin lives on one or more networks, and the network decides the fee and the speed. On Base, a network run by Coinbase, a USDC transfer costs cents and confirms in seconds. StableCart takes USDC on Base only, so there is one thing for your buyer to get right.</p>
+
+        <h2>Custodial or non-custodial</h2>
+        <ul>
+          <li><strong>Custodial processors</strong> receive the money first and pay you out later. You open an account, pass their checks, and wait for payouts. In return, many convert to your local currency for you.</li>
+          <li><strong>Non-custodial checkout</strong> sends the money from the buyer's wallet straight to yours. Nobody can freeze or delay it, and there is nothing to apply for. You keep USDC until you decide to move it.</li>
+        </ul>
+
+        <h2>The two simplest ways to start</h2>
+        <ol>
+          <li><strong>You have a WooCommerce shop:</strong> <a href="/accept-usdc-woocommerce/">install the StableCart plugin</a>, paste your wallet address, save. Buyers see "USDC on Base" at checkout.</li>
+          <li><strong>You have no website:</strong> make a <a href="/links/">payment link</a> with an amount and send it by message, email or on an invoice.</li>
+        </ol>
+
+        <h2>What it costs</h2>
+        <p>With StableCart, nothing per sale. The free plan covers 20 paid orders a month, and Pro removes the limit for $12 per 30 days. The buyer pays the network fee. If you later sell USDC for local currency, the exchange you use charges its own fee.</p>
+
+        <h2>What to watch out for</h2>
+        <ul>
+          <li><strong>Refunds are manual.</strong> Nobody can reverse a payment for you, so you send refunds from your own wallet.</li>
+          <li><strong>Keep your wallet safe.</strong> Whoever holds the recovery phrase holds the money. Write it down offline.</li>
+          <li><strong>Taxes still apply.</strong> A sale in USDC is a sale. Ask your accountant how to book it where you live.</li>
+        </ul>
+
+        <div class="faq">
+          <h2>Questions</h2>
+          <h3>Do buyers need to own crypto already?</h3><p>Yes, they need USDC on Base in a wallet or an exchange account. This suits buyers who already hold crypto; buyers who only use cards need another payment method alongside it.</p><h3>Is a stablecoin payment reversible?</h3><p>No. Once it confirms, it is final. That protects you from chargebacks, and means refunds are something you send yourself.</p><h3>Do I need a business account or KYC?</h3><p>Not with StableCart: there is no account and no application. Your legal and tax duties where you live stay the same.</p>
+        </div>
+
+        <h2>Start with one test order</h2>
+        <div class="cta"><a class="btn" href="/downloads/stablecart-for-woocommerce.zip">Download for WooCommerce</a> <a href="/links/">No website? Payment links ›</a></div>
+      </div>
+    </main>
+
+    <footer><div class="wrap"><span class="wordmark" style="font-size:15px;margin-right:10px">stablecart<i></i></span>© 2026 Fantom Studio · <a href="/">Home</a> · <a href="/links/">Payment links</a> · <a href="/terms/">Terms</a> · <a href="/privacy/">Privacy</a></div></footer>
+  </body>
+</html>

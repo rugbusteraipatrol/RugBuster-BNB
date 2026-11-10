@@ -1,0 +1,342 @@
+import type { Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import type pg from 'pg';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { createApp } from '../../src/api/app.js';
+import type { Config } from '../../src/config.js';
+import { PriceService } from '../../src/price/priceService.js';
+import { SessionService } from '../../src/sessions/sessionService.js';
+import { Settlement } from '../../src/watcher/settlement.js';
+import type { Watcher, WatcherStatus } from '../../src/watcher/watcher.js';
+import { createTestPool, hasDatabase, resetDatabase } from '../helpers/db.js';
+import { json } from '../helpers/http.js';
+import { fixedPriceService, MERCHANT_ADDRESS, seedMerchant, testConfig, transfer } from '../helpers/fixtures.js';
+
+describe.skipIf(!hasDatabase)('HTTP API', () => {
+  let pool: pg.Pool;
+  let server: Server;
+  let baseUrl: string;
+  let config: Config;
+
+  beforeAll(async () => {
+    pool = await createTestPool();
+    config = testConfig({ SERVE_WIDGET: 'false' });
+    const app = createApp({
+      config,
+      pool,
+      priceService: fixedPriceService(),
+      sessionService: new SessionService(pool, config, fixedPriceService()),
+      watcher: null,
+    });
+    server = app.listen(0, '127.0.0.1');
+    await new Promise<void>((resolve) => server.once('listening', resolve));
+    baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  });
+
+  afterAll(async () => {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await pool.end();
+  });
+
+  beforeEach(async () => {
+    await resetDatabase(pool);
+    await seedMerchant(pool);
+  });
+
+  const post = (path: string, body: unknown, headers: Record<string, string> = {}) =>
+    fetch(`${baseUrl}${path}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...headers },
+      body: JSON.stringify(body),
+    });
+
+  describe('POST /api/sessions', () => {
+    it('creates a session', async () => {
+      const response = await post('/api/sessions', { merchantId: 'demo', amountUsd: 45, orderRef: 'A-1' });
+      expect(response.status).toBe(201);
+
+      const body = await json(response);
+      expect(body).toMatchObject({
+        status: 'pending',
+        amountUsd: '45.00',
+        amountUsdc: '45.000000',
+        payToAddress: MERCHANT_ADDRESS,
+        chainId: 8453,
+        orderRef: 'A-1',
+        onramp: null,
+      });
+      expect(body.sessionId).toMatch(/^[0-9a-f-]{36}$/);
+    });
+
+    it('accepts the amount as a string as well as a number', async () => {
+      const response = await post('/api/sessions', { merchantId: 'demo', amountUsd: '19.99' });
+      expect(response.status).toBe(201);
+      expect((await json(response)).amountUsd).toBe('19.99');
+    });
+
+    it('rejects a malformed body with a machine-readable code', async () => {
+      for (const body of [{}, { merchantId: 'demo' }, { amountUsd: 45 }, { merchantId: '', amountUsd: 45 }]) {
+        const response = await post('/api/sessions', body);
+        expect(response.status).toBe(400);
+        expect((await json(response)).error.code).toBe('INVALID_REQUEST');
+      }
+    });
+
+    it('rejects a non-positive or over-precise amount', async () => {
+      expect((await post('/api/sessions', { merchantId: 'demo', amountUsd: 0 })).status).toBe(400);
+      expect((await post('/api/sessions', { merchantId: 'demo', amountUsd: -5 })).status).toBe(400);
+
+      const overPrecise = await post('/api/sessions', { merchantId: 'demo', amountUsd: '45.001' });
+      expect(overPrecise.status).toBe(409);
+      expect((await json(overPrecise)).error.code).toBe('INVALID_AMOUNT');
+    });
+
+    it('404s an unknown merchant', async () => {
+      const response = await post('/api/sessions', { merchantId: 'ghost', amountUsd: 45 });
+      expect(response.status).toBe(404);
+      expect((await json(response)).error.code).toBe('MERCHANT_NOT_FOUND');
+    });
+
+    it('sends CORS headers, because the widget runs on the merchant domain', async () => {
+      const response = await fetch(`${baseUrl}/api/sessions`, {
+        method: 'OPTIONS',
+        headers: {
+          origin: 'https://shop.webflow.io',
+          'access-control-request-method': 'POST',
+          'access-control-request-headers': 'content-type',
+        },
+      });
+      expect(response.status).toBeLessThan(300);
+      expect(response.headers.get('access-control-allow-origin')).toBeTruthy();
+    });
+  });
+
+  describe('GET /api/sessions/:id', () => {
+    it('reflects settlement progress', async () => {
+      const created = await json(await post('/api/sessions', { merchantId: 'demo', amountUsd: 45 }));
+
+      let response = await fetch(`${baseUrl}/api/sessions/${created.sessionId}`);
+      expect(response.status).toBe(200);
+      expect(response.headers.get('cache-control')).toBe('no-store');
+      expect((await json(response)).status).toBe('pending');
+
+      const settlement = new Settlement(pool, config);
+      await settlement.applyTransfer(
+        transfer({ to: MERCHANT_ADDRESS, value: BigInt(created.amountUsdcMicro), blockNumber: 100n }),
+      );
+
+      response = await fetch(`${baseUrl}/api/sessions/${created.sessionId}`);
+      let body = await json(response);
+      expect(body.status).toBe('confirming');
+      expect(body.confirmations).toBe(1);
+      expect(body.confirmationsRequired).toBe(3);
+      expect(body.transactions).toHaveLength(1);
+
+      await settlement.advanceConfirmations(102n);
+      body = await json(await fetch(`${baseUrl}/api/sessions/${created.sessionId}`));
+      expect(body.status).toBe('paid');
+      expect(body.receivedUsdc).toBe('45.000000');
+      expect(body.settledAt).not.toBeNull();
+    });
+
+    it('404s an unknown or malformed id without leaking a database error', async () => {
+      for (const id of ['11111111-1111-4111-8111-111111111111', 'not-a-uuid', '1; DROP TABLE sessions']) {
+        const response = await fetch(`${baseUrl}/api/sessions/${encodeURIComponent(id)}`);
+        expect(response.status).toBe(404);
+        expect((await json(response)).error.code).toBe('SESSION_NOT_FOUND');
+      }
+      // The injection attempt did not do anything.
+      expect((await pool.query('SELECT count(*) FROM sessions')).rows).toHaveLength(1);
+    });
+  });
+
+  describe('admin API', () => {
+    const auth = { authorization: 'Bearer test-admin-token' };
+
+    it('requires a bearer token', async () => {
+      expect((await fetch(`${baseUrl}/admin/merchants`)).status).toBe(401);
+      expect((await fetch(`${baseUrl}/admin/merchants`, { headers: { authorization: 'Bearer wrong' } })).status).toBe(401);
+      expect((await fetch(`${baseUrl}/admin/merchants`, { headers: auth })).status).toBe(200);
+    });
+
+    it('registers a merchant and normalises the address', async () => {
+      const response = await post(
+        '/admin/merchants',
+        {
+          merchantId: 'acme',
+          walletAddress: MERCHANT_ADDRESS.toLowerCase(),
+          webhookUrl: 'https://acme.example/hooks',
+          webhookSecret: 'whsec_acme_secret_value_0123',
+        },
+        auth,
+      );
+      expect(response.status).toBe(201);
+      const body = await json(response);
+      expect(body.walletAddress).toBe(MERCHANT_ADDRESS);
+      expect(body.webhookConfigured).toBe(true);
+      // The secret is never echoed back.
+      expect(JSON.stringify(body)).not.toContain('whsec_');
+    });
+
+    it('rejects a bad address and a half-configured webhook', async () => {
+      expect((await post('/admin/merchants', { merchantId: 'a', walletAddress: '0xnope' }, auth)).status).toBe(400);
+      expect(
+        (await post('/admin/merchants', { merchantId: 'a', walletAddress: MERCHANT_ADDRESS, webhookUrl: 'https://x.example/h' }, auth))
+          .status,
+      ).toBe(400);
+    });
+
+    it('lists payments that could not be attributed', async () => {
+      await new Settlement(pool, config).applyTransfer(transfer({ to: MERCHANT_ADDRESS, value: 12_345_678n }));
+
+      const body = await json(await fetch(`${baseUrl}/admin/payments/unmatched`, { headers: auth }));
+      expect(body.payments).toHaveLength(1);
+      expect(body.payments[0].amountUsdc).toBe('12.345678');
+    });
+  });
+
+  describe('health', () => {
+    it('reports liveness and readiness', async () => {
+      const health = await json(await fetch(`${baseUrl}/healthz`));
+      expect(health).toMatchObject({ status: 'ok', chainId: 8453 });
+
+      const ready = await fetch(`${baseUrl}/readyz`);
+      expect(ready.status).toBe(200);
+      const body = await json(ready);
+      expect(body.status).toBe('ready');
+      expect(body.checks.database).toEqual({ ok: true });
+      expect(body.checks.price.ok).toBe(true);
+    });
+
+    /** Serves /readyz once from an app built around the given dependencies. */
+    async function readyzWith(deps: { priceService?: PriceService; watcher?: Watcher | null }) {
+      const priceService = deps.priceService ?? fixedPriceService();
+      const app = createApp({
+        config,
+        pool,
+        priceService,
+        sessionService: new SessionService(pool, config, priceService),
+        watcher: deps.watcher ?? null,
+      });
+      const probe = app.listen(0, '127.0.0.1');
+      await new Promise<void>((resolve) => probe.once('listening', resolve));
+      try {
+        const response = await fetch(`http://127.0.0.1:${(probe.address() as AddressInfo).port}/readyz`);
+        return { status: response.status, body: await json(response) };
+      } finally {
+        await new Promise<void>((resolve) => probe.close(() => resolve()));
+      }
+    }
+
+    /** A price service whose only price was fetched an hour ago. */
+    function hourOldPrice(fetchPrice: () => Promise<string>) {
+      const service = new PriceService({ fetchPrice, cacheTtlSeconds: 60, maxStaleSeconds: 600 });
+      service.seed('1.00000000', Date.now() - 3_600_000);
+      return service;
+    }
+
+    it('reports degraded when the watcher has stopped completing passes', async () => {
+      const stalled: WatcherStatus = {
+        enabled: true,
+        transport: 'websocket+http',
+        lastProcessedBlock: '100',
+        headBlock: '3400',
+        lastTickAt: null,
+        lastError: 'RPC Request failed.\n\nURL: https://base-mainnet.g.alchemy.com/[redacted]',
+        ok: false,
+      };
+      const { status, body } = await readyzWith({ watcher: { getStatus: () => stalled } as unknown as Watcher });
+
+      expect(status).toBe(503);
+      expect(body.status).toBe('degraded');
+      expect(body.checks.watcher.ok).toBe(false);
+    });
+
+    it('refreshes a price that aged out while no one was checking out', async () => {
+      const { status, body } = await readyzWith({ priceService: hourOldPrice(async () => '0.99990000') });
+
+      expect(status).toBe(200);
+      expect(body.checks.price).toMatchObject({ ok: true, priceUsd: '0.99990000' });
+    });
+
+    it('reports degraded when the price is old and the feed is down', async () => {
+      const { status, body } = await readyzWith({
+        priceService: hourOldPrice(async () => {
+          throw new Error('CoinGecko unreachable');
+        }),
+      });
+
+      expect(status).toBe(503);
+      expect(body.checks.price.ok).toBe(false);
+    });
+  });
+
+  describe('static site', () => {
+    // The landing page is served from `/`, which means its static handler sits
+    // in front of the 404. If it were ever mounted before the routers it would
+    // swallow the API — hence this test rather than a comment.
+    let siteServer: Server;
+    let siteUrl: string;
+
+    beforeAll(async () => {
+      const siteConfig = testConfig({ SERVE_WIDGET: 'false', SERVE_SITE: 'true' });
+      const app = createApp({
+        config: siteConfig,
+        pool,
+        priceService: fixedPriceService(),
+        sessionService: new SessionService(pool, siteConfig, fixedPriceService()),
+        watcher: null,
+      });
+      siteServer = app.listen(0, '127.0.0.1');
+      await new Promise<void>((resolve) => siteServer.once('listening', resolve));
+      siteUrl = `http://127.0.0.1:${(siteServer.address() as AddressInfo).port}`;
+    });
+
+    afterAll(async () => {
+      await new Promise<void>((resolve) => siteServer.close(() => resolve()));
+    });
+
+    it('serves the landing page at the root', async () => {
+      const response = await fetch(`${siteUrl}/`);
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toMatch(/text\/html/);
+      const html = await response.text();
+      expect(html).toContain('<title>');
+      expect(html).toContain('application/ld+json');
+    });
+
+    it('serves robots.txt and sitemap.xml from the domain root, where crawlers look', async () => {
+      const robots = await fetch(`${siteUrl}/robots.txt`);
+      expect(robots.status).toBe(200);
+      expect(await robots.text()).toContain('Sitemap:');
+
+      const sitemap = await fetch(`${siteUrl}/sitemap.xml`);
+      expect(sitemap.status).toBe(200);
+      expect(await sitemap.text()).toContain('<urlset');
+    });
+
+    it('does not shadow the API, admin or health routes', async () => {
+      expect((await fetch(`${siteUrl}/healthz`)).headers.get('content-type')).toMatch(/json/);
+
+      // An unknown session id must still be the API's JSON 404, not the site's.
+      const session = await fetch(`${siteUrl}/api/sessions/11111111-1111-4111-8111-111111111111`);
+      expect(session.status).toBe(404);
+      expect(await json(session)).toMatchObject({ error: { code: 'SESSION_NOT_FOUND' } });
+
+      // And admin still requires its token rather than falling through to the page.
+      expect((await fetch(`${siteUrl}/admin/merchants`)).status).toBe(401);
+    });
+
+    it('still 404s an unknown path as JSON rather than serving the page', async () => {
+      const response = await fetch(`${siteUrl}/no/such/path`);
+      expect(response.status).toBe(404);
+      expect(await json(response)).toMatchObject({ error: { code: 'NOT_FOUND' } });
+    });
+  });
+
+  it('404s an unknown endpoint as JSON', async () => {
+    const response = await fetch(`${baseUrl}/nope`);
+    expect(response.status).toBe(404);
+    expect((await json(response)).error.code).toBe('NOT_FOUND');
+  });
+});

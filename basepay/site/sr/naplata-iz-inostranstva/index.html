@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="sr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kako naplatiti iz inostranstva bez PayPal-a i Stripe-a — StableCart</title>
+    <meta name="description" content="Stripe ne radi u Srbiji, a PayPal i Payoneer uzimaju proviziju. Pošalji klijentu link, on plati u USDC i novac ti za nekoliko sekundi stiže u tvoj novčanik." />
+    <link rel="canonical" href="https://www.stablecart.org/sr/naplata-iz-inostranstva/" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://www.stablecart.org/sr/naplata-iz-inostranstva/" />
+    <meta property="og:title" content="Naplata od stranog klijenta bez PayPal-a i Stripe-a" />
+    <meta property="og:description" content="Stripe ne radi u Srbiji, a PayPal i Payoneer uzimaju proviziju. Pošalji klijentu link, on plati u USDC i novac ti za nekoliko sekundi stiže u tvoj novčanik." />
+    <meta property="og:image" content="https://www.stablecart.org/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+    <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Šta je USDC?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Stablecoin čija je vrednost vezana za američki dolar: jedan USDC vredi jedan dolar. Zato iznos koji naplatiš ne skače i ne pada dok ga držiš."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Šta je mreža Base?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Mreža na kojoj se USDC šalje za nekoliko centi i stiže za nekoliko sekundi. Većina novčanika i menjačnica, uključujući Coinbase, može da šalje i prima USDC na Base-u."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Treba li mi nalog na StableCart-u?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Ne. Nalepiš adresu novčanika i praviš linkove. Ne treba ni mejl ni lična dokumenta."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Šta ako klijent pošalje pogrešan iznos?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Stranica za plaćanje traži tačan iznos i sama prepoznaje uplatu. Ako stigne manje, u svom novčaniku vidiš tačno koliko je stiglo, a razliku rešavaš direktno sa klijentom."
+      }
+    }
+  ]
+}
+    </script>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #1d1d1f; --ink-2: #6e6e73; --line: #d2d2d7; --accent: #4f6ef7; --bg-alt: #f5f5f7;
+        --grad: linear-gradient(135deg, #6d5dfc 0%, #3b82f6 55%, #22d3ee 100%);
+        --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #fff; color: var(--ink); font: 17px/1.6 var(--sans); letter-spacing: -0.011em; -webkit-font-smoothing: antialiased; }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      .wrap { max-width: 760px; margin: 0 auto; padding: 0 22px; }
+      header.nav { position: sticky; top: 0; z-index: 10; background: rgba(250,250,252,.8); backdrop-filter: saturate(180%) blur(20px); }
+      header.nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 48px; }
+      .wordmark { font-weight: 700; letter-spacing: -0.045em; color: var(--ink); font-size: 19px; }
+      .wordmark i { display: inline-block; width: .2em; height: .2em; border-radius: 50%; background: var(--grad); margin-left: .045em; vertical-align: baseline; }
+      header.nav nav a { color: var(--ink); font-size: 12.5px; opacity: .88; }
+      main { padding: 56px 0 72px; }
+      .eyebrow { font-size: 14px; font-weight: 600; color: var(--ink-2); margin: 0 0 10px; }
+      h1 { font-size: clamp(34px, 5.4vw, 52px); letter-spacing: -0.035em; font-weight: 650; line-height: 1.07; margin: 0 0 18px; }
+      .lede { font-size: 20px; color: var(--ink-2); margin: 0 0 28px; }
+      h2 { font-size: 26px; letter-spacing: -0.025em; margin: 48px 0 12px; line-height: 1.2; }
+      p, li { color: #33333a; }
+      ul, ol { padding-left: 22px; }
+      li { margin-bottom: 6px; }
+      .cta { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin: 8px 0 0; }
+      .btn { display: inline-block; background: var(--accent); color: #fff; font-weight: 600; border-radius: 980px; padding: 13px 24px; }
+      .btn:hover { text-decoration: none; filter: brightness(1.06); }
+      .note { font-size: 14px; color: var(--ink-2); }
+      .facts { background: var(--bg-alt); border-radius: 20px; padding: 20px 22px; margin: 28px 0 0; }
+      .facts p { margin: 0 0 8px; }
+      .facts p:last-child { margin: 0; font-size: 14px; color: var(--ink-2); }
+      .table-wrap { overflow-x: auto; margin: 14px 0 0; }
+      table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 15.5px; }
+      th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 11px 10px 11px 0; vertical-align: top; }
+      th { font-weight: 600; color: var(--ink); }
+      td:first-child { color: var(--ink-2); width: 34%; }
+      .faq h3 { font-size: 18px; letter-spacing: -0.015em; margin: 26px 0 6px; }
+      .faq p { margin: 0; }
+      footer { border-top: 1px solid var(--line); padding: 22px 0 40px; font-size: 12.5px; color: var(--ink-2); }
+    </style>
+  </head>
+  <body>
+    <header class="nav">
+      <div class="wrap">
+        <a class="wordmark" href="/">stablecart<i></i></a>
+        <nav><a href="/links/">Napravi link za plaćanje</a></nav>
+      </div>
+    </header>
+
+    <main>
+      <div class="wrap">
+        <p class="eyebrow">Vodič · naplata iz inostranstva</p>
+        <h1>Kako da naplatiš stranom klijentu bez PayPal-a i Stripe-a.</h1>
+        <p class="lede">Pošalješ link, klijent plati u USDC — digitalnom dolaru — i novac je za nekoliko sekundi u tvom novčaniku. Bez banke u sredini, bez naloga i bez provizije na uplatu.</p>
+        <div class="cta"><a class="btn" href="/links/">Napravi link za plaćanje</a></div>
+
+        <h2>Zašto je naplata iz Srbije komplikovana</h2>
+        <ul>
+          <li><strong>Stripe</strong> zvanično ne radi u Srbiji. Do njega se stiže samo preko firme u inostranstvu.</li>
+          <li><strong>PayPal</strong> radi delimično, a na konverziji valute ostaje primetan deo iznosa.</li>
+          <li><strong>Payoneer i SWIFT</strong> rade, ali uz proviziju i čekanje na isplatu.</li>
+        </ul>
+
+        <h2>Kako izgleda naplata linkom</h2>
+        <ol>
+          <li>Na <a href="/links/">stablecart.org/links</a> nalepiš adresu svog novčanika na mreži Base i upišeš iznos.</li>
+          <li>Dobiješ link i QR kod i pošalješ ih klijentu, mejlom, porukom ili uz fakturu.</li>
+          <li>Klijent otvori link i plati iz svog novčanika. Stranica pokaže kad je uplata stigla.</li>
+        </ol>
+        <p>Novac ide direktno sa klijentovog novčanika na tvoj. StableCart ga nikad ne drži i ne može da ga zadrži ni poništi. Besplatno je do 20 uplata mesečno, bez provizije na iznos.</p>
+
+        <h2>Gde ovo ne pomaže — iskreno</h2>
+        <ul>
+          <li><strong>Klijent mora da ima USDC ili kripto novčanik.</strong> Najbolje radi sa klijentima iz kripto i web3 sveta i sa firmama koje već plaćaju u stablecoin-u. Klijentu koji plaća isključivo karticom ovo ništa ne rešava.</li>
+          <li><strong>Za dinare</strong> USDC prebaciš na kripto menjačnicu koja ima dozvolu Narodne banke Srbije i isplatiš na račun. Spisak je u <a href="https://nbs.rs/sr/ciljevi-i-funkcije/nadzor-nad-finansijskim-institucijama/digital-imo/reg_di/reg_di_mcm/index.html" rel="nofollow">registru NBS</a>. Menjačnica naplaćuje svoju proviziju.</li>
+          <li><strong>Porez:</strong> prihod je prihod i prijavljuje se kao i svaka druga naplata iz inostranstva. Za tvoj slučaj pitaj knjigovođu.</li>
+        </ul>
+
+        <div class="faq">
+          <h2>Pitanja</h2>
+          <h3>Šta je USDC?</h3><p>Stablecoin čija je vrednost vezana za američki dolar: jedan USDC vredi jedan dolar. Zato iznos koji naplatiš ne skače i ne pada dok ga držiš.</p><h3>Šta je mreža Base?</h3><p>Mreža na kojoj se USDC šalje za nekoliko centi i stiže za nekoliko sekundi. Većina novčanika i menjačnica, uključujući Coinbase, može da šalje i prima USDC na Base-u.</p><h3>Treba li mi nalog na StableCart-u?</h3><p>Ne. Nalepiš adresu novčanika i praviš linkove. Ne treba ni mejl ni lična dokumenta.</p><h3>Šta ako klijent pošalje pogrešan iznos?</h3><p>Stranica za plaćanje traži tačan iznos i sama prepoznaje uplatu. Ako stigne manje, u svom novčaniku vidiš tačno koliko je stiglo, a razliku rešavaš direktno sa klijentom.</p>
+        </div>
+
+        <h2>Probaj na prvoj fakturi</h2>
+        <div class="cta"><a class="btn" href="/links/">Napravi link za plaćanje</a></div>
+      </div>
+    </main>
+
+    <footer><div class="wrap"><span class="wordmark" style="font-size:15px;margin-right:10px">stablecart<i></i></span>© 2026 Fantom Studio · <a href="/">Početna</a> · <a href="/links/">Linkovi za plaćanje</a> · <a href="/terms/">Uslovi</a> · <a href="/privacy/">Privatnost</a></div></footer>
+  </body>
+</html>

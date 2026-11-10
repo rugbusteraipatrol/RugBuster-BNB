@@ -1,0 +1,340 @@
+import type pg from 'pg';
+import type { Address, PublicClient } from 'viem';
+import type { Activity } from '../activity.js';
+import type { Config } from '../config.js';
+import { listAddressesWithOpenSessions, listMerchantAddresses } from '../db/merchants.js';
+import { hasBackgroundWork } from '../db/sessions.js';
+import { getWatcherState, setWatcherState } from '../db/watcherState.js';
+import { logger } from '../logger.js';
+import { redactUrls } from '../redact.js';
+import { createChainClient } from './chainClient.js';
+import { TRANSFER_EVENT, watcherStateId } from './constants.js';
+import { Settlement, type ObservedTransfer } from './settlement.js';
+
+export interface WatcherStatus {
+  enabled: boolean;
+  transport: string;
+  lastProcessedBlock: string | null;
+  headBlock: string | null;
+  lastTickAt: string | null;
+  /** RPC URLs are cut to their host: this string is served on the public `/readyz`. */
+  lastError: string | null;
+  /** A pass has succeeded recently. `/readyz` fails when this is false. */
+  ok: boolean;
+}
+
+/**
+ * Passes run at least once per safety interval, so this many missed intervals
+ * means the watcher is failing rather than between passes.
+ */
+const STALL_AFTER_SAFETY_INTERVALS = 3;
+
+/** Base produces a block every two seconds; used to turn time asleep into blocks. */
+const BASE_BLOCK_MS = 2_000;
+
+/**
+ * Watches USDC Transfer events into merchant addresses on Base.
+ *
+ * One code path handles live blocks and backfill: every tick asks the chain for
+ * its head, scans forward from the persisted bookmark, and persists the new
+ * bookmark. A restart therefore resumes exactly where it stopped — the service
+ * being down delays settlement, it never loses a payment.
+ *
+ * Each tick also re-scans the last REORG_DEPTH_BLOCKS blocks and re-checks the
+ * block hashes of transfers recorded there. Re-scanning is safe because
+ * recording a transfer is idempotent on (tx_hash, log_index).
+ */
+export class Watcher {
+  private readonly client: PublicClient;
+  private readonly settlement: Settlement;
+  private readonly stateId: string;
+  private readonly transport: string;
+  private readonly safetyIntervalMs: number;
+
+  private unwatchBlocks: (() => void) | null = null;
+  private safetyTimer: NodeJS.Timeout | null = null;
+  private lastTickStartedAt = 0;
+  private lastSuccessAt: number | null = null;
+  private ticking = false;
+  // Only stop() sets this. A Watcher that was never started can still be
+  // ticked directly, which is how tests and one-shot backfills drive it.
+  private stopped = false;
+  private status: Omit<WatcherStatus, 'ok'>;
+
+  constructor(
+    private readonly pool: pg.Pool,
+    private readonly config: Config,
+    client?: PublicClient,
+    /** Lets the service go quiet when idle. Tests leave it out, so passes always run. */
+    private readonly activity: Activity | null = null,
+  ) {
+    const chain = client ? null : createChainClient(config);
+    this.client = client ?? (chain?.client as PublicClient);
+    this.transport = chain?.transport ?? 'injected';
+    this.settlement = new Settlement(pool, config);
+    this.stateId = watcherStateId(config.chain.chainId, config.chain.usdcAddress);
+    this.safetyIntervalMs = Math.max(config.watcher.pollIntervalMs * 5, 15_000);
+    this.status = {
+      enabled: config.watcher.enabled,
+      transport: this.transport,
+      lastProcessedBlock: null,
+      headBlock: null,
+      lastTickAt: null,
+      lastError: null,
+    };
+  }
+
+  /**
+   * `ok` is false until a pass succeeds, and again once none has for three
+   * safety intervals. One failed pass does not clear it, since the next one
+   * usually recovers; a watcher that keeps failing does. Without this a
+   * deployment whose every pass fails still reports itself ready.
+   */
+  getStatus(now: number = Date.now()): WatcherStatus {
+    const stallAfterMs = this.safetyIntervalMs * STALL_AFTER_SAFETY_INTERVALS;
+    const ok = this.lastSuccessAt !== null && now - this.lastSuccessAt <= stallAfterMs;
+    return { ...this.status, ok };
+  }
+
+  /**
+   * New-head notifications drive the ticks (a WebSocket subscription when the
+   * RPC supports it, viem's polling otherwise). The safety interval is a belt
+   * for when the subscription silently stalls.
+   */
+  async start(): Promise<void> {
+    if (!this.config.watcher.enabled) {
+      logger.warn('watcher disabled by configuration; sessions will never settle');
+      return;
+    }
+    this.stopped = false;
+    await this.tick();
+
+    // `poll` is deliberately left to viem: it subscribes over WebSocket when the
+    // transport supports it and polls otherwise, which is exactly the intent.
+    this.unwatchBlocks = this.client.watchBlockNumber({
+      emitOnBegin: false,
+      pollingInterval: this.config.watcher.pollIntervalMs,
+      onBlockNumber: () => {
+        this.tickIfDue();
+      },
+      onError: (err) => {
+        logger.warn({ err: err.message }, 'block subscription error');
+      },
+    });
+
+    this.safetyTimer = setInterval(() => {
+      void this.tick();
+    }, this.safetyIntervalMs);
+    this.safetyTimer.unref?.();
+  }
+
+  async stop(): Promise<void> {
+    this.stopped = true;
+    this.unwatchBlocks?.();
+    this.unwatchBlocks = null;
+    if (this.safetyTimer) {
+      clearInterval(this.safetyTimer);
+      this.safetyTimer = null;
+    }
+    while (this.ticking) await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+
+  /**
+   * Runs a pass only if one is due, per `minTickIntervalMs`.
+   *
+   * This is what the block subscription calls. `tick()` itself stays unthrottled
+   * so the safety timer, startup and tests can always force a pass.
+   */
+  private tickIfDue(): void {
+    if (Date.now() - this.lastTickStartedAt < this.config.watcher.minTickIntervalMs) return;
+    void this.tick();
+  }
+
+  /** One full pass. Exposed so integration tests can drive the watcher deterministically. */
+  async tick(): Promise<void> {
+    if (this.ticking || this.stopped) return;
+    this.ticking = true;
+    this.lastTickStartedAt = Date.now();
+    try {
+      // Asleep means nothing is open and nothing is owed, so there is nothing a
+      // pass could settle. It still counts as a pass, so `/readyz` stays green.
+      if (this.activity?.isAsleep()) {
+        this.markPassed();
+        return;
+      }
+      const mark = this.activity?.mark() ?? 0;
+
+      const head = await this.client.getBlockNumber();
+      this.status.headBlock = head.toString();
+
+      let from = await this.resolveScanStart(head);
+      const wokeAt = this.activity?.takeWokeAt() ?? null;
+      if (wokeAt !== null) from = this.skipSleptBlocks(from, head, wokeAt);
+
+      // Re-validate first: drop transfers that left the canonical chain before
+      // re-scanning, so a re-included transfer is re-recorded in the same tick.
+      // Costs RPC only while there are active payments inside the window.
+      await this.settlement.revalidateFromBlock(from, (blockNumber) => this.blockHashAt(blockNumber));
+
+      // Only scan for transfers while a session is open. With nothing open there
+      // is nothing a transfer could be attributed to, and every getLogs would be
+      // spent on empty blocks — which, on a chain that produces a block every two
+      // seconds, is most of a free RPC tier for a merchant with no traffic. A
+      // payment cannot precede the session it pays for, so the blocks skipped here
+      // are ones no open session could ever need. What is given up: stray
+      // transfers to a merchant wallet during idle periods are not recorded as
+      // unmatched. They are still visible on any block explorer.
+      const openAddresses = await listAddressesWithOpenSessions(this.pool);
+      if (openAddresses.length === 0) {
+        await this.saveBookmark(head);
+      } else {
+        const addresses = await listMerchantAddresses(this.pool);
+        await this.scanRange(from, head, addresses as Address[]);
+      }
+
+      await this.settlement.advanceConfirmations(head);
+
+      if (
+        this.activity &&
+        openAddresses.length === 0 &&
+        !(await hasBackgroundWork(this.pool, this.config.latePayments.windowSeconds)) &&
+        this.activity.sleepIfQuietSince(mark)
+      ) {
+        logger.info('nothing open; background work paused until the next API request');
+      }
+
+      this.status.lastProcessedBlock = head.toString();
+      this.markPassed();
+    } catch (err) {
+      this.status.lastError = redactUrls((err as Error).message);
+      logger.error({ err }, 'watcher tick failed');
+    } finally {
+      this.ticking = false;
+    }
+  }
+
+  private markPassed(): void {
+    this.lastSuccessAt = Date.now();
+    this.status.lastTickAt = new Date(this.lastSuccessAt).toISOString();
+    this.status.lastError = null;
+  }
+
+  /**
+   * The bookmark stood still while asleep. Every session open now was created
+   * after the request that woke us, and a payment cannot precede its session, so
+   * the blocks from before waking are skipped rather than backfilled, which
+   * after a quiet week would be tens of thousands of getLogs calls. The estimate
+   * leans early: the reorg depth plus a few blocks of slack.
+   */
+  private skipSleptBlocks(from: bigint, head: bigint, wokeAt: number): bigint {
+    const sinceWake = BigInt(Math.ceil(Math.max(Date.now() - wokeAt, 0) / BASE_BLOCK_MS));
+    const margin = sinceWake + BigInt(this.config.watcher.reorgDepthBlocks) + 5n;
+    const floor = head > margin ? head - margin : 0n;
+    return floor > from ? floor : from;
+  }
+
+  /**
+   * Where this tick starts scanning: the persisted bookmark rewound by the reorg
+   * depth. On a cold start with no bookmark we use WATCHER_START_BLOCK if set,
+   * otherwise the current head — a fresh deployment has no older sessions to settle.
+   */
+  private async resolveScanStart(head: bigint): Promise<bigint> {
+    const state = await getWatcherState(this.pool, this.stateId);
+    const depth = BigInt(this.config.watcher.reorgDepthBlocks);
+
+    if (!state) {
+      const start = this.config.watcher.startBlock ?? head;
+      logger.info({ startBlock: start.toString() }, 'watcher cold start');
+      return start > head ? head : start;
+    }
+
+    const rewound = state.lastProcessedBlock > depth ? state.lastProcessedBlock - depth + 1n : 0n;
+    return rewound > head ? head : rewound;
+  }
+
+  private async scanRange(from: bigint, to: bigint, addresses: Address[]): Promise<void> {
+    const chunk = BigInt(this.config.watcher.maxBlockRange);
+    for (let start = from; start <= to; start += chunk) {
+      const end = start + chunk - 1n > to ? to : start + chunk - 1n;
+
+      const logs = await this.client.getLogs({
+        address: this.config.chain.usdcAddress as Address,
+        event: TRANSFER_EVENT,
+        args: { to: addresses },
+        fromBlock: start,
+        toBlock: end,
+      });
+
+      for (const log of logs) {
+        const transfer = toObservedTransfer(log);
+        if (!transfer) continue;
+        await this.settlement.applyTransfer(transfer);
+      }
+
+      if (logs.length > 0) {
+        logger.info({ from: start.toString(), to: end.toString(), transfers: logs.length }, 'scanned transfers');
+      }
+      await this.saveBookmark(end);
+    }
+  }
+
+  /**
+   * Advances the bookmark.
+   *
+   * Deliberately does NOT fetch the block hash. `watcher_state` has a column for
+   * it, but nothing reads it: `resolveScanStart` rewinds by REORG_DEPTH_BLOCKS on
+   * every pass, which covers a reorged bookmark far more thoroughly than a stored
+   * hash would. Fetching it cost an extra `getBlock` on every pass — a third of
+   * this watcher's entire RPC spend, for a value nobody looked at.
+   */
+  private async saveBookmark(block: bigint): Promise<void> {
+    await setWatcherState(this.pool, this.stateId, block, null);
+  }
+
+  private async blockHashAt(blockNumber: bigint): Promise<string | null> {
+    try {
+      const block = await this.client.getBlock({ blockNumber });
+      return block.hash ?? null;
+    } catch (err) {
+      logger.debug({ blockNumber: blockNumber.toString(), err: (err as Error).message }, 'block lookup failed');
+      return null;
+    }
+  }
+}
+
+type TransferLog = {
+  transactionHash: string | null;
+  logIndex: number | null;
+  blockNumber: bigint | null;
+  blockHash: string | null;
+  args: { from?: string | undefined; to?: string | undefined; value?: bigint | undefined };
+};
+
+/**
+ * Converts a viem log into a settlement input. Pending logs (null block fields)
+ * are skipped: an unmined transfer has no position in the chain to reorg-check
+ * against, so it is not money we can count yet.
+ */
+export function toObservedTransfer(log: TransferLog): ObservedTransfer | null {
+  const { transactionHash, logIndex, blockNumber, blockHash, args } = log;
+  if (
+    transactionHash === null ||
+    logIndex === null ||
+    blockNumber === null ||
+    blockHash === null ||
+    args.from === undefined ||
+    args.to === undefined ||
+    args.value === undefined
+  ) {
+    return null;
+  }
+  return {
+    txHash: transactionHash,
+    logIndex,
+    blockNumber,
+    blockHash,
+    from: args.from,
+    to: args.to,
+    value: args.value,
+  };
+}

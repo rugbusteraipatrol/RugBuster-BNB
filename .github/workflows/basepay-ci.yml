@@ -1,0 +1,130 @@
+name: BasePay CI
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'basepay/**'
+      - '.github/workflows/basepay-ci.yml'
+  pull_request:
+    paths:
+      - 'basepay/**'
+      - '.github/workflows/basepay-ci.yml'
+
+defaults:
+  run:
+    working-directory: basepay
+
+jobs:
+  check:
+    name: lint, typecheck, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: basepay/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+
+      - name: Check the widget is still one embeddable file
+        run: |
+          test -f widget/dist/widget.js
+          # The Webflow embed is a single <script> tag, so the build must not
+          # start emitting chunks the page would also have to load.
+          chunks=$(find widget/dist -name '*.js' ! -name 'widget.js' | wc -l)
+          if [ "$chunks" -ne 0 ]; then
+            echo "widget build emitted $chunks extra script file(s)" >&2
+            find widget/dist -name '*.js' >&2
+            exit 1
+          fi
+          size=$(wc -c < widget/dist/widget.js)
+          echo "widget bundle: $size bytes"
+          if [ "$size" -gt 153600 ]; then
+            echo "widget bundle exceeded 150 kB" >&2
+            exit 1
+          fi
+
+  test:
+    name: tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: basepay
+          POSTGRES_PASSWORD: basepay
+          POSTGRES_DB: basepay_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U basepay -d basepay_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      TEST_DATABASE_URL: postgres://basepay:basepay@localhost:5432/basepay_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: basepay/package-lock.json
+
+      # anvil, for the watcher suite that runs against a real chain. Without it
+      # that suite skips, so keep this step ahead of the tests.
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - run: npm ci
+
+      - name: Confirm the chain-backed suite will actually run
+        run: anvil --version
+
+      - run: npm run test --workspace server
+      - run: npm run test --workspace widget
+
+  audit:
+    name: dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: basepay/package-lock.json
+      - run: npm ci
+      # This handles money: a known-vulnerable dependency fails the build.
+      - run: npm audit --audit-level=moderate
+
+  docker:
+    name: docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: basepay
+          push: false
+          load: true
+          tags: basepay:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke-test the image
+        run: docker run --rm --entrypoint node basepay:ci -e "console.log('image ok')"

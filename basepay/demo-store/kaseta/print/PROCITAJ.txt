@@ -1,0 +1,35 @@
+KASETA - Strana B: fajlovi za stampu (A3)
+
+Svaki crtez je na stranici A3 uspravno (297 x 420 mm), centriran, sa 10 mm
+praznog ruba sa svake strane. Pozadina je providna.
+
+Tri formata po crtezu:
+  pdf/  vektor, A3, fontovi ugradjeni
+  svg/  vektor, A3, slova pretvorena u krive (ne treba nijedan font)
+  png/  3508 x 4960 px = A3 na 300 dpi, providna pozadina
+
+Velicina otiska (sirina x visina) i boja majice:
+  trece-oko         277 x 310 mm   crna majica
+  tecno-sunce       277 x 324 mm   bela majica
+  sumski-trip       277 x 306 mm   bela majica
+  hipnoza           277 x 278 mm   crna majica
+  tunel             277 x 343 mm   bela majica
+  lava              267 x 400 mm   crna majica
+  kaleidoskop       277 x 331 mm   bela majica
+  leto-ljubavi      277 x 322 mm   crna majica
+  kosmicka-kaseta   277 x 319 mm   bela majica
+  dobre-vibracije   277 x 324 mm   bela majica
+
+Vazno za stampara:
+- Crtezi za crnu majicu traze belu podlogu ispod boja (DTF / DTG).
+- Sedam crteza je cist vektor. Tri imaju efekte koji ne mogu da budu vektor,
+  pa je taj deo u fajlu slika na 300 dpi:
+    tecno-sunce      (sunce koje se topi)
+    lava             (sjaj oko lampe 188 dpi, mehuri u lampi 300 dpi)
+    dobre-vibracije  (natpis koji se talasa)
+  Za DTF i DTG to je u redu. Za sito stampu ta tri treba doraditi.
+- hipnoza: PDF je cist vektor; u SVG-u je senka po ivici kruga mala slika.
+- Boje su RGB (ekranske). Stampar ih prevodi u svoj profil; jarke roze i
+  zelene mogu na tkanini da ispadnu malo mirnije nego na ekranu.
+
+A3-pregled.png prikazuje svih deset na boji majice za koju su radjeni.

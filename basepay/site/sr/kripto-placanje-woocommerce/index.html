@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="sr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kripto plaćanje u WooCommerce prodavnici — StableCart</title>
+    <meta name="description" content="Primaj USDC u WooCommerce prodavnici direktno na svoj novčanik. Podešavanje za minut, bez naloga i bez provizije na prodaju. Šta treba znati o refundaciji i porezu." />
+    <link rel="canonical" href="https://www.stablecart.org/sr/kripto-placanje-woocommerce/" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://www.stablecart.org/sr/kripto-placanje-woocommerce/" />
+    <meta property="og:title" content="Kako da primaš kripto plaćanje u WooCommerce prodavnici" />
+    <meta property="og:description" content="Primaj USDC u WooCommerce prodavnici direktno na svoj novčanik. Podešavanje za minut, bez naloga i bez provizije na prodaju. Šta treba znati o refundaciji i porezu." />
+    <meta property="og:image" content="https://www.stablecart.org/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+    <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Da li StableCart drži moj novac?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Ne. Kupac plaća direktno na tvoju adresu. StableCart samo prati mrežu Base i javlja prodavnici da je uplata stigla."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Šta je mreža Base?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Mreža na kojoj se USDC šalje za nekoliko centi i stiže za nekoliko sekundi. Većina novčanika i menjačnica može da šalje i prima USDC na Base-u."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Kako prodavnica zna koja uplata je za koju porudžbinu?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Svaka porudžbina dobije jedinstven iznos, na primer 25,000173 USDC. Po toj maloj razlici StableCart prepoznaje uplatu, a kasne uplate prepoznaje još 24 sata."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Da li je plugin na WordPress.org?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Trenutno je na pregledu. Dok ne bude objavljen, isti plugin se preuzima sa ovog sajta."
+      }
+    }
+  ]
+}
+    </script>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #1d1d1f; --ink-2: #6e6e73; --line: #d2d2d7; --accent: #4f6ef7; --bg-alt: #f5f5f7;
+        --grad: linear-gradient(135deg, #6d5dfc 0%, #3b82f6 55%, #22d3ee 100%);
+        --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #fff; color: var(--ink); font: 17px/1.6 var(--sans); letter-spacing: -0.011em; -webkit-font-smoothing: antialiased; }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      .wrap { max-width: 760px; margin: 0 auto; padding: 0 22px; }
+      header.nav { position: sticky; top: 0; z-index: 10; background: rgba(250,250,252,.8); backdrop-filter: saturate(180%) blur(20px); }
+      header.nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 48px; }
+      .wordmark { font-weight: 700; letter-spacing: -0.045em; color: var(--ink); font-size: 19px; }
+      .wordmark i { display: inline-block; width: .2em; height: .2em; border-radius: 50%; background: var(--grad); margin-left: .045em; vertical-align: baseline; }
+      header.nav nav a { color: var(--ink); font-size: 12.5px; opacity: .88; }
+      main { padding: 56px 0 72px; }
+      .eyebrow { font-size: 14px; font-weight: 600; color: var(--ink-2); margin: 0 0 10px; }
+      h1 { font-size: clamp(34px, 5.4vw, 52px); letter-spacing: -0.035em; font-weight: 650; line-height: 1.07; margin: 0 0 18px; }
+      .lede { font-size: 20px; color: var(--ink-2); margin: 0 0 28px; }
+      h2 { font-size: 26px; letter-spacing: -0.025em; margin: 48px 0 12px; line-height: 1.2; }
+      p, li { color: #33333a; }
+      ul, ol { padding-left: 22px; }
+      li { margin-bottom: 6px; }
+      .cta { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin: 8px 0 0; }
+      .btn { display: inline-block; background: var(--accent); color: #fff; font-weight: 600; border-radius: 980px; padding: 13px 24px; }
+      .btn:hover { text-decoration: none; filter: brightness(1.06); }
+      .note { font-size: 14px; color: var(--ink-2); }
+      .facts { background: var(--bg-alt); border-radius: 20px; padding: 20px 22px; margin: 28px 0 0; }
+      .facts p { margin: 0 0 8px; }
+      .facts p:last-child { margin: 0; font-size: 14px; color: var(--ink-2); }
+      .table-wrap { overflow-x: auto; margin: 14px 0 0; }
+      table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 15.5px; }
+      th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 11px 10px 11px 0; vertical-align: top; }
+      th { font-weight: 600; color: var(--ink); }
+      td:first-child { color: var(--ink-2); width: 34%; }
+      .faq h3 { font-size: 18px; letter-spacing: -0.015em; margin: 26px 0 6px; }
+      .faq p { margin: 0; }
+      footer { border-top: 1px solid var(--line); padding: 22px 0 40px; font-size: 12.5px; color: var(--ink-2); }
+    </style>
+  </head>
+  <body>
+    <header class="nav">
+      <div class="wrap">
+        <a class="wordmark" href="/">stablecart<i></i></a>
+        <nav><a href="/links/">Napravi link za plaćanje</a></nav>
+      </div>
+    </header>
+
+    <main>
+      <div class="wrap">
+        <p class="eyebrow">Vodič · WooCommerce</p>
+        <h1>Kako da primaš kripto plaćanje u WooCommerce prodavnici.</h1>
+        <p class="lede">Kupac iz bilo koje zemlje plati u USDC — digitalnom dolaru — i novac za nekoliko sekundi stiže u tvoj novčanik. Bez banke, bez procesora i bez provizije na prodaju.</p>
+        <div class="cta"><a class="btn" href="/downloads/stablecart-for-woocommerce.zip">Preuzmi plugin</a></div>
+
+        <h2>Zašto USDC, a ne Bitcoin</h2>
+        <p>USDC uvek vredi jedan dolar. Cena koju naplatiš je iznos koji ostaje u novčaniku. Bitcoin može da promeni vrednost za nekoliko procenata od prodaje do trenutka kad ti novac zatreba.</p>
+
+        <h2>Podešavanje za minut</h2>
+        <ol>
+          <li><a href="/downloads/stablecart-for-woocommerce.zip">Preuzmi StableCart</a> i dodaj ga u <em>Plugins → Add New → Upload Plugin</em>.</li>
+          <li>Otvori <em>WooCommerce → Settings → Payments → StableCart</em>, nalepi adresu novčanika na mreži Base i sačuvaj. Nema naloga ni API ključa.</li>
+          <li>Napravi malu probnu porudžbinu i plati je iz bilo kog novčanika. Porudžbina se sama završi kad uplata stigne.</li>
+        </ol>
+
+        <h2>Šta vidi kupac</h2>
+        <p>Na kasi izabere „USDC on Base" i dobije stranicu sa tačnim iznosom i QR kodom. Skenira ga novčanikom na telefonu ili plati iz MetaMask-a ili Coinbase Wallet-a u pregledaču. Kad mreža potvrdi uplatu, vraća se na tvoju stranicu porudžbine.</p>
+
+        <h2>Koliko košta</h2>
+        <p>Besplatno do 20 plaćenih porudžbina mesečno. Pro skida ograničenje za 12 dolara na 30 dana, bez procenta od prodaje. Kupac plaća naknadu mreže, obično nekoliko centi.</p>
+
+        <h2>Šta treba znati — iskreno</h2>
+        <ul>
+          <li><strong>Kupac mora da ima USDC.</strong> Ovo najviše pomaže kad prodaješ kupcima iz inostranstva i iz kripto sveta. Kupcima koji plaćaju samo karticom treba i drugi način plaćanja.</li>
+          <li><strong>Refundaciju šalješ sam</strong>, iz svog novčanika. Uplata se ne može poništiti, pa nema ni chargeback-a.</li>
+          <li><strong>Za dinare</strong> USDC prebaciš na kripto menjačnicu koja ima dozvolu Narodne banke Srbije. Spisak je u <a href="https://nbs.rs/sr/ciljevi-i-funkcije/nadzor-nad-finansijskim-institucijama/digital-imo/reg_di/reg_di_mcm/index.html" rel="nofollow">registru NBS</a>. Menjačnica naplaćuje svoju proviziju.</li>
+          <li><strong>Porez:</strong> prodaja u USDC je prodaja kao i svaka druga. Kako da je proknjižiš, pitaj knjigovođu.</li>
+        </ul>
+
+        <div class="faq">
+          <h2>Pitanja</h2>
+          <h3>Da li StableCart drži moj novac?</h3><p>Ne. Kupac plaća direktno na tvoju adresu. StableCart samo prati mrežu Base i javlja prodavnici da je uplata stigla.</p><h3>Šta je mreža Base?</h3><p>Mreža na kojoj se USDC šalje za nekoliko centi i stiže za nekoliko sekundi. Većina novčanika i menjačnica može da šalje i prima USDC na Base-u.</p><h3>Kako prodavnica zna koja uplata je za koju porudžbinu?</h3><p>Svaka porudžbina dobije jedinstven iznos, na primer 25,000173 USDC. Po toj maloj razlici StableCart prepoznaje uplatu, a kasne uplate prepoznaje još 24 sata.</p><h3>Da li je plugin na WordPress.org?</h3><p>Trenutno je na pregledu. Dok ne bude objavljen, isti plugin se preuzima sa ovog sajta.</p>
+        </div>
+
+        <h2>Probaj na jednoj porudžbini</h2>
+        <div class="cta"><a class="btn" href="/downloads/stablecart-for-woocommerce.zip">Preuzmi plugin</a></div>
+      </div>
+    </main>
+
+    <footer><div class="wrap"><span class="wordmark" style="font-size:15px;margin-right:10px">stablecart<i></i></span>© 2026 Fantom Studio · <a href="/">Početna</a> · <a href="/links/">Linkovi za plaćanje</a> · <a href="/terms/">Uslovi</a> · <a href="/privacy/">Privatnost</a></div></footer>
+  </body>
+</html>
