@@ -58,3 +58,16 @@ written to each page's embed again.
 
 Webflow's API returned 502 on batches of about twenty element edits; batches
 of eight or fewer went through.
+
+## Print files (A3)
+
+`print/` holds the ten Strana B designs as print-ready vector files, one A3
+portrait page each (297 x 420 mm, 10 mm clear margin, transparent background):
+`print/pdf/` with fonts embedded and `print/svg/` with text converted to
+outlines. `print/PROCITAJ.txt` is the note for the print shop (print size per
+design, tee colour, which three designs contain raster effects).
+
+To regenerate: `python3 print_prep.py` then `node print_make.js` (needs
+Playwright and the woff2 files in `fonts/`, which are not in the repo), then
+`pdftocairo -svg` on each PDF. `print_make.js` also writes a 300 dpi PNG per
+design; those are not committed because of their size.
