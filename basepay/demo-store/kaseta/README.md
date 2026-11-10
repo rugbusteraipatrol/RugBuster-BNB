@@ -71,3 +71,12 @@ To regenerate: `python3 print_prep.py` then `node print_make.js` (needs
 Playwright and the woff2 files in `fonts/`, which are not in the repo), then
 `pdftocairo -svg` on each PDF. `print_make.js` also writes a 300 dpi PNG per
 design; those are not committed because of their size.
+
+## Mockups at real print size
+
+Since 2026-11-10 the tee mockups show the print at the size of the A3 file.
+`gen.placement()` reads `print/report.json` and scales each design so that the
+mockup tee stands for a size M (52 cm chest, about 75 cm long); the print is
+then at most 277 mm wide, a little over half the chest. The twelve re-rendered
+images are in Webflow under the ids in `assets-a3.json`; the earlier ones in
+`assets.json` are no longer used on any page.

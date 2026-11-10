@@ -1,0 +1,142 @@
+{
+ "trece-oko": {
+  "tee": "black",
+  "printMm": [
+   277,
+   310.3
+  ],
+  "mmPerUnit": 0.5496,
+  "box": [
+   -252,
+   -302,
+   504,
+   564.5
+  ]
+ },
+ "tecno-sunce": {
+  "tee": "white",
+  "printMm": [
+   277,
+   324.3
+  ],
+  "mmPerUnit": 0.57648,
+  "box": [
+   -241,
+   -284,
+   480.5,
+   562.5
+  ]
+ },
+ "sumski-trip": {
+  "tee": "white",
+  "printMm": [
+   277,
+   306.2
+  ],
+  "mmPerUnit": 0.59062,
+  "box": [
+   -230,
+   -252,
+   469,
+   518.5
+  ]
+ },
+ "hipnoza": {
+  "tee": "black",
+  "printMm": [
+   277,
+   278.4
+  ],
+  "mmPerUnit": 0.55678,
+  "box": [
+   -247.5,
+   -268,
+   497.5,
+   500
+  ]
+ },
+ "tunel": {
+  "tee": "white",
+  "printMm": [
+   277,
+   343.2
+  ],
+  "mmPerUnit": 0.67233,
+  "box": [
+   -206,
+   -246,
+   412,
+   510.5
+  ]
+ },
+ "lava": {
+  "tee": "black",
+  "printMm": [
+   266.7,
+   400
+  ],
+  "mmPerUnit": 0.67511,
+  "box": [
+   -197.5,
+   -318.5,
+   395,
+   592.5
+  ]
+ },
+ "kaleidoskop": {
+  "tee": "white",
+  "printMm": [
+   277,
+   331
+  ],
+  "mmPerUnit": 0.62387,
+  "box": [
+   -222,
+   -262,
+   444,
+   530.5
+  ]
+ },
+ "leto-ljubavi": {
+  "tee": "black",
+  "printMm": [
+   277,
+   322
+  ],
+  "mmPerUnit": 0.62528,
+  "box": [
+   -221.5,
+   -249.5,
+   443,
+   515
+  ]
+ },
+ "kosmicka-kaseta": {
+  "tee": "white",
+  "printMm": [
+   277,
+   319
+  ],
+  "mmPerUnit": 0.57529,
+  "box": [
+   -234,
+   -286,
+   481.5,
+   554.5
+  ]
+ },
+ "dobre-vibracije": {
+  "tee": "white",
+  "printMm": [
+   277,
+   324.3
+  ],
+  "mmPerUnit": 0.61419,
+  "box": [
+   -225.5,
+   -253.5,
+   451,
+   528
+  ]
+ }
+}

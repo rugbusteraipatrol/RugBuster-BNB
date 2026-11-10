@@ -383,10 +383,24 @@ DESIGNS = {
     "dobre-vibracije": (d_dobre_vibracije, "white"),
 }
 
-TEE = "M398,222 C352,236 298,248 258,262 C196,300 142,372 104,440 L186,540 C216,506 244,470 272,438 C270,620 268,840 268,1040 C420,1058 580,1058 732,1040 C732,840 730,620 728,438 C756,470 784,506 814,540 L896,440 C858,372 804,300 742,262 C702,248 648,236 602,222 C560,282 440,282 398,222Z"
+TEE = "M398,222 C352,236 298,248 258,262 C196,300 142,372 104,440 L186,540 C216,506 244,470 272,438 C270,600 268,760 268,900 C420,918 580,918 732,900 C732,760 730,600 728,438 C756,470 784,506 814,540 L896,440 C858,372 804,300 742,262 C702,248 648,236 602,222 C560,282 440,282 398,222Z"
 
 
-def tee_svg(defs, body, colour, scale=0.82, bg=True):
+# The mockup tee is a size M: body 456 units wide for a 52 cm chest, 660 units long for about 75 cm.
+MM_PER_TEE_UNIT = 520 / 456
+PRINT_TOP = 335  # top edge of the print, about 8 cm below the collar
+
+
+def placement(name):
+    """Transform that shows the print at its real A3 size (print/report.json) on the mockup."""
+    import json
+    r = json.load(open(os.path.join(HERE, "print", "report.json")))[name]
+    x0, y0, w, h = r["box"]
+    s = r["mmPerUnit"] / MM_PER_TEE_UNIT
+    return f"translate({500 - (x0 + w / 2) * s:.2f},{PRINT_TOP - y0 * s:.2f}) scale({s:.4f})"
+
+
+def tee_svg(defs, body, colour, scale=0.82, bg=True, place=None):
     if colour == "black":
         base, hi, lo, rib, seam, bgshadow = "#1b1b1f", "#34343b", "#0b0b0d", "#232328", "#000", 0.42
         fold_op, tex_op = 0.5, 0.10
@@ -404,22 +418,23 @@ def tee_svg(defs, body, colour, scale=0.82, bg=True):
     {defs}
   </defs>
   {'<rect width="1000" height="1250" fill="#f3f1ec"/>' if bg else ''}
-  <ellipse cx="500" cy="1076" rx="280" ry="26" fill="#000" opacity="{bgshadow if bg else 0}" filter="url(#soft)"/>
+  <g transform="translate(500,632) scale(1.16) translate(-500,-572)">
+  <ellipse cx="500" cy="936" rx="280" ry="26" fill="#000" opacity="{bgshadow if bg else 0}" filter="url(#soft)"/>
   <path d="{TEE}" fill="#000" opacity="{bgshadow * 0.7 if bg else 0}" filter="url(#soft)" transform="translate(0,14)"/>
   <path d="{TEE}" fill="url(#teeg)"/>
   <path d="M398,222 C440,250 560,250 602,222 C560,282 440,282 398,222Z" fill="{lo}" opacity="0.9"/>
   <g clip-path="url(#teeclip)">
-    <g transform="translate(500,640) scale({scale})">{body}</g>
+    <g transform="{place or f'translate(500,640) scale({scale})'}">{body}</g>
     <rect width="1000" height="1250" filter="url(#tex)" opacity="{tex_op}"/>
     <g opacity="{fold_op}" filter="url(#soft)">
-      <path d="M272,438 C286,540 280,720 288,1040 L250,1040 L250,430Z" fill="#000"/>
-      <path d="M728,438 C714,540 720,720 712,1040 L750,1040 L750,430Z" fill="#000"/>
+      <path d="M272,438 C286,540 280,660 288,900 L250,900 L250,430Z" fill="#000"/>
+      <path d="M728,438 C714,540 720,660 712,900 L750,900 L750,430Z" fill="#000"/>
       <path d="M258,262 C232,340 210,440 186,540 L138,484 C170,390 214,310 258,262Z" fill="#000" opacity="0.6"/>
       <path d="M742,262 C768,340 790,440 814,540 L862,484 C830,390 786,310 742,262Z" fill="#000" opacity="0.6"/>
     </g>
     <g opacity="{fold_op * 0.75}" filter="url(#soft2)">
-      <path d="M320,986 C400,966 470,978 520,996 C470,990 400,982 320,1002Z" fill="#000"/>
-      <path d="M560,1000 C610,984 660,984 700,996 C660,994 610,996 560,1010Z" fill="#000"/>
+      <path d="M320,846 C400,826 470,838 520,856 C470,850 400,842 320,862Z" fill="#000"/>
+      <path d="M560,860 C610,844 660,844 700,856 C660,854 610,856 560,870Z" fill="#000"/>
     </g>
     <path d="{TEE}" fill="url(#teev)"/>
   </g>
@@ -429,7 +444,8 @@ def tee_svg(defs, body, colour, scale=0.82, bg=True):
   <path d="M728,438 C738,400 744,330 742,262" fill="none" stroke="{seam}" stroke-width="1.5" opacity="0.35"/>
   <path d="M104,440 L186,540" fill="none" stroke="{seam}" stroke-width="1.5" opacity="0.3" transform="translate(13,-13)"/>
   <path d="M896,440 L814,540" fill="none" stroke="{seam}" stroke-width="1.5" opacity="0.3" transform="translate(-13,-13)"/>
-  <path d="M269,1020 C420,1038 580,1038 731,1020" fill="none" stroke="{seam}" stroke-width="1.5" opacity="0.3"/>
+  <path d="M269,880 C420,898 580,898 731,880" fill="none" stroke="{seam}" stroke-width="1.5" opacity="0.3"/>
+  </g>
 </svg>'''
 
 
@@ -454,8 +470,9 @@ def main():
     for n in names:
         fn, colour = DESIGNS[n]
         defs, body = fn()
-        render_html(page(tee_svg(defs, body, colour)), os.path.join(OUT, f"tee-{n}.png"), 1000, 1250, scale=1.2)
-        render_html(page(tee_svg(defs, body, colour, bg=False), bg="transparent"), os.path.join(OUT, f"cut-{n}.png"), 1000, 1250, transparent=True)
+        pl = placement(n)
+        render_html(page(tee_svg(defs, body, colour, place=pl)), os.path.join(OUT, f"tee-{n}.png"), 1000, 1250, scale=1.2)
+        render_html(page(tee_svg(defs, body, colour, bg=False, place=pl), bg="transparent"), os.path.join(OUT, f"cut-{n}.png"), 1000, 1250, transparent=True)
         print("ok", n)
     cells = "".join(f'<img src="file://{OUT}/tee-{n}.png" style="width:400px;height:500px;display:block">' for n in DESIGNS)
     sheet = f'<!doctype html><html><body style="margin:0;display:grid;grid-template-columns:repeat(5,400px);background:#fff">{cells}</body></html>'

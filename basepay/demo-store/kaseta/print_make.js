@@ -50,7 +50,7 @@ const load = async (page, markup) => {
     await load(p3, html(svg.replace(`width="${A3.w}mm" height="${A3.h}mm"`, `width="${CSSW}" height="${(CSSW * A3.h / A3.w).toFixed(2)}"`)));
     await p3.screenshot({ path: path.join(dir, `${name}-A3-300dpi.png`), omitBackground: true, clip: { x: 0, y: 0, width: CSSW, height: CSSW * PH / PW } });
     await p3.close();
-    report[name] = { tee: d.tee, printMm: [+(uw * k).toFixed(1), +(uh * k).toFixed(1)] };
+    report[name] = { tee: d.tee, printMm: [+(uw * k).toFixed(1), +(uh * k).toFixed(1)], mmPerUnit: +k.toFixed(5), box: [ux0, uy0, uw, uh] };
     console.log(name, report[name].printMm.join(' x '), 'mm');
   }
   fs.writeFileSync(path.join(dir, 'report.json'), JSON.stringify(report, null, 1));
